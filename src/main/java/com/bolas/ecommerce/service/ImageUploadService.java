@@ -1,5 +1,7 @@
 package com.bolas.ecommerce.service;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -9,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -21,15 +24,30 @@ public class ImageUploadService {
     private static final long MAX_SIZE = 5 * 1024 * 1024; // 5 MB
 
     private final Path uploadDir;
+    private final Cloudinary cloudinary;
+    private final boolean cloudinaryEnabled;
 
-    public ImageUploadService(@Value("${bolas.upload.dir:uploads}") String uploadDirPath) throws IOException {
+    public ImageUploadService(
+            @Value("${bolas.upload.dir:uploads}") String uploadDirPath,
+            @Value("${cloudinary.url:}") String cloudinaryUrl) throws IOException {
+
         this.uploadDir = Paths.get(uploadDirPath).toAbsolutePath().normalize();
         Files.createDirectories(this.uploadDir);
+
+        // Cloudinary activé seulement si l'URL est définie
+        if (cloudinaryUrl != null && !cloudinaryUrl.isBlank()) {
+            this.cloudinary = new Cloudinary(cloudinaryUrl);
+            this.cloudinaryEnabled = true;
+        } else {
+            this.cloudinary = null;
+            this.cloudinaryEnabled = false;
+        }
     }
 
     /**
-     * Sauvegarde le fichier uploadé et retourne l'URL publique relative (/uploads/xxx.jpg).
-     * Retourne null si le fichier est vide.
+     * Stocke l'image :
+     * - En prod (CLOUDINARY_URL définie) : upload sur Cloudinary → retourne l'URL CDN
+     * - En dev : sauvegarde locale → retourne /uploads/xxx.jpg
      */
     public String store(MultipartFile file) throws IOException {
         if (file == null || file.isEmpty()) {
@@ -43,6 +61,25 @@ public class ImageUploadService {
             throw new IllegalArgumentException("Fichier trop volumineux (max 5 Mo).");
         }
 
+        if (cloudinaryEnabled) {
+            return uploadToCloudinary(file);
+        } else {
+            return saveLocally(file, contentType);
+        }
+    }
+
+    private String uploadToCloudinary(MultipartFile file) throws IOException {
+        Map<?, ?> result = cloudinary.uploader().upload(
+                file.getBytes(),
+                ObjectUtils.asMap(
+                        "folder", "bolas",
+                        "resource_type", "image"
+                )
+        );
+        return (String) result.get("secure_url");
+    }
+
+    private String saveLocally(MultipartFile file, String contentType) throws IOException {
         String ext = getExtension(file.getOriginalFilename(), contentType);
         String filename = UUID.randomUUID().toString().replace("-", "") + ext;
         Path target = uploadDir.resolve(filename);
