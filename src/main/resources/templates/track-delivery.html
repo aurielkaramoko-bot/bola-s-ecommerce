@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Suivi — Bola's</title>
+</head>
+<body class="bolas-body">
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<main class="container py-5 flex-grow-1">
+  <h1 class="h2 text-center mb-3" style="color: #8B5E3C;" th:text="'Suivi de livraison'">Suivi</h1>
+  <p class="text-center text-muted mb-4" th:text="'Entrez votre numéro de commande pour suivre la livraison.'">Aide</p>
+
+  <form th:action="@{/tracking}" method="get" class="row g-2 justify-content-center mb-5 mx-auto p-4 rounded-3 border admin-card" style="max-width: 640px;">
+    <div class="col-12 col-md-8">
+      <label for="trackingNumber" class="form-label" th:text="'Numéro de commande'">Numéro</label>
+      <input type="text" class="form-control border-secondary-subtle" id="trackingNumber" name="trackingNumber" required
+             th:value="${trackingNumber}"
+             placeholder="ex. BOL-XXXXXXXX"
+             autocomplete="off"/>
+    </div>
+    <div class="col-12 col-md-4 d-flex align-items-end">
+      <button type="submit" class="btn btn-hero-solid w-100" th:text="'Rechercher'">OK</button>
+    </div>
+  </form>
+
+  <div th:if="${tracking != null}" class="mx-auto mb-4 p-4 rounded-3 border admin-card" style="max-width: 720px;">
+    <p class="small text-muted mb-1" th:text="'Numéro de suivi'">N°</p>
+    <p class="fw-bold fs-5 mb-3" th:text="${tracking.trackingNumber}">BOL</p>
+    <p class="small text-muted mb-1" th:text="'Statut'">St</p>
+    <p class="mb-0">
+      <span th:if="${tracking.status.name() == 'PENDING'}" class="badge rounded-pill" style="background:#8B5E3C;color:#fff;" th:text="'En attente'">—</span>
+      <span th:if="${tracking.status.name() == 'IN_DELIVERY'}" class="badge rounded-pill" style="background:#6f4a30;color:#fff;" th:text="'En cours de livraison'">—</span>
+      <span th:if="${tracking.status.name() == 'DELIVERED'}" class="badge rounded-pill bg-success" th:text="'Livrée'">—</span>
+      <span th:if="${tracking.status.name() == 'CANCELLED'}" class="badge rounded-pill bg-secondary" th:text="'Annulée'">—</span>
+    </p>
+  </div>
+
+  <!-- Infos livreur : téléphone, plaque, photo, lien Maps (actualisées avec la position ~30 s) -->
+  <div th:if="${tracking != null}" class="mx-auto mb-4 p-4 rounded-3 border admin-card courier-follow-card" style="max-width: 900px;">
+    <h2 class="h5 mb-2" style="color: #8B5E3C;" th:text="'Votre livreur'">Livreur</h2>
+    <p class="small text-muted mb-4" th:text="'Ces informations sont mises à jour par Bola’s. La position sur la carte suit le GPS du livreur.'">Aide</p>
+    <div class="row g-4 align-items-start">
+      <div class="col-md-4 text-center" id="courier-photo-box"
+           th:style="${tracking.courierPhotoUrl != null and !tracking.courierPhotoUrl.isEmpty()} ? '' : 'display:none;'">
+        <img id="courier-photo-el" class="rounded-3 shadow-sm img-fluid courier-photo-thumb" alt="Livreur / véhicule"
+             th:src="${tracking.courierPhotoUrl != null and !tracking.courierPhotoUrl.isEmpty()} ? ${tracking.courierPhotoUrl} : ''"/>
+      </div>
+      <div class="col-md-8">
+        <ul class="list-unstyled mb-3 courier-track-details">
+          <li class="mb-3">
+            <span class="text-muted small d-block" th:text="'Téléphone du livreur'">Tél</span>
+            <span id="courier-phone-text" class="fw-semibold" th:text="${tracking.courierPhone != null and !tracking.courierPhone.isEmpty()} ? ${tracking.courierPhone} : '—'">—</span>
+            <span id="courier-phone-actions" class="ms-2"
+                  th:style="${tracking.courierPhone != null and !tracking.courierPhone.isEmpty()} ? '' : 'display:none;'">
+              <a id="courier-tel-a" href="#" class="btn btn-sm btn-outline-secondary" th:text="'Appeler'">Appeler</a>
+              <a id="courier-wa-a" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-sm text-white ms-1" style="background:#25D366;" th:text="'WhatsApp'">WA</a>
+            </span>
+          </li>
+          <li class="mb-3">
+            <span class="text-muted small d-block" th:text="'Plaque du véhicule'">Plaque</span>
+            <span id="courier-plate-text" class="fw-semibold fs-5" style="letter-spacing:.08em;"
+                  th:text="${tracking.courierVehiclePlate != null and !tracking.courierVehiclePlate.isEmpty()} ? ${tracking.courierVehiclePlate} : '—'">—</span>
+          </li>
+          <li class="mb-0">
+            <a id="courier-gmaps-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-hero-outline btn-sm"
+               th:style="${tracking.courierLatitude != null and tracking.courierLongitude != null} ? '' : 'display:none;'"
+               th:href="${tracking.courierLatitude != null and tracking.courierLongitude != null} ? |https://www.google.com/maps?q=${tracking.courierLatitude},${tracking.courierLongitude}| : '#'">
+              <i class="bi bi-geo-alt me-1"></i><span th:text="'Voir la position sur Google Maps'">Maps</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div th:if="${tracking != null and googleMapsApiKey != null and !googleMapsApiKey.isEmpty()}" class="mx-auto" style="max-width: 900px;">
+    <div id="map-tracking" class="shadow-sm"
+         th:attr="data-shop-lat=${shopLatitude},data-shop-lng=${shopLongitude},
+                  data-client-lat=${tracking.clientLatitude},data-client-lng=${tracking.clientLongitude},
+                  data-courier-lat=${tracking.courierLatitude},data-courier-lng=${tracking.courierLongitude}"></div>
+    <p class="small text-muted mt-2 text-center" th:text="'Carte actualisée toutes les 30 secondes en cas de livraison en cours.'">Aide</p>
+  </div>
+
+  <div th:if="${trackingError != null}" class="alert alert-warning text-center mx-auto" style="max-width: 560px;" role="alert" th:text="${trackingError}">
+    Erreur
+  </div>
+</main>
+
+<div th:replace="~{fragments/popular-section :: popular}"></div>
+<div th:replace="~{fragments/footer :: footer}"></div>
+
+<th:block th:if="${tracking != null}">
+  <script th:inline="javascript">
+    /*<![CDATA[*/
+    (function () {
+      function digits(s) {
+        return s ? String(s).replace(/\D/g, '') : '';
+      }
+      function applyCourierFromData(data) {
+        var phone = data.courierPhone;
+        var plate = data.courierVehiclePlate;
+        var photo = data.courierPhotoUrl;
+        var lat = data.courierLatitude;
+        var lng = data.courierLongitude;
+        var phoneEl = document.getElementById('courier-phone-text');
+        var actions = document.getElementById('courier-phone-actions');
+        var telA = document.getElementById('courier-tel-a');
+        var waA = document.getElementById('courier-wa-a');
+        var plateEl = document.getElementById('courier-plate-text');
+        var photoBox = document.getElementById('courier-photo-box');
+        var photoImg = document.getElementById('courier-photo-el');
+        var gmaps = document.getElementById('courier-gmaps-link');
+        var d = digits(phone);
+        if (phoneEl) phoneEl.textContent = (phone && String(phone).trim()) ? phone : '—';
+        if (actions) actions.style.display = d ? 'inline' : 'none';
+        if (telA) telA.href = d ? ('tel:+' + d) : '#';
+        if (waA) waA.href = d ? ('https://wa.me/' + d) : '#';
+        if (plateEl) plateEl.textContent = (plate && String(plate).trim()) ? plate : '—';
+        if (photoBox && photoImg) {
+          if (photo && String(photo).trim()) {
+            photoBox.style.display = '';
+            photoImg.src = photo;
+          } else {
+            photoBox.style.display = 'none';
+          }
+        }
+        if (gmaps) {
+          if (lat != null && lng != null && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
+            gmaps.href = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+            gmaps.style.display = 'inline-block';
+          } else {
+            gmaps.style.display = 'none';
+          }
+        }
+      }
+      var pollBase = /*[[@{/api/public/tracking/}]]*/ '';
+      var trackCode = /*[[${tracking.trackingNumber}]]*/ '';
+      window.applyBolasCourierTracking = applyCourierFromData;
+      window.bolasTrackingPollSubscribers = window.bolasTrackingPollSubscribers || [];
+      function poll() {
+        fetch(pollBase + encodeURIComponent(trackCode))
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+          .then(function (data) {
+            applyCourierFromData(data);
+            (window.bolasTrackingPollSubscribers || []).forEach(function (fn) {
+              try { fn(data); } catch (e) {}
+            });
+          })
+          .catch(function () {});
+      }
+      poll();
+      setInterval(poll, 30000);
+    })();
+    /*]]>*/
+  </script>
+</th:block>
+
+<th:block th:if="${tracking != null and googleMapsApiKey != null and !googleMapsApiKey.isEmpty()}">
+  <script th:src="|https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&callback=initBolasMap|" async defer></script>
+  <script th:inline="javascript">
+    /*<![CDATA[*/
+    var MAP_THEME = '#8B5E3C';
+
+    function initBolasMap() {
+      var el = document.getElementById('map-tracking');
+      if (!el) return;
+
+      var shopLat = parseFloat(el.getAttribute('data-shop-lat'));
+      var shopLng = parseFloat(el.getAttribute('data-shop-lng'));
+      var clientLat = parseFloat(el.getAttribute('data-client-lat'));
+      var clientLng = parseFloat(el.getAttribute('data-client-lng'));
+      var cLat = parseFloat(el.getAttribute('data-courier-lat'));
+      var cLng = parseFloat(el.getAttribute('data-courier-lng'));
+
+      var center = { lat: shopLat, lng: shopLng };
+      if (!isNaN(clientLat) && !isNaN(clientLng)) {
+        center = { lat: (shopLat + clientLat) / 2, lng: (shopLng + clientLng) / 2 };
+      }
+
+      var map = new google.maps.Map(el, {
+        zoom: 13,
+        center: center,
+        styles: [
+          { elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+          { elementType: 'labels.text.fill', stylers: [{ color: '#8B5E3C' }] },
+          { featureType: 'water', elementType: 'geometry.fill', stylers: [{ color: '#e8dfd6' }] }
+        ]
+      });
+
+      new google.maps.Marker({
+        position: { lat: shopLat, lng: shopLng },
+        map: map,
+        title: 'Bola\'s',
+        icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#d9534f', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 }
+      });
+
+      if (!isNaN(clientLat) && !isNaN(clientLng)) {
+        new google.maps.Marker({
+          position: { lat: clientLat, lng: clientLng },
+          map: map,
+          title: 'Client',
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#0d6efd', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 }
+        });
+      }
+
+      var courierMarker = null;
+      var directionsService = new google.maps.DirectionsService();
+      var directionsRenderer = new google.maps.DirectionsRenderer({
+        polylineOptions: { strokeColor: MAP_THEME, strokeWeight: 5 },
+        suppressMarkers: true
+      });
+      directionsRenderer.setMap(map);
+
+      function drawRoute(from, to) {
+        if (!from || !to || isNaN(from.lat) || isNaN(to.lat)) return;
+        directionsService.route(
+          { origin: from, destination: to, travelMode: google.maps.TravelMode.DRIVING },
+          function (response, status) {
+            if (status === 'OK') directionsRenderer.setDirections(response);
+          }
+        );
+      }
+
+      function updateCourier(lat, lng) {
+        if (isNaN(lat) || isNaN(lng)) return;
+        var pos = { lat: lat, lng: lng };
+        if (!courierMarker) {
+          courierMarker = new google.maps.Marker({
+            position: pos,
+            map: map,
+            title: 'Livreur',
+            icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#198754', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 }
+          });
+        } else {
+          courierMarker.setPosition(pos);
+        }
+        if (!isNaN(clientLat) && !isNaN(clientLng)) {
+          drawRoute(pos, { lat: clientLat, lng: clientLng });
+        }
+      }
+
+      if (!isNaN(cLat) && !isNaN(cLng)) updateCourier(cLat, cLng);
+
+      if (window.bolasTrackingPollSubscribers) {
+        window.bolasTrackingPollSubscribers.push(function (data) {
+          if (data.courierLatitude != null && data.courierLongitude != null) {
+            updateCourier(parseFloat(data.courierLatitude), parseFloat(data.courierLongitude));
+          }
+          if (data.clientLatitude != null && data.clientLongitude != null) {
+            clientLat = parseFloat(data.clientLatitude);
+            clientLng = parseFloat(data.clientLongitude);
+          }
+        });
+      }
+    }
+    window.initBolasMap = initBolasMap;
+    /*]]>*/
+  </script>
+</th:block>
+</body>
+</html>

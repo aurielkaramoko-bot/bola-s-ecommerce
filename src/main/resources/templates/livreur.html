@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+  <title th:text="${pageTitle}">Livraison — Bola's</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+  <style>
+    body { background: #fff9f5; font-family: Georgia, serif; }
+    .bolas-header { background: #8B5E3C; color: #fff; padding: 1rem; text-align: center; }
+    .bolas-header h1 { font-size: 1.4rem; margin: 0; }
+    .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .dot-active   { background: #25D366; animation: pulse 1.5s infinite; }
+    .dot-inactive { background: #aaa; }
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: .5; transform: scale(1.3); }
+    }
+    #gps-status { font-size: .9rem; }
+    .btn-bolas { background: #8B5E3C; color: #fff; border: none; border-radius: 999px; padding: .7rem 2rem; font-size: 1rem; }
+    .btn-bolas:hover { background: #6f4a30; color: #fff; }
+    .btn-stop  { background: #dc3545; color: #fff; border: none; border-radius: 999px; padding: .7rem 2rem; font-size: 1rem; }
+  </style>
+</head>
+<body>
+
+<div class="bolas-header">
+  <h1><i class="bi bi-truck me-2"></i>Bola's — Livraison</h1>
+</div>
+
+<div class="container py-4" style="max-width:480px;">
+
+  <!-- Commande inactive -->
+  <div th:if="${!active}" class="alert alert-warning text-center">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    Cette livraison n'est pas active ou a déjà été livrée.
+  </div>
+
+  <!-- Commande active -->
+  <div th:if="${active}">
+    <div class="card border-0 shadow-sm mb-4" style="border-radius:12px;">
+      <div class="card-body">
+        <p class="small text-muted mb-1">Commande</p>
+        <p class="fw-bold mb-1" th:text="${tracking}">BOL-XXXX</p>
+        <p class="small text-muted mb-1">Client</p>
+        <p class="fw-semibold mb-0" th:text="${customerName}">Nom</p>
+      </div>
+    </div>
+
+    <!-- Statut GPS -->
+    <div class="card border-0 shadow-sm mb-4 text-center" style="border-radius:12px;">
+      <div class="card-body py-4">
+        <div id="gps-status" class="mb-3">
+          <span class="status-dot dot-inactive" id="statusDot"></span>
+          <span id="statusText">GPS non démarré</span>
+        </div>
+        <p class="small text-muted mb-3" id="coordsDisplay">—</p>
+        <button class="btn btn-bolas me-2" id="btnStart" onclick="startTracking()">
+          <i class="bi bi-play-fill me-1"></i>Démarrer le GPS
+        </button>
+        <button class="btn btn-stop" id="btnStop" onclick="stopTracking()" style="display:none;">
+          <i class="bi bi-stop-fill me-1"></i>Arrêter
+        </button>
+      </div>
+    </div>
+
+    <p class="small text-muted text-center">
+      Votre position est envoyée automatiquement toutes les 10 secondes.<br>
+      Le client peut suivre votre trajet en temps réel.
+    </p>
+  </div>
+
+</div>
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+var TOKEN    = /*[[${token}]]*/ '';
+var API_URL  = '/api/livreur/' + TOKEN + '/position';
+var watchId  = null;
+var intervalId = null;
+var lastLat  = null;
+var lastLng  = null;
+
+function startTracking() {
+  if (!navigator.geolocation) {
+    setStatus('error', 'GPS non supporté par ce navigateur.');
+    return;
+  }
+
+  setStatus('waiting', 'Recherche du signal GPS…');
+  document.getElementById('btnStart').style.display = 'none';
+  document.getElementById('btnStop').style.display  = 'inline-block';
+
+  // Obtenir la position immédiatement
+  navigator.geolocation.getCurrentPosition(onPosition, onError, {
+    enableHighAccuracy: true,
+    timeout: 15000,
+    maximumAge: 0
+  });
+
+  // Puis surveiller en continu
+  watchId = navigator.geolocation.watchPosition(onPosition, onError, {
+    enableHighAccuracy: true,
+    timeout: 15000,
+    maximumAge: 5000
+  });
+
+  // Envoyer au serveur toutes les 10 secondes
+  intervalId = setInterval(sendPosition, 10000);
+}
+
+function stopTracking() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+  if (intervalId !== null) {
+    clearInterval(intervalId);
+    intervalId = null;
+  }
+  document.getElementById('btnStart').style.display = 'inline-block';
+  document.getElementById('btnStop').style.display  = 'none';
+  setStatus('inactive', 'GPS arrêté.');
+}
+
+function onPosition(pos) {
+  lastLat = pos.coords.latitude;
+  lastLng = pos.coords.longitude;
+  var acc = Math.round(pos.coords.accuracy);
+  setStatus('active', 'GPS actif — précision ~' + acc + ' m');
+  document.getElementById('coordsDisplay').textContent =
+    'Lat: ' + lastLat.toFixed(5) + '  Lng: ' + lastLng.toFixed(5);
+  sendPosition(); // envoyer immédiatement à chaque nouvelle position
+}
+
+function onError(err) {
+  var msg = 'Erreur GPS';
+  if (err.code === 1) msg = 'Permission GPS refusée. Autorisez la localisation dans votre navigateur.';
+  if (err.code === 2) msg = 'Signal GPS indisponible. Vérifiez votre connexion.';
+  if (err.code === 3) msg = 'Délai GPS dépassé. Réessayez.';
+  setStatus('error', msg);
+}
+
+function sendPosition() {
+  if (lastLat === null || lastLng === null) return;
+  fetch(API_URL + '?lat=' + lastLat + '&lng=' + lastLng, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+  })
+  .then(function(r) {
+    if (r.status === 403) {
+      stopTracking();
+      setStatus('error', 'Livraison terminée ou token invalide.');
+    }
+  })
+  .catch(function() {
+    setStatus('warn', 'Envoi échoué — nouvelle tentative dans 10 s.');
+  });
+}
+
+function setStatus(type, msg) {
+  var dot  = document.getElementById('statusDot');
+  var text = document.getElementById('statusText');
+  text.textContent = msg;
+  dot.className = 'status-dot';
+  if (type === 'active')   dot.classList.add('dot-active');
+  else                     dot.classList.add('dot-inactive');
+}
+
+// Démarrer automatiquement si la page est ouverte
+window.addEventListener('load', function() {
+  // Petit délai pour que le navigateur affiche la page avant de demander la permission GPS
+  setTimeout(startTracking, 800);
+});
+/*]]>*/
+</script>
+
+</body>
+</html>

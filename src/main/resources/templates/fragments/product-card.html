@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<body>
+
+<th:block th:fragment="card (p)">
+  <article class="product-card-artisal d-flex flex-column">
+
+    <!-- Image + badges -->
+    <div class="product-img-wrap flex-shrink-0">
+      <span th:if="${p.onPromotion}" class="badge-promo">PROMO</span>
+      <span class="badge-price">
+        <span th:if="${p.onPromotion}" class="price-old"
+              th:text="${#numbers.formatInteger(p.priceCfa,0,'COMMA')} + ' CFA'">0</span>
+        <span th:text="${#numbers.formatInteger(p.effectivePriceCfa,0,'COMMA')} + ' CFA'">0 CFA</span>
+      </span>
+      <img th:if="${p.imageUrl != null and !p.imageUrl.isEmpty()}"
+           th:src="${p.imageUrl}" th:alt="${p.name}" loading="lazy"/>
+      <div th:if="${p.imageUrl == null or p.imageUrl.isEmpty()}"
+           class="d-flex align-items-center justify-content-center h-100 text-secondary">
+        <i class="bi bi-image fs-1"></i>
+      </div>
+    </div>
+
+    <!-- Nom + boutons sur une seule ligne -->
+    <div class="card-body-artisal flex-grow-1 d-flex flex-column">
+      <h3 th:text="${p.name}">Nom</h3>
+
+      <div class="d-flex align-items-center gap-2 mt-auto">
+        <!-- Voir détails — prend toute la place disponible -->
+        <a th:href="@{/products/{id}(id=${p.id})}" class="btn-detail flex-grow-1">
+          Voir détails
+        </a>
+        <!-- Panier -->
+        <form th:action="@{/cart/add}" method="post" class="m-0 flex-shrink-0">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" name="productId" th:value="${p.id}"/>
+          <input type="hidden" name="qty" value="1"/>
+          <button type="submit" class="btn-card-cart" aria-label="Ajouter au panier">
+            <i class="bi bi-cart-plus"></i>
+          </button>
+        </form>
+        <!-- WhatsApp -->
+        <a th:href="|https://wa.me/${whatsappNumber}?text=Bonjour Bola's %F0%9F%91%8B%0AJe veux commander :%0A${p.name} — ${p.effectivePriceCfa} CFA|"
+           target="_blank" rel="noopener" class="btn-card-wa flex-shrink-0"
+           aria-label="Commander via WhatsApp">
+          <i class="bi bi-whatsapp"></i>
+        </a>
+      </div>
+    </div>
+  </article>
+</th:block>
+
+</body>
+</html>

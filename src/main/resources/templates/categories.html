@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Catégories — Bola's</title>
+</head>
+<body class="bolas-body">
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<main class="container py-5 flex-grow-1">
+  <h1 class="h2 section-title">Nos catégories</h1>
+  <p class="section-subtitle">Choisissez un univers pour découvrir nos produits</p>
+
+  <div class="row g-4 justify-content-center"
+       th:if="${categories != null and !categories.isEmpty()}">
+    <div class="col-sm-6 col-lg-4" th:each="c : ${categories}">
+
+      <!-- Avec image : overlay photo -->
+      <a th:href="@{/products(categoryId=${c.id})}" class="cat-card d-block"
+         th:if="${c.imageUrl != null and !c.imageUrl.isEmpty()}">
+        <img th:src="${c.imageUrl}" th:alt="${c.name}" loading="lazy"/>
+        <div class="cat-card-overlay">
+          <p class="cat-card-name" th:text="${c.name}">Catégorie</p>
+          <p class="cat-card-desc"
+             th:if="${c.description != null and !c.description.isEmpty()}"
+             th:text="${#strings.abbreviate(c.description, 80)}">Desc</p>
+        </div>
+      </a>
+
+      <!-- Sans image : carte simple -->
+      <a th:href="@{/products(categoryId=${c.id})}" class="cat-card-plain"
+         th:if="${c.imageUrl == null or c.imageUrl.isEmpty()}">
+        <h2 th:text="${c.name}">Catégorie</h2>
+        <p th:if="${c.description != null and !c.description.isEmpty()}"
+           th:text="${#strings.abbreviate(c.description, 140)}">Desc</p>
+        <span class="small" style="color:var(--bolas-accent)">
+          Voir les produits <i class="bi bi-arrow-right"></i>
+        </span>
+      </a>
+    </div>
+  </div>
+
+  <p th:if="${categories == null or categories.isEmpty()}"
+     class="text-center text-muted py-5">
+    Aucune catégorie pour le moment.
+  </p>
+</main>
+
+<div th:replace="~{fragments/popular-section :: popular}"></div>
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

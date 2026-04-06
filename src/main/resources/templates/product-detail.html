@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Produit — Bola's</title>
+</head>
+<body class="bolas-body">
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<main class="container py-5 flex-grow-1" th:if="${product != null}">
+
+  <!-- Fil d'Ariane -->
+  <nav aria-label="Fil d'Ariane" class="mb-4 small">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a th:href="@{/}" style="color:var(--bolas-accent)">Accueil</a></li>
+      <li class="breadcrumb-item"><a th:href="@{/products}" style="color:var(--bolas-accent)">Produits</a></li>
+      <li class="breadcrumb-item active" aria-current="page" th:text="${product.name}">Produit</li>
+    </ol>
+  </nav>
+
+  <div class="row g-5 align-items-start">
+
+    <!-- ===== PHOTO GAUCHE ===== -->
+    <div class="col-lg-6">
+      <div class="product-detail-photo">
+        <img th:if="${product.imageUrl != null and !product.imageUrl.isEmpty()}"
+             th:src="${product.imageUrl}" th:alt="${product.name}"/>
+        <div th:if="${product.imageUrl == null or product.imageUrl.isEmpty()}"
+             class="d-flex align-items-center justify-content-center"
+             style="min-height:380px; background:#f8f6f4;">
+          <i class="bi bi-image text-secondary display-4"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== INFOS DROITE ===== -->
+    <div class="col-lg-6">
+
+      <!-- Badge PROMO -->
+      <span th:if="${product.onPromotion}"
+            class="badge bg-danger mb-2 px-3 py-2"
+            style="font-size:.8rem;letter-spacing:.06em;">PROMO</span>
+
+      <!-- Nom -->
+      <h1 class="h2 mb-3" style="color:var(--bolas-text);" th:text="${product.name}">Nom</h1>
+
+      <!-- Prix -->
+      <p class="mb-3">
+        <span th:if="${product.onPromotion}"
+              class="product-detail-price-old"
+              th:text="${#numbers.formatInteger(product.priceCfa, 0, 'COMMA')} + ' CFA'">0</span>
+        <span class="product-detail-price"
+              th:text="${#numbers.formatInteger(product.effectivePriceCfa, 0, 'COMMA')} + ' CFA'">0 CFA</span>
+      </p>
+
+      <!-- Catégorie -->
+      <p class="small text-muted mb-3">
+        <i class="bi bi-tag me-1"></i>
+        <span th:text="${product.category.name}">Catégorie</span>
+      </p>
+
+      <!-- Description -->
+      <div class="mb-4" th:if="${product.description != null and !product.description.isEmpty()}">
+        <h2 class="h6 text-uppercase mb-2" style="color:var(--bolas-muted);letter-spacing:.08em;">Description</h2>
+        <p class="mb-0" style="white-space:pre-wrap;line-height:1.7;" th:text="${product.description}">Desc</p>
+      </div>
+
+      <!-- Livraison -->
+      <div class="mb-4 p-3 rounded-3" style="background:var(--bolas-light);">
+        <div th:if="${product.deliveryAvailable}">
+          <i class="bi bi-truck me-2 text-accent"></i>
+          <span th:text="'Livraison à domicile disponible — +'
+                + ${#numbers.formatInteger(product.deliveryPriceCfa, 0, 'COMMA')} + ' CFA'">Livraison</span>
+        </div>
+        <div th:if="${!product.deliveryAvailable}" class="text-muted small">
+          <i class="bi bi-shop me-2"></i>Retrait en boutique uniquement
+        </div>
+      </div>
+
+      <!-- Option commande -->
+      <fieldset class="mb-4">
+        <legend class="form-label fw-semibold mb-2" style="color:var(--bolas-text);">Option de commande</legend>
+        <div class="form-check mb-1" th:if="${product.deliveryAvailable}">
+          <input class="form-check-input" type="radio" name="deliveryOption"
+                 id="optHome" value="HOME" checked/>
+          <label class="form-check-label" for="optHome">
+            <i class="bi bi-truck me-1"></i> Livraison à domicile
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="deliveryOption"
+                 id="optPickup" value="PICKUP"
+                 th:checked="${!product.deliveryAvailable}"/>
+          <label class="form-check-label" for="optPickup">
+            <i class="bi bi-shop me-1"></i> Retrait boutique Bola's
+          </label>
+        </div>
+      </fieldset>
+
+      <!-- Boutons d'action -->
+      <div class="d-flex flex-wrap gap-3">
+        <a href="#" target="_blank" rel="noopener noreferrer"
+           id="whatsappBtn" class="btn btn-wa px-4"
+           th:attr="data-whatsapp=${whatsappNumber}">
+          <i class="bi bi-whatsapp"></i>
+          Commander via WhatsApp
+        </a>
+        <a th:href="|tel:+${shopPhone}|" class="btn btn-call-brown px-4">
+          <i class="bi bi-telephone"></i>
+          Appeler
+        </a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div th:replace="~{fragments/popular-section :: popular}"></div>
+<div th:replace="~{fragments/footer :: footer}"></div>
+
+<script th:inline="javascript" th:if="${product != null}">
+  /*<![CDATA[*/
+  (function () {
+    var btn = document.getElementById('whatsappBtn');
+    if (!btn) return;
+    var wa = btn.getAttribute('data-whatsapp');
+    var productName = /*[[${product.name}]]*/ '';
+    var price       = /*[[${product.effectivePriceCfa}]]*/ 0;
+    var deliveryFee = /*[[${product.deliveryPriceCfa}]]*/ 0;
+    var deliveryOk  = /*[[${product.deliveryAvailable}]]*/ false;
+
+    function buildMessage() {
+      var pickup = document.getElementById('optPickup');
+      var isPickup = pickup && pickup.checked;
+      var opt = isPickup ? 'Retrait en boutique' : 'Livraison à domicile';
+      var lines = [
+        "Bonjour Bola's 👋",
+        "Je souhaite commander :",
+        "📦 Produit : " + productName,
+        "💰 Prix : " + price + " CFA",
+        "🚚 Option : " + opt
+      ];
+      if (!isPickup && deliveryOk && deliveryFee > 0) {
+        lines.push("(+ " + deliveryFee + " CFA de livraison)");
+      }
+      return encodeURIComponent(lines.join("\n"));
+    }
+
+    function updateLink() {
+      if (!wa) return;
+      btn.setAttribute('href', "https://wa.me/" + wa + "?text=" + buildMessage());
+    }
+
+    document.querySelectorAll('input[name="deliveryOption"]').forEach(function (el) {
+      el.addEventListener('change', updateLink);
+    });
+    updateLink();
+  })();
+  /*]]>*/
+</script>
+</body>
+</html>

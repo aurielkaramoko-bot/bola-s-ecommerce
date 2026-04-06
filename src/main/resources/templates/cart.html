@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Panier — Bola's</title>
+</head>
+<body class="bolas-body">
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<main class="container py-5 flex-grow-1" style="max-width:860px;">
+
+  <h1 class="h2 section-title">Mon panier</h1>
+  <hr class="section-divider"/>
+
+  <div th:if="${flashOk}" class="alert alert-success" role="alert" th:text="${flashOk}"></div>
+
+  <!-- Panier vide -->
+  <div th:if="${cartLines == null or cartLines.isEmpty()}" class="text-center py-5">
+    <i class="bi bi-cart3 display-4 text-muted d-block mb-3"></i>
+    <p class="text-muted mb-4">Votre panier est vide.</p>
+    <a th:href="@{/products}" class="btn btn-hero-solid">Voir les produits</a>
+  </div>
+
+  <!-- Lignes du panier -->
+  <div th:if="${cartLines != null and !cartLines.isEmpty()}">
+    <div class="admin-card mb-3 overflow-hidden">
+      <div th:each="line : ${cartLines}" class="d-flex align-items-center gap-3 p-3 border-bottom"
+           style="border-color:#eee8e4 !important;"
+           data-cart-line="1"
+           th:attr="data-name=${line.product.name},data-qty=${line.quantity},data-total=${line.lineTotalCfa}">
+
+        <!-- Photo -->
+        <div style="width:72px;height:72px;flex-shrink:0;border-radius:8px;overflow:hidden;background:#f8f6f4;">
+          <img th:if="${line.product.imageUrl != null and !line.product.imageUrl.isEmpty()}"
+               th:src="${line.product.imageUrl}" th:alt="${line.product.name}"
+               style="width:100%;height:100%;object-fit:cover;"/>
+          <div th:if="${line.product.imageUrl == null or line.product.imageUrl.isEmpty()}"
+               class="d-flex align-items-center justify-content-center h-100">
+            <i class="bi bi-image text-muted"></i>
+          </div>
+        </div>
+
+        <!-- Nom + prix -->
+        <div class="flex-grow-1 min-width-0">
+          <p class="fw-semibold mb-0 text-truncate" th:text="${line.product.name}">Nom</p>
+          <p class="small mb-0" style="color:var(--bolas-accent);">
+            <span th:if="${line.product.onPromotion}"
+                  class="text-decoration-line-through text-muted me-1 small"
+                  th:text="${#numbers.formatInteger(line.product.priceCfa,0,'COMMA')} + ' CFA'"></span>
+            <span th:text="${#numbers.formatInteger(line.product.effectivePriceCfa,0,'COMMA')} + ' CFA'"></span>
+          </p>
+        </div>
+
+        <!-- Quantité avec input + − + -->
+        <div class="d-flex align-items-center gap-1 flex-shrink-0">
+          <form th:action="@{/cart/update}" method="post" class="qty-form m-0"
+                th:attr="data-product-id=${line.product.id}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" name="productId" th:value="${line.product.id}"/>
+            <div class="qty-control">
+              <button type="button" class="qty-btn qty-minus" aria-label="Diminuer">−</button>
+              <input type="number" name="qty" class="qty-input"
+                     th:value="${line.quantity}"
+                     min="1" max="99" step="1"
+                     inputmode="numeric"
+                     pattern="[0-9]*"
+                     autocomplete="off"/>
+              <button type="button" class="qty-btn qty-plus" aria-label="Augmenter">+</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Total ligne -->
+        <p class="fw-bold mb-0 text-nowrap" style="color:var(--bolas-accent);min-width:90px;text-align:right;"
+           th:text="${#numbers.formatInteger(line.lineTotalCfa,0,'COMMA')} + ' CFA'">0</p>
+
+        <!-- Supprimer -->
+        <form th:action="@{/cart/remove}" method="post" class="m-0">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" name="productId" th:value="${line.product.id}"/>
+          <button type="submit" class="btn btn-sm btn-outline-danger px-2 py-0" aria-label="Supprimer">
+            <i class="bi bi-trash3"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Total + actions -->
+    <div class="p-3 admin-card">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <span class="text-muted small">Total</span>
+          <p class="h4 fw-bold mb-0" style="color:var(--bolas-accent);"
+             id="cartTotalDisplay"
+             th:text="${#numbers.formatInteger(cartTotalCfa,0,'COMMA')} + ' CFA'">0 CFA</p>
+        </div>
+        <form th:action="@{/cart/clear}" method="post" class="m-0">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <button type="submit" class="btn btn-outline-secondary rounded-pill px-3">
+            <i class="bi bi-trash3 me-1"></i>Vider
+          </button>
+        </form>
+      </div>
+      <!-- Commander via WhatsApp -->
+      <a id="whatsappCartBtn" href="#" target="_blank" rel="noopener"
+         class="btn-wa-full"
+         th:attr="data-wa=${whatsappNumber}">
+        <i class="bi bi-whatsapp me-2"></i>Commander via WhatsApp
+      </a>
+    </div>
+  </div>
+
+</main>
+
+<div th:replace="~{fragments/popular-section :: popular}"></div>
+<div th:replace="~{fragments/footer :: footer}"></div>
+
+<!-- Quantité : validation + soumission -->
+<script>
+document.querySelectorAll('.qty-form').forEach(function(form) {
+  var input = form.querySelector('.qty-input');
+  var minus  = form.querySelector('.qty-minus');
+  var plus   = form.querySelector('.qty-plus');
+
+  function clamp(v) { return Math.min(99, Math.max(1, v)); }
+
+  function sanitize(raw) {
+    // Supprime tout ce qui n'est pas un chiffre
+    var clean = String(raw).replace(/[^0-9]/g, '');
+    var n = parseInt(clean, 10);
+    return isNaN(n) ? 1 : clamp(n);
+  }
+
+  function submit(val) {
+    input.value = val;
+    form.submit();
+  }
+
+  minus.addEventListener('click', function() {
+    submit(clamp(sanitize(input.value) - 1));
+  });
+
+  plus.addEventListener('click', function() {
+    submit(clamp(sanitize(input.value) + 1));
+  });
+
+  // Validation en temps réel : bloque lettres et chars spéciaux
+  input.addEventListener('input', function() {
+    var pos = this.selectionStart;
+    var clean = this.value.replace(/[^0-9]/g, '');
+    if (clean !== this.value) {
+      this.value = clean;
+      this.setSelectionRange(pos - 1, pos - 1);
+    }
+    // Clamp visuel (sans soumettre)
+    if (clean !== '' && parseInt(clean, 10) > 99) this.value = '99';
+    if (clean !== '' && parseInt(clean, 10) < 1)  this.value = '1';
+  });
+
+  // Soumission quand on quitte le champ ou appuie sur Entrée
+  input.addEventListener('change', function() {
+    submit(sanitize(this.value));
+  });
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); submit(sanitize(this.value)); }
+  });
+});
+</script>
+
+<!-- WhatsApp -->
+<script>
+(function() {
+  var btn = document.getElementById('whatsappCartBtn');
+  if (!btn) return;
+  var wa = btn.getAttribute('data-wa');
+  if (!wa) return;
+  var rows = document.querySelectorAll('[data-cart-line]');
+  var lines = [];
+  rows.forEach(function(row) {
+    lines.push('• ' + row.getAttribute('data-name')
+      + ' x' + row.getAttribute('data-qty')
+      + ' = ' + row.getAttribute('data-total') + ' CFA');
+  });
+  var total = document.getElementById('cartTotalDisplay');
+  var msg = "Bonjour Bola's \uD83D\uDC4B\nJe souhaite commander :\n\n"
+          + lines.join('\n')
+          + '\n\nTotal : ' + (total ? total.textContent.trim() : '');
+  btn.href = 'https://wa.me/' + wa + '?text=' + encodeURIComponent(msg);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<body>
+
+<section th:fragment="contactSection" id="contact" class="contact-section py-5">
+  <div class="container">
+    <h2 class="contact-section-title text-center">Contactez-nous</h2>
+    <p class="contact-section-lead text-center mx-auto">Nous sommes là pour vous aider. N’hésitez pas à nous contacter.</p>
+    <div class="row g-4 justify-content-center mt-2">
+      <div class="col-md-4">
+        <div class="contact-card h-100 text-center">
+          <div class="contact-card-icon contact-card-icon-phone mx-auto mb-3">
+            <i class="bi bi-telephone-fill"></i>
+          </div>
+          <h3 class="contact-card-heading">Téléphone</h3>
+          <p class="contact-card-sub text-muted small mb-2">Appelez-nous directement</p>
+          <a th:href="|tel:+${shopPhone}|" class="contact-card-link" th:text="${shopPhone}">Tél</a>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="contact-card h-100 text-center">
+          <div class="contact-card-icon contact-card-icon-wa mx-auto mb-3">
+            <i class="bi bi-whatsapp"></i>
+          </div>
+          <h3 class="contact-card-heading">WhatsApp</h3>
+          <p class="contact-card-sub text-muted small mb-2">Discutez avec nous instantanément</p>
+          <a th:href="|https://wa.me/${whatsappNumber}|" target="_blank" rel="noopener noreferrer" class="contact-card-link-wa">Discuter sur WhatsApp</a>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="contact-card h-100 text-center">
+          <div class="contact-card-icon contact-card-icon-mail mx-auto mb-3">
+            <i class="bi bi-envelope-fill"></i>
+          </div>
+          <h3 class="contact-card-heading">Email</h3>
+          <p class="contact-card-sub text-muted small mb-2">Envoyez-nous un message</p>
+          <a th:if="${shopEmail != null and !shopEmail.isEmpty()}" th:href="|mailto:${shopEmail}|" class="contact-card-link" th:text="${shopEmail}">email</a>
+          <span th:if="${shopEmail == null or shopEmail.isEmpty()}" class="text-muted small">À renseigner dans la configuration</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

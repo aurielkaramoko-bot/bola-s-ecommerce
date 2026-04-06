@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Admin — Bola's</title>
+</head>
+<body class="bolas-body">
+<nav th:replace="~{fragments/header :: navbar}"></nav>
+
+<div class="container-fluid">
+  <div class="row">
+    <div th:replace="~{fragments/admin-sidebar :: sidebar(active='dashboard')}"></div>
+    <main class="col-12 col-md-9 col-lg-10 ms-sm-auto px-4 py-4">
+      <h1 class="h3 fw-semibold mb-4" style="color: #8B5E3C;" th:text="'Tableau de bord'">Tableau de bord</h1>
+
+      <div class="row g-3 mb-4">
+        <div class="col-sm-4">
+          <div class="admin-card p-3 text-center">
+            <p class="small text-muted mb-1" th:text="'Produits'">Produits</p>
+            <p class="h2 fw-bold mb-0" style="color: #8B5E3C;" th:text="${productCount}">0</p>
+          </div>
+        </div>
+        <div class="col-sm-4">
+          <div class="admin-card p-3 text-center">
+            <p class="small text-muted mb-1" th:text="'Catégories'">Catégories</p>
+            <p class="h2 fw-bold mb-0" style="color: #8B5E3C;" th:text="${categoryCount}">0</p>
+          </div>
+        </div>
+        <div class="col-sm-4">
+          <div class="admin-card p-3 text-center">
+            <p class="small text-muted mb-1" th:text="'Commandes'">Commandes</p>
+            <p class="h2 fw-bold mb-0" style="color: #8B5E3C;" th:text="${orderCount}">0</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="admin-card p-3">
+            <h2 class="h6 fw-semibold mb-3" style="color: #8B5E3C;" th:text="'Produits par catégorie'">Graphique</h2>
+            <canvas id="chartCategories" style="max-height:280px;"></canvas>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="admin-card p-3">
+            <h2 class="h6 fw-semibold mb-3" style="color: #8B5E3C;" th:text="'Commandes récentes'">Récentes</h2>
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0">
+                <thead>
+                <tr>
+                  <th th:text="'N° suivi'">N°</th>
+                  <th th:text="'Client'">Client</th>
+                  <th th:text="'Statut'">Statut</th>
+                  <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="o : ${recentOrders}">
+                  <td th:text="${o.trackingNumber}">—</td>
+                  <td th:text="${o.customerName}">—</td>
+                  <td th:text="${o.status}">—</td>
+                  <td><a th:href="@{/admin/orders}" class="small" th:text="'Voir'">Voir</a></td>
+                </tr>
+                <tr th:if="${recentOrders == null or recentOrders.isEmpty()}">
+                  <td colspan="4" class="text-muted small" th:text="'Aucune commande.'">—</td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+  /*<![CDATA[*/
+  var labels = /*[[${categoryChartLabels}]]*/ [];
+  var values = /*[[${categoryChartCounts}]]*/ [];
+  if (labels && labels.length && document.getElementById('chartCategories')) {
+    new Chart(document.getElementById('chartCategories'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Produits',
+          data: values,
+          backgroundColor: 'rgba(139, 94, 60, 0.75)',
+          borderColor: '#8B5E3C',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+      }
+    });
+  }
+  /*]]>*/
+</script>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+</body>
+</html>

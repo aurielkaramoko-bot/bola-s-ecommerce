@@ -1,0 +1,16 @@
+target/
+*.class
+*.jar
+*.war
+.mvn/
+!.mvn/wrapper/
+uploads/
+logs/
+data/
+*.log
+.env
+.env.*
+*.iml
+.idea/
+.vscode/
+*.DS_Store

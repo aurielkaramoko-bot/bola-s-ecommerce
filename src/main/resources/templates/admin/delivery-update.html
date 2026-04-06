@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Livraison GPS — Bola's</title>
+</head>
+<body class="bolas-body">
+<nav th:replace="~{fragments/header :: navbar}"></nav>
+
+<style>
+  #admin-delivery-map {
+    width: 100%;
+    height: 480px;
+    border-radius: 12px;
+    border: 1px solid #eee8e4;
+    display: block;
+  }
+</style>
+
+<div class="container-fluid">
+  <div class="row">
+    <div th:replace="~{fragments/admin-sidebar :: sidebar(active='delivery')}"></div>
+    <main class="col-12 col-md-9 col-lg-10 ms-sm-auto px-4 py-4">
+
+      <h1 class="h3 fw-semibold mb-1" style="color:#8B5E3C;">Position du livreur (GPS)</h1>
+      <p class="text-muted mb-3">Cliquez sur la carte pour placer le livreur.</p>
+
+      <div th:if="${flashOk}"    class="alert alert-success mb-3" role="alert" th:text="${flashOk}"></div>
+      <div th:if="${flashError}" class="alert alert-danger  mb-3" role="alert" th:text="${flashError}"></div>
+
+      <!-- LIEN LIVREUR GÉNÉRÉ -->
+      <div th:if="${courierLink}" class="alert mb-3" style="background:#e8f5e9;border:1px solid #25D366;border-radius:12px;">
+        <p class="fw-semibold mb-2"><i class="bi bi-link-45deg me-1"></i>Lien GPS livreur généré :</p>
+        <code id="courierLinkText" th:text="${courierLink}" class="d-block mb-2 small" style="word-break:break-all;"></code>
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-sm btn-outline-secondary" onclick="copyLink()">
+            <i class="bi bi-clipboard me-1"></i>Copier
+          </button>
+          <a th:href="|https://wa.me/?text=Bonjour, voici votre lien de suivi GPS Bola's : ${courierLink}|"
+             target="_blank" class="btn btn-sm" style="background:#25D366;color:#fff;">
+            <i class="bi bi-whatsapp me-1"></i>Envoyer via WhatsApp
+          </a>
+        </div>
+      </div>
+
+      <!-- GÉNÉRER LIEN LIVREUR -->
+      <div class="admin-card p-4 mb-4" style="max-width:720px;">
+        <h2 class="h6 fw-semibold mb-3" style="color:#8B5E3C;">
+          <i class="bi bi-phone me-1"></i>GPS automatique — lien pour le livreur
+        </h2>
+        <p class="small text-muted mb-3">
+          Choisissez la commande, cliquez "Générer". Le livreur reçoit un lien unique sur son téléphone.
+          Son GPS s'envoie automatiquement toutes les 10 secondes. Le client voit le point bouger en temps réel.
+        </p>
+        <form th:action="@{/admin/delivery/__${selectedOrderId != null ? selectedOrderId : 0}__/generate-token}"
+              method="post" id="generateForm">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" name="baseUrl" id="baseUrlInput" value=""/>
+          <div class="row g-2 align-items-end">
+            <div class="col-md-8">
+              <label for="genOrderId" class="form-label fw-semibold small">Commande</label>
+              <select class="form-select" id="genOrderId" required>
+                <option value="">Choisir…</option>
+                <option th:each="o : ${orders}" th:value="${o.id}"
+                        th:text="${o.trackingNumber} + ' — ' + ${o.customerName}">Cmd</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <button type="button" class="btn btn-hero-solid w-100" onclick="generateToken()">
+                <i class="bi bi-qr-code me-1"></i>Générer le lien
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- CARTE -->
+      <div class="mb-4">
+        <div id="admin-delivery-map"></div>
+        <p class="small text-muted mt-2">
+          <i class="bi bi-geo-alt-fill me-1" style="color:#8B5E3C;"></i>
+          Clic sur la carte = position du livreur. Marqueur rouge = boutique. Marqueur vert = livreur (déplaçable).
+        </p>
+      </div>
+
+      <!-- FORMULAIRE -->
+      <div class="admin-card p-4" style="max-width:720px;">
+        <form th:action="@{/admin/delivery/position}" method="post"
+              enctype="multipart/form-data" th:object="${courierUpdate}">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+          <!-- Champs GPS cachés — remplis par le clic carte -->
+          <input type="hidden" id="courierLatitude"  th:field="*{courierLatitude}"/>
+          <input type="hidden" id="courierLongitude" th:field="*{courierLongitude}"/>
+
+          <div id="map-no-position" class="alert alert-warning small py-2 mb-3" style="display:none;">
+            Cliquez d'abord sur la carte pour placer le livreur.
+          </div>
+
+          <!-- Commande -->
+          <div class="mb-3">
+            <label for="orderId" class="form-label fw-semibold">Commande (n° de suivi)</label>
+            <select class="form-select" id="orderId" th:field="*{orderId}" required>
+              <option value="">Choisir…</option>
+              <option th:each="o : ${orders}" th:value="${o.id}"
+                      th:text="${o.trackingNumber} + ' — ' + ${o.customerName}">Cmd</option>
+            </select>
+          </div>
+
+          <!-- Téléphone livreur -->
+          <div class="mb-3">
+            <label for="courierPhone" class="form-label fw-semibold">Téléphone du livreur</label>
+            <input type="text" class="form-control" id="courierPhone"
+                   th:field="*{courierPhone}" maxlength="40" placeholder="ex. 22870123456"/>
+          </div>
+
+          <!-- Plaque -->
+          <div class="mb-3">
+            <label for="courierVehiclePlate" class="form-label fw-semibold">Plaque d'immatriculation</label>
+            <input type="text" class="form-control" id="courierVehiclePlate"
+                   th:field="*{courierVehiclePlate}" maxlength="32" placeholder="ex. AB-123-CD"/>
+          </div>
+
+          <!-- Photo livreur -->
+          <div class="mb-4">
+            <label for="courierPhoto" class="form-label fw-semibold">Photo livreur ou véhicule</label>
+            <input type="file" class="form-control" id="courierPhoto" name="courierPhoto"
+                   accept="image/jpeg,image/png,image/webp"/>
+            <div class="form-text small">Optionnel — JPG/PNG/WebP, max 5 Mo.</div>
+          </div>
+
+          <button type="submit" class="btn btn-hero-solid w-100" id="submitBtn">
+            <i class="bi bi-send me-2"></i>Enregistrer pour le client
+          </button>
+        </form>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Variables Thymeleaf → JS -->
+<script th:inline="javascript">
+/*<![CDATA[*/
+var BOLAS_LAT = /*[[${shopLatitude != null ? shopLatitude : 6.1375}]]*/ 6.1375;
+var BOLAS_LNG = /*[[${shopLongitude != null ? shopLongitude : 1.2123}]]*/ 1.2123;
+/*]]>*/
+</script>
+
+<script>
+function generateToken() {
+  var orderId = document.getElementById('genOrderId').value;
+  if (!orderId) { alert('Choisissez une commande.'); return; }
+  document.getElementById('baseUrlInput').value = window.location.origin;
+  var form = document.getElementById('generateForm');
+  form.action = '/admin/delivery/' + orderId + '/generate-token';
+  form.submit();
+}
+
+function copyLink() {
+  var text = document.getElementById('courierLinkText').textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    alert('Lien copié !');
+  });
+}
+</script>
+
+<!-- Google Maps — chargé APRÈS les variables -->
+<script>
+function initAdminMap() {
+  var mapEl = document.getElementById('admin-delivery-map');
+  if (!mapEl) return;
+
+  var center = { lat: BOLAS_LAT, lng: BOLAS_LNG };
+
+  var latVal = parseFloat(document.getElementById('courierLatitude').value);
+  var lngVal = parseFloat(document.getElementById('courierLongitude').value);
+  if (!isNaN(latVal) && !isNaN(lngVal)) {
+    center = { lat: latVal, lng: lngVal };
+  }
+
+  var map = new google.maps.Map(mapEl, {
+    zoom: 15,
+    center: center,
+    mapTypeId: 'roadmap',          // carte normale avec rues
+    mapTypeControl: true,
+    streetViewControl: false,
+    fullscreenControl: true
+    // PAS de styles custom → rues visibles normalement
+  });
+
+  // Marqueur boutique (rouge fixe)
+  new google.maps.Marker({
+    position: { lat: BOLAS_LAT, lng: BOLAS_LNG },
+    map: map,
+    title: "Bola's Boutique",
+    label: { text: 'B', color: '#fff', fontWeight: 'bold' }
+  });
+
+  // Marqueur livreur (vert, déplaçable)
+  var courierMarker = null;
+
+  function placeCourier(latLng) {
+    document.getElementById('courierLatitude').value  = latLng.lat().toFixed(7);
+    document.getElementById('courierLongitude').value = latLng.lng().toFixed(7);
+    document.getElementById('map-no-position').style.display = 'none';
+
+    if (courierMarker) {
+      courierMarker.setPosition(latLng);
+    } else {
+      courierMarker = new google.maps.Marker({
+        position: latLng,
+        map: map,
+        title: 'Livreur',
+        draggable: true,
+        icon: {
+          url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
+        }
+      });
+      courierMarker.addListener('dragend', function(e) {
+        placeCourier(e.latLng);
+      });
+    }
+  }
+
+  // Placer le marqueur livreur si coordonnées déjà présentes
+  if (!isNaN(latVal) && !isNaN(lngVal)) {
+    placeCourier(new google.maps.LatLng(latVal, lngVal));
+  }
+
+  // Clic sur la carte
+  map.addListener('click', function(e) {
+    placeCourier(e.latLng);
+  });
+}
+
+window.initAdminMap = initAdminMap;
+
+// Validation avant soumission
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('submitBtn').closest('form').addEventListener('submit', function(e) {
+    var lat = document.getElementById('courierLatitude').value;
+    var lng = document.getElementById('courierLongitude').value;
+    if (!lat || !lng) {
+      e.preventDefault();
+      document.getElementById('map-no-position').style.display = 'block';
+      document.getElementById('admin-delivery-map').scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+});
+</script>
+
+<script th:src="|https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initAdminMap|"
+        async defer></script>
+
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+</body>
+</html>

@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: bolas-ecommerce
+    runtime: java
+    buildCommand: mvn clean package -DskipTests
+    startCommand: java -Dspring.profiles.active=prod -jar target/bolas-ecommerce-1.0.0.jar
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bolas-db
+          property: connectionString
+      - key: DB_USERNAME
+        fromDatabase:
+          name: bolas-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: bolas-db
+          property: password
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: UPLOAD_PATH
+        value: /opt/render/project/uploads
+
+databases:
+  - name: bolas-db
+    databaseName: bolas
+    user: bolas_user
+    plan: free
