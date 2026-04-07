@@ -49,9 +49,12 @@ public class DataInitializer {
                 admin.setPasswordHash(passwordEncoder.encode(adminPassword));
                 adminUserRepository.save(admin);
             } else {
-                // Met à jour le mot de passe si les variables d'environnement ont changé
-                adminUserRepository.findByUsername(adminUsername.trim()).ifPresent(admin -> {
-                    if (!passwordEncoder.matches(adminPassword, admin.getPasswordHash())) {
+                // Synchronise toujours le premier admin avec les variables d'environnement
+                adminUserRepository.findAll().stream().findFirst().ifPresent(admin -> {
+                    boolean usernameChanged = !admin.getUsername().equals(adminUsername.trim());
+                    boolean passwordChanged = !passwordEncoder.matches(adminPassword, admin.getPasswordHash());
+                    if (usernameChanged || passwordChanged) {
+                        admin.setUsername(adminUsername.trim());
                         admin.setPasswordHash(passwordEncoder.encode(adminPassword));
                         adminUserRepository.save(admin);
                     }
