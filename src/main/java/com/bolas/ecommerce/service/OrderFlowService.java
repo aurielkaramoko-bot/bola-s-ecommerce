@@ -5,6 +5,7 @@ import com.bolas.ecommerce.model.OrderStatus;
 import com.bolas.ecommerce.repository.CustomerOrderRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -35,6 +36,7 @@ public class OrderFlowService {
      * Admin valide la commande PENDING → CONFIRMED.
      * Retourne le lien WhatsApp pour notifier le vendeur.
      */
+    @Transactional
     public String confirmOrder(CustomerOrder order, String vendorPhone, String appBaseUrl) {
         order.setStatus(OrderStatus.CONFIRMED);
         orderRepository.save(order);
@@ -56,6 +58,7 @@ public class OrderFlowService {
      * Vendeur valide la préparation CONFIRMED → READY.
      * Retourne le lien WhatsApp pour notifier l'admin.
      */
+    @Transactional
     public String markReady(CustomerOrder order, String appBaseUrl) {
         order.setStatus(OrderStatus.READY);
         orderRepository.save(order);
@@ -74,6 +77,7 @@ public class OrderFlowService {
      * Admin informe le client que sa commande est prête / en livraison.
      * Retourne le lien WhatsApp pour notifier le client.
      */
+    @Transactional
     public String notifyClientReady(CustomerOrder order, String appBaseUrl) {
         order.setStatus(OrderStatus.IN_DELIVERY);
         orderRepository.save(order);
