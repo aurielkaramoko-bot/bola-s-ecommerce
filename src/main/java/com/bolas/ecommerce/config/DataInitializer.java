@@ -1,5 +1,6 @@
 package com.bolas.ecommerce.config;
 
+import com.bolas.ecommerce.security.LoginAttemptRepository;
 import com.bolas.ecommerce.model.AdminUser;
 import com.bolas.ecommerce.model.Category;
 import com.bolas.ecommerce.model.CustomerOrder;
@@ -32,10 +33,13 @@ public class DataInitializer {
             CategoryRepository categoryRepository,
             ProductRepository productRepository,
             CustomerOrderRepository customerOrderRepository,
+            LoginAttemptRepository loginAttemptRepository,
             Environment environment,
             @Value("${bolas.admin.username:admin}") String adminUsername,
             @Value("${bolas.admin.password:}") String adminPassword) {
         return args -> {
+            // Nettoie tous les blocages de login au démarrage
+            loginAttemptRepository.deleteAll();
             boolean prod = isProd(environment);
             if (adminUserRepository.count() == 0) {
                 if (adminPassword == null || adminPassword.isBlank()) {
