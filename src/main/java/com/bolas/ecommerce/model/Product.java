@@ -63,6 +63,11 @@ public class Product {
     @Column(nullable = false)
     private boolean featured;
 
+    /** URL de la vidéo du produit (YouTube ou TikTok). Optionnel. */
+    @Size(max = 2000)
+    @Column(name = "video_url", length = 2000)
+    private String videoUrl;
+
     public Long getId() {
         return id;
     }
@@ -157,5 +162,13 @@ public class Product {
 
     public void setFeatured(boolean featured) {
         this.featured = featured;
+    }
+
+    public String getVideoUrl() {
+        return videoUrl;
+    }
+
+    public void setVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
     }
 }

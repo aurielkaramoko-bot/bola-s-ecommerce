@@ -20,9 +20,20 @@
 
   <div class="row g-5 align-items-start">
 
-    <!-- ===== PHOTO GAUCHE ===== -->
+    <!-- ===== PHOTO / VIDÉO GAUCHE ===== -->
     <div class="col-lg-6">
-      <div class="product-detail-photo">
+      <!-- Vidéo uploadée (priorité sur la photo) -->
+      <div th:if="${product.videoUrl != null and !product.videoUrl.isEmpty()}"
+           class="product-detail-photo">
+        <video th:src="${product.videoUrl}" controls muted playsinline
+               style="width:100%;border-radius:12px;max-height:480px;object-fit:cover;"
+               th:attr="poster=${product.imageUrl}">
+          Votre navigateur ne supporte pas la lecture vidéo.
+        </video>
+      </div>
+      <!-- Photo si pas de vidéo -->
+      <div th:if="${product.videoUrl == null or product.videoUrl.isEmpty()}"
+           class="product-detail-photo">
         <img th:if="${product.imageUrl != null and !product.imageUrl.isEmpty()}"
              th:src="${product.imageUrl}" th:alt="${product.name}"/>
         <div th:if="${product.imageUrl == null or product.imageUrl.isEmpty()}"

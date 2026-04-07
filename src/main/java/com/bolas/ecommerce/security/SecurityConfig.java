@@ -62,6 +62,7 @@ public class SecurityConfig {
                     headers.contentSecurityPolicy(csp -> csp.policyDirectives(
                             "default-src 'self'; "
                                     + "img-src 'self' data: https:; "
+                                    + "media-src 'self' https://res.cloudinary.com; "
                                     + "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://maps.googleapis.com; "
                                     + "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
                                     + "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; "

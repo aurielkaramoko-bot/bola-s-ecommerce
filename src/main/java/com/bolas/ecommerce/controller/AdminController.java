@@ -141,6 +141,8 @@ public class AdminController {
                               @RequestParam(value = "deliveryAvailableChecked", required = false) String deliveryChecked,
                               @RequestParam(value = "featuredChecked", required = false) String featuredChecked,
                               @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
+                              @RequestParam(value = "videoFile", required = false) MultipartFile videoFile,
+                              @RequestParam(value = "removeVideo", required = false) String removeVideo,
                               Model model) {
         form.setAvailable("true".equals(availableChecked));
         form.setDeliveryAvailable("true".equals(deliveryChecked));
@@ -168,6 +170,7 @@ public class AdminController {
         form.setCategory(category);
 
         try {
+            // --- Image ---
             if (imageFile != null && !imageFile.isEmpty()) {
                 form.setImageUrl(imageUploadService.store(imageFile));
             } else if (form.getId() != null) {
@@ -175,6 +178,15 @@ public class AdminController {
                 if (form.getImageUrl() == null || form.getImageUrl().isBlank()) {
                     form.setImageUrl(existing.getImageUrl());
                 }
+            }
+            // --- Vidéo ---
+            if ("true".equals(removeVideo)) {
+                form.setVideoUrl(null);
+            } else if (videoFile != null && !videoFile.isEmpty()) {
+                form.setVideoUrl(imageUploadService.storeVideo(videoFile));
+            } else if (form.getId() != null && (form.getVideoUrl() == null || form.getVideoUrl().isBlank())) {
+                Product existing = productRepository.findById(form.getId()).orElseThrow();
+                form.setVideoUrl(existing.getVideoUrl());
             }
         } catch (IllegalArgumentException e) {
             model.addAttribute("pageTitle", form.getId() != null ? "Modifier le produit — Bola's" : "Nouveau produit — Bola's");
@@ -186,7 +198,7 @@ public class AdminController {
             model.addAttribute("pageTitle", form.getId() != null ? "Modifier le produit — Bola's" : "Nouveau produit — Bola's");
             model.addAttribute("product", form);
             model.addAttribute("categories", categoryRepository.findAll());
-            model.addAttribute("flashError", "Échec de l'enregistrement de la photo.");
+            model.addAttribute("flashError", "Échec de l'enregistrement du fichier.");
             return "admin/product-form";
         }
 

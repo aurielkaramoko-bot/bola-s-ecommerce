@@ -21,7 +21,11 @@ public class ImageUploadService {
     private static final Set<String> ALLOWED_TYPES = Set.of(
             "image/jpeg", "image/png", "image/webp"
     );
-    private static final long MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+    private static final Set<String> ALLOWED_VIDEO_TYPES = Set.of(
+            "video/mp4", "video/quicktime", "video/webm", "video/x-msvideo"
+    );
+    private static final long MAX_SIZE = 5 * 1024 * 1024;       // 5 MB images
+    private static final long MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100 MB vidéos
 
     private final Path uploadDir;
     private final Cloudinary cloudinary;
@@ -68,6 +72,37 @@ public class ImageUploadService {
         }
     }
 
+    /**
+     * Stocke une vidéo filmée localement (MP4, MOV, WebM, AVI).
+     * - En prod : upload Cloudinary resource_type=video → URL CDN
+     * - En dev  : sauvegarde locale → /uploads/xxx.mp4
+     */
+    public String storeVideo(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_VIDEO_TYPES.contains(contentType)) {
+            throw new IllegalArgumentException("Type de vidéo non autorisé. Utilisez MP4, MOV, WebM ou AVI.");
+        }
+        if (file.getSize() > MAX_VIDEO_SIZE) {
+            throw new IllegalArgumentException("Vidéo trop volumineuse (max 100 Mo).");
+        }
+
+        if (cloudinaryEnabled) {
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "bolas/videos",
+                            "resource_type", "video"
+                    )
+            );
+            return (String) result.get("secure_url");
+        } else {
+            return saveLocally(file, contentType);
+        }
+    }
+
     private String uploadToCloudinary(MultipartFile file) throws IOException {
         Map<?, ?> result = cloudinary.uploader().upload(
                 file.getBytes(),
@@ -90,14 +125,18 @@ public class ImageUploadService {
     private String getExtension(String originalFilename, String contentType) {
         if (originalFilename != null && originalFilename.contains(".")) {
             String ext = originalFilename.substring(originalFilename.lastIndexOf('.')).toLowerCase();
-            if (Set.of(".jpg", ".jpeg", ".png", ".webp").contains(ext)) {
+            if (Set.of(".jpg", ".jpeg", ".png", ".webp", ".mp4", ".mov", ".webm", ".avi").contains(ext)) {
                 return ext;
             }
         }
         return switch (contentType) {
-            case "image/png"  -> ".png";
-            case "image/webp" -> ".webp";
-            default           -> ".jpg";
+            case "image/png"        -> ".png";
+            case "image/webp"       -> ".webp";
+            case "video/mp4"        -> ".mp4";
+            case "video/quicktime"  -> ".mov";
+            case "video/webm"       -> ".webm";
+            case "video/x-msvideo" -> ".avi";
+            default                 -> ".jpg";
         };
     }
 }
