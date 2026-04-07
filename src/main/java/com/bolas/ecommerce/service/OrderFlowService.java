@@ -3,6 +3,8 @@ package com.bolas.ecommerce.service;
 import com.bolas.ecommerce.model.CustomerOrder;
 import com.bolas.ecommerce.model.OrderStatus;
 import com.bolas.ecommerce.repository.CustomerOrderRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +18,8 @@ import java.nio.charset.StandardCharsets;
  */
 @Service
 public class OrderFlowService {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderFlowService.class);
 
     private final CustomerOrderRepository orderRepository;
     private final AuditLogService auditLogService;
@@ -38,8 +42,11 @@ public class OrderFlowService {
      */
     @Transactional
     public String confirmOrder(CustomerOrder order, String vendorPhone, String appBaseUrl) {
+        log.info("confirmOrder: id={} status={}", order.getId(), order.getStatus());
         order.setStatus(OrderStatus.CONFIRMED);
+        log.info("confirmOrder: saving with status CONFIRMED");
         orderRepository.save(order);
+        log.info("confirmOrder: saved OK");
         auditLogService.orderStatusChanged(order.getId(), order.getTrackingNumber(), "CONFIRMED");
 
         // Message WhatsApp pour le vendeur
