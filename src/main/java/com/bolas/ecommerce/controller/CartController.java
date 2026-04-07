@@ -105,6 +105,12 @@ public class CartController {
                            HttpSession session,
                            RedirectAttributes ra) {
 
+        // Forcer la connexion si pas de compte client
+        if (session.getAttribute("BOLAS_CUSTOMER") == null) {
+            ra.addFlashAttribute("flashError", "Veuillez vous connecter ou créer un compte pour commander.");
+            return "redirect:/customer/login";
+        }
+
         var lines = cartService.lines(session);
         if (lines.isEmpty()) {
             ra.addFlashAttribute("flashError", "Votre panier est vide.");

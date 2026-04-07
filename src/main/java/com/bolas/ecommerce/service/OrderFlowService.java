@@ -43,11 +43,16 @@ public class OrderFlowService {
     @Transactional
     public String confirmOrder(CustomerOrder order, String vendorPhone, String appBaseUrl) {
         log.info("confirmOrder: id={} status={}", order.getId(), order.getStatus());
-        order.setStatus(OrderStatus.CONFIRMED);
-        log.info("confirmOrder: saving with status CONFIRMED");
-        orderRepository.save(order);
-        log.info("confirmOrder: saved OK");
-        auditLogService.orderStatusChanged(order.getId(), order.getTrackingNumber(), "CONFIRMED");
+        try {
+            order.setStatus(OrderStatus.CONFIRMED);
+            log.info("confirmOrder: saving with status CONFIRMED");
+            orderRepository.save(order);
+            log.info("confirmOrder: saved OK");
+            auditLogService.orderStatusChanged(order.getId(), order.getTrackingNumber(), "CONFIRMED");
+        } catch (Exception e) {
+            log.error("confirmOrder FAILED: {}", e.getMessage(), e);
+            throw e;
+        }
 
         // Message WhatsApp pour le vendeur
         String msg = "🛍️ Nouvelle commande à préparer !\n\n"
