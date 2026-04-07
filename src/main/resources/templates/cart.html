@@ -104,6 +104,8 @@
       <!-- Infos client avant commande -->
       <form th:action="@{/cart/checkout}" method="post" id="checkoutForm">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <input type="hidden" name="clientLatitude"  id="clientLat"/>
+        <input type="hidden" name="clientLongitude" id="clientLng"/>
         <div class="row g-2 mb-3">
           <div class="col-md-6">
             <input type="text" class="form-control" name="customerName" required
@@ -118,10 +120,17 @@
                    placeholder="Votre adresse de livraison (optionnel)" maxlength="500"/>
           </div>
           <div class="col-md-6">
-            <select class="form-select" name="deliveryOption">
+            <select class="form-select" name="deliveryOption" id="deliveryOptionSelect">
               <option value="HOME">Livraison à domicile</option>
               <option value="PICKUP">Retrait en boutique</option>
             </select>
+          </div>
+          <!-- Bouton GPS — visible seulement si livraison à domicile -->
+          <div class="col-md-6" id="gpsBlock">
+            <button type="button" class="btn btn-outline-secondary w-100" onclick="getLocation()">
+              <i class="bi bi-geo-alt me-1"></i>Partager ma position GPS
+            </button>
+            <p class="small text-muted mt-1 mb-0" id="gpsStatus">Optionnel — permet au livreur de vous trouver facilement.</p>
           </div>
         </div>
         <button type="submit" class="btn-wa-full">
@@ -188,8 +197,30 @@ document.querySelectorAll('.qty-form').forEach(function(form) {
 });
 </script>
 
-<!-- WhatsApp -->
+<!-- GPS client -->
 <script>
+function getLocation() {
+  if (!navigator.geolocation) {
+    document.getElementById('gpsStatus').textContent = 'GPS non supporté par ce navigateur.';
+    return;
+  }
+  document.getElementById('gpsStatus').textContent = 'Recherche de votre position…';
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    document.getElementById('clientLat').value = pos.coords.latitude.toFixed(7);
+    document.getElementById('clientLng').value = pos.coords.longitude.toFixed(7);
+    document.getElementById('gpsStatus').textContent =
+      '✓ Position enregistrée (précision ~' + Math.round(pos.coords.accuracy) + ' m)';
+    document.getElementById('gpsStatus').style.color = '#198754';
+  }, function() {
+    document.getElementById('gpsStatus').textContent = 'Impossible d\'obtenir la position. Saisissez votre adresse.';
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+// Masquer GPS si retrait en boutique
+document.getElementById('deliveryOptionSelect').addEventListener('change', function() {
+  document.getElementById('gpsBlock').style.display = this.value === 'PICKUP' ? 'none' : '';
+});
+</script>
 (function() {
   var btn = document.getElementById('whatsappCartBtn');
   if (!btn) return;

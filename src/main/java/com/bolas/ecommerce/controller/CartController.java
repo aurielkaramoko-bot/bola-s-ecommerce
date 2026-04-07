@@ -92,6 +92,8 @@ public class CartController {
                            @RequestParam String customerPhone,
                            @RequestParam(required = false, defaultValue = "") String customerAddress,
                            @RequestParam(defaultValue = "HOME") String deliveryOption,
+                           @RequestParam(required = false) Double clientLatitude,
+                           @RequestParam(required = false) Double clientLongitude,
                            HttpSession session,
                            RedirectAttributes ra) {
 
@@ -110,6 +112,8 @@ public class CartController {
         order.setDeliveryOption("PICKUP".equals(deliveryOption) ? DeliveryOption.PICKUP : DeliveryOption.HOME);
         order.setTotalAmountCfa(cartService.totalAmountCfa(session));
         order.setDeliveryFeeCfa(0L);
+        if (clientLatitude != null)  order.setClientLatitude(clientLatitude);
+        if (clientLongitude != null) order.setClientLongitude(clientLongitude);
 
         for (var line : lines) {
             OrderLine ol = new OrderLine();
