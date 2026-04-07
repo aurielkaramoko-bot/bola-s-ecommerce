@@ -48,6 +48,14 @@ public class DataInitializer {
                 admin.setUsername(adminUsername.trim());
                 admin.setPasswordHash(passwordEncoder.encode(adminPassword));
                 adminUserRepository.save(admin);
+            } else {
+                // Met à jour le mot de passe si les variables d'environnement ont changé
+                adminUserRepository.findByUsername(adminUsername.trim()).ifPresent(admin -> {
+                    if (!passwordEncoder.matches(adminPassword, admin.getPasswordHash())) {
+                        admin.setPasswordHash(passwordEncoder.encode(adminPassword));
+                        adminUserRepository.save(admin);
+                    }
+                });
             }
 
             if (categoryRepository.count() > 0) {
