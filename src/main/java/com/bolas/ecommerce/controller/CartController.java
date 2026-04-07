@@ -1,10 +1,12 @@
 package com.bolas.ecommerce.controller;
 
+import com.bolas.ecommerce.model.Customer;
 import com.bolas.ecommerce.model.CustomerOrder;
 import com.bolas.ecommerce.model.DeliveryOption;
 import com.bolas.ecommerce.model.OrderLine;
 import com.bolas.ecommerce.repository.CustomerOrderRepository;
 import com.bolas.ecommerce.service.CartService;
+import com.bolas.ecommerce.service.CustomerService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,13 +26,16 @@ public class CartController {
 
     private final CartService cartService;
     private final CustomerOrderRepository orderRepository;
+    private final CustomerService customerService;
     private final String whatsappNumber;
 
     public CartController(CartService cartService,
                           CustomerOrderRepository orderRepository,
+                          CustomerService customerService,
                           @Value("${whatsapp.number}") String whatsappNumber) {
         this.cartService = cartService;
         this.orderRepository = orderRepository;
+        this.customerService = customerService;
         this.whatsappNumber = whatsappNumber;
     }
 
@@ -39,6 +44,9 @@ public class CartController {
         model.addAttribute("pageTitle", "Panier — Bola's");
         model.addAttribute("cartLines", cartService.lines(session));
         model.addAttribute("cartTotalCfa", cartService.totalAmountCfa(session));
+        // Pré-remplir les infos si client connecté
+        Customer customer = (Customer) session.getAttribute("BOLAS_CUSTOMER");
+        model.addAttribute("connectedCustomer", customer);
         return "cart";
     }
 
@@ -105,7 +113,16 @@ public class CartController {
 
         // Créer la commande
         CustomerOrder order = new CustomerOrder();
-        order.setTrackingNumber("BOL-" + UUID.randomUUID().toString().replace("-","").substring(0,8).toUpperCase());
+
+        // Tracking number personnalisé si client connecté, sinon UUID classique
+        Customer customer = (Customer) session.getAttribute("BOLAS_CUSTOMER");
+        String trackingNumber;
+        if (customer != null) {
+            trackingNumber = customerService.generateTrackingNumber(customer);
+        } else {
+            trackingNumber = "BOL-" + UUID.randomUUID().toString().replace("-","").substring(0,8).toUpperCase();
+        }
+        order.setTrackingNumber(trackingNumber);
         order.setCustomerName(customerName.trim());
         order.setCustomerPhone(customerPhone.trim());
         order.setCustomerAddress(customerAddress.trim());

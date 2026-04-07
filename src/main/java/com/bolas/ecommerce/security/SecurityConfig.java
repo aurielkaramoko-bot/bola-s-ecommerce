@@ -1,5 +1,6 @@
 package com.bolas.ecommerce.security;
 
+import com.bolas.ecommerce.security.GoogleOAuth2SuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -25,17 +26,20 @@ public class SecurityConfig {
     private final BolasAuthenticationFailureHandler failureHandler;
     private final RateLimitingFilter rateLimitingFilter;
     private final SensitiveCacheControlFilter sensitiveCacheControlFilter;
+    private final GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler;
     private final Environment environment;
 
     public SecurityConfig(BolasAuthenticationSuccessHandler successHandler,
                           BolasAuthenticationFailureHandler failureHandler,
                           RateLimitingFilter rateLimitingFilter,
                           SensitiveCacheControlFilter sensitiveCacheControlFilter,
+                          GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler,
                           Environment environment) {
         this.successHandler = successHandler;
         this.failureHandler = failureHandler;
         this.rateLimitingFilter = rateLimitingFilter;
         this.sensitiveCacheControlFilter = sensitiveCacheControlFilter;
+        this.googleOAuth2SuccessHandler = googleOAuth2SuccessHandler;
         this.environment = environment;
     }
 
@@ -107,10 +111,18 @@ public class SecurityConfig {
                         new AntPathRequestMatcher("/webjars/**"),
                         new AntPathRequestMatcher("/admin/login"),
                         new AntPathRequestMatcher("/admin/login-error"),
+                        new AntPathRequestMatcher("/customer/login"),
+                        new AntPathRequestMatcher("/customer/signup"),
+                        new AntPathRequestMatcher("/customer/logout"),
+                        new AntPathRequestMatcher("/vendor/login"),
                         new AntPathRequestMatcher("/error")
                 ).permitAll()
                 .requestMatchers(new AntPathRequestMatcher("/h2-console/**")).access((authentication, context) ->
                         new org.springframework.security.authorization.AuthorizationDecision(!isProdProfile()))
+                .requestMatchers(
+                        new AntPathRequestMatcher("/vendor"),
+                        new AntPathRequestMatcher("/vendor/**")
+                ).hasAnyRole("VENDOR", "ADMIN")
                 .requestMatchers(
                         new AntPathRequestMatcher("/admin"),
                         new AntPathRequestMatcher("/admin/**")
@@ -133,6 +145,12 @@ public class SecurityConfig {
                 .logoutSuccessUrl("/")
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID")
+        );
+
+        // OAuth2 Google — login client uniquement
+        http.oauth2Login(oauth2 -> oauth2
+                .loginPage("/customer/login")
+                .successHandler(googleOAuth2SuccessHandler)
         );
 
         http.addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);

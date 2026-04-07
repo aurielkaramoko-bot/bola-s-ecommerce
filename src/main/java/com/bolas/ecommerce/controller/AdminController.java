@@ -8,19 +8,23 @@ import com.bolas.ecommerce.model.DeliveryOption;
 import com.bolas.ecommerce.model.OrderLine;
 import com.bolas.ecommerce.model.OrderStatus;
 import com.bolas.ecommerce.model.Product;
+import com.bolas.ecommerce.model.VendorUser;
 import com.bolas.ecommerce.repository.CategoryRepository;
 import com.bolas.ecommerce.repository.CustomerOrderRepository;
 import com.bolas.ecommerce.repository.OrderLineRepository;
 import com.bolas.ecommerce.repository.ProductRepository;
+import com.bolas.ecommerce.repository.VendorUserRepository;
 import com.bolas.ecommerce.service.AuditLogService;
 import com.bolas.ecommerce.service.CategoryCoverImageUrlService;
 import com.bolas.ecommerce.service.CategoryCoverImageUrlService.Resolution;
 import com.bolas.ecommerce.service.CategoryCoverImageUrlService.ResolutionKind;
 import com.bolas.ecommerce.service.ImageUploadService;
 import com.bolas.ecommerce.service.InputSanitizerService;
+import com.bolas.ecommerce.service.OrderFlowService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Value; // IMPORT IMPORTANT
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -29,6 +33,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,6 +50,9 @@ public class AdminController {
     private final CategoryCoverImageUrlService categoryCoverImageUrlService;
     private final InputSanitizerService inputSanitizerService;
     private final AuditLogService auditLogService;
+    private final OrderFlowService orderFlowService;
+    private final VendorUserRepository vendorUserRepository;
+    private final PasswordEncoder passwordEncoder;
 
     // --- ICI : RÉCUPÉRATION DE TA CLÉ API DEPUIS TON PC ---
     @Value("${google.maps.api.key}")
@@ -63,7 +71,10 @@ public class AdminController {
                            ImageUploadService imageUploadService,
                            CategoryCoverImageUrlService categoryCoverImageUrlService,
                            InputSanitizerService inputSanitizerService,
-                           AuditLogService auditLogService) {
+                           AuditLogService auditLogService,
+                           OrderFlowService orderFlowService,
+                           VendorUserRepository vendorUserRepository,
+                           PasswordEncoder passwordEncoder) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.customerOrderRepository = customerOrderRepository;
@@ -72,6 +83,9 @@ public class AdminController {
         this.categoryCoverImageUrlService = categoryCoverImageUrlService;
         this.inputSanitizerService = inputSanitizerService;
         this.auditLogService = auditLogService;
+        this.orderFlowService = orderFlowService;
+        this.vendorUserRepository = vendorUserRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @InitBinder
@@ -309,9 +323,16 @@ public class AdminController {
     @GetMapping("/admin/orders")
     public String orders(Model model) {
         model.addAttribute("pageTitle", "Commandes — Admin Bola's");
-        model.addAttribute("orders", customerOrderRepository.findAllByOrderByCreatedAtDesc());
+        // Séparer par statut pour l'affichage priorisé
+        model.addAttribute("pendingOrders",  customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.PENDING));
+        model.addAttribute("confirmedOrders",customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.CONFIRMED));
+        model.addAttribute("readyOrders",    customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.READY));
+        model.addAttribute("activeOrders",   customerOrderRepository.findByStatusOrderByCreatedAtDesc(OrderStatus.IN_DELIVERY));
+        model.addAttribute("closedOrders",   customerOrderRepository.findTop20ByStatusInOrderByCreatedAtDesc(
+                List.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED)));
         model.addAttribute("newOrder", new NewOrderDto());
         model.addAttribute("products", productRepository.findByAvailableTrue());
+        model.addAttribute("vendors", vendorUserRepository.findAll());
         return "admin/orders";
     }
 
@@ -355,6 +376,83 @@ public class AdminController {
         customerOrderRepository.save(order);
         auditLogService.orderStatusChanged(id, order.getTrackingNumber(), status.name());
         return "redirect:/admin/orders";
+    }
+
+    /** Admin valide une commande PENDING → CONFIRMED + notifie le vendeur via WhatsApp */
+    @PostMapping("/admin/orders/{id}/confirm")
+    public String confirmOrder(@PathVariable Long id,
+                               @RequestParam(required = false) String vendorPhone,
+                               HttpServletRequest request,
+                               RedirectAttributes ra) {
+        CustomerOrder order = customerOrderRepository.findById(id).orElseThrow();
+        if (order.getStatus() != OrderStatus.PENDING) {
+            ra.addFlashAttribute("flashError", "Cette commande n'est plus en attente.");
+            return "redirect:/admin/orders";
+        }
+        String baseUrl = baseUrl(request);
+        String phone = (vendorPhone != null && !vendorPhone.isBlank()) ? vendorPhone : "";
+        String waLink = orderFlowService.confirmOrder(order, phone, baseUrl);
+        ra.addFlashAttribute("flashOk", "Commande " + order.getTrackingNumber() + " validée !");
+        if (!phone.isBlank()) ra.addFlashAttribute("waVendorLink", waLink);
+        return "redirect:/admin/orders";
+    }
+
+    /** Admin informe le client que sa commande est prête / en livraison */
+    @PostMapping("/admin/orders/{id}/notify-client")
+    public String notifyClient(@PathVariable Long id,
+                               HttpServletRequest request,
+                               RedirectAttributes ra) {
+        CustomerOrder order = customerOrderRepository.findById(id).orElseThrow();
+        if (order.getStatus() != OrderStatus.READY) {
+            ra.addFlashAttribute("flashError", "La commande n'est pas encore prête.");
+            return "redirect:/admin/orders";
+        }
+        String waLink = orderFlowService.notifyClientReady(order, baseUrl(request));
+        ra.addFlashAttribute("flashOk", "Client notifié — commande en livraison.");
+        ra.addFlashAttribute("waClientLink", waLink);
+        return "redirect:/admin/orders";
+    }
+
+    // --- Gestion des vendeurs ---
+
+    @GetMapping("/admin/vendors")
+    public String vendors(Model model) {
+        model.addAttribute("pageTitle", "Vendeurs — Admin Bola's");
+        model.addAttribute("vendors", vendorUserRepository.findAll());
+        return "admin/vendors";
+    }
+
+    @PostMapping("/admin/vendors")
+    public String saveVendor(@RequestParam String username,
+                             @RequestParam String password,
+                             @RequestParam String phone,
+                             RedirectAttributes ra) {
+        if (vendorUserRepository.findByUsername(username).isPresent()) {
+            ra.addFlashAttribute("flashError", "Ce nom d'utilisateur existe déjà.");
+            return "redirect:/admin/vendors";
+        }
+        VendorUser v = new VendorUser();
+        v.setUsername(username.trim());
+        v.setPasswordHash(passwordEncoder.encode(password));
+        v.setPhone(phone.trim());
+        vendorUserRepository.save(v);
+        ra.addFlashAttribute("flashOk", "Vendeur créé.");
+        return "redirect:/admin/vendors";
+    }
+
+    @PostMapping("/admin/vendors/{id}/toggle")
+    public String toggleVendor(@PathVariable Long id, RedirectAttributes ra) {
+        VendorUser v = vendorUserRepository.findById(id).orElseThrow();
+        v.setActive(!v.isActive());
+        vendorUserRepository.save(v);
+        ra.addFlashAttribute("flashOk", v.isActive() ? "Vendeur activé." : "Vendeur désactivé.");
+        return "redirect:/admin/vendors";
+    }
+
+    private String baseUrl(HttpServletRequest request) {
+        return request.getScheme() + "://" + request.getServerName()
+                + (request.getServerPort() != 80 && request.getServerPort() != 443
+                ? ":" + request.getServerPort() : "");
     }
 
     @PostMapping("/admin/orders/{id}/delete")

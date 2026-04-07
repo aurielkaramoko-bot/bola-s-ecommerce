@@ -109,11 +109,13 @@
         <div class="row g-2 mb-3">
           <div class="col-md-6">
             <input type="text" class="form-control" name="customerName" required
-                   placeholder="Votre nom complet" maxlength="200"/>
+                   placeholder="Votre nom complet" maxlength="200"
+                   th:value="${connectedCustomer != null} ? ${connectedCustomer.firstName + ' ' + connectedCustomer.lastName} : ''"/>
           </div>
           <div class="col-md-6">
             <input type="text" class="form-control" name="customerPhone" required
-                   placeholder="Votre téléphone (ex. 22890123456)" maxlength="40"/>
+                   placeholder="Votre téléphone (ex. 22890123456)" maxlength="40"
+                   th:value="${connectedCustomer != null} ? ${connectedCustomer.phone} : ''"/>
           </div>
           <div class="col-12">
             <input type="text" class="form-control" name="customerAddress"

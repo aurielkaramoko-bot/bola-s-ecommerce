@@ -22,6 +22,9 @@
     <a class="nav-link" th:href="@{/admin/delivery}" th:classappend="${active == 'delivery' ? 'active' : ''}">
       <i class="bi bi-geo-alt me-2"></i><span th:text="'Livraison GPS'">Livraison</span>
     </a>
+    <a class="nav-link" th:href="@{/admin/vendors}" th:classappend="${active == 'vendors' ? 'active' : ''}">
+      <i class="bi bi-person-badge me-2"></i><span>Vendeurs</span>
+    </a>
     <hr style="border-color: #eee8e4;"/>
     <form th:action="@{/admin/logout}" method="post" class="px-2">
       <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>

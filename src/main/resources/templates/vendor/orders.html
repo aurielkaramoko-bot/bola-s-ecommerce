@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Commandes vendeur — Bola's</title>
+</head>
+<body class="bolas-body">
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<main class="container py-4 flex-grow-1">
+  <h1 class="h3 fw-bold mb-4" style="color:var(--bolas-accent);">
+    <i class="bi bi-bag-check me-2"></i>Mes commandes à préparer
+  </h1>
+
+  <!-- Notifications flash -->
+  <div th:if="${flashOk}" class="alert alert-success" th:text="${flashOk}"></div>
+  <div th:if="${flashError}" class="alert alert-danger" th:text="${flashError}"></div>
+
+  <!-- Lien WhatsApp admin si commande prête -->
+  <div th:if="${waNotifyLink}" class="alert alert-info d-flex align-items-center gap-3">
+    <i class="bi bi-whatsapp fs-4 text-success"></i>
+    <div>
+      Commande marquée prête. Notifiez l'admin :
+      <a th:href="${waNotifyLink}" target="_blank" rel="noopener noreferrer"
+         class="btn btn-sm btn-success ms-2">
+        <i class="bi bi-whatsapp me-1"></i>Envoyer sur WhatsApp
+      </a>
+    </div>
+  </div>
+
+  <!-- À préparer -->
+  <h2 class="h5 fw-semibold mb-3" style="color:var(--bolas-accent);">
+    <span class="badge bg-warning text-dark me-2" th:text="${toProcess.size()}">0</span>
+    À préparer
+  </h2>
+
+  <div th:if="${toProcess.isEmpty()}" class="text-muted mb-4">Aucune commande en attente.</div>
+
+  <div class="row g-3 mb-5">
+    <div class="col-md-6 col-lg-4" th:each="o : ${toProcess}">
+      <div class="admin-card p-3 h-100 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <span class="fw-bold" style="color:var(--bolas-accent);" th:text="${o.trackingNumber}">—</span>
+          <span class="badge bg-warning text-dark">À préparer</span>
+        </div>
+        <p class="mb-1"><i class="bi bi-person me-1"></i><span th:text="${o.customerName}">—</span></p>
+        <p class="mb-1 small text-muted"><i class="bi bi-telephone me-1"></i><span th:text="${o.customerPhone}">—</span></p>
+        <p class="mb-1 small" th:if="${o.customerAddress != null and !o.customerAddress.isEmpty()}">
+          <i class="bi bi-geo-alt me-1"></i><span th:text="${o.customerAddress}">—</span>
+        </p>
+        <p class="mb-2">
+          <span th:if="${o.deliveryOption.name() == 'HOME'}" class="badge bg-info text-dark">
+            <i class="bi bi-truck me-1"></i>Livraison domicile
+          </span>
+          <span th:if="${o.deliveryOption.name() == 'PICKUP'}" class="badge bg-secondary">
+            <i class="bi bi-shop me-1"></i>Retrait boutique
+          </span>
+        </p>
+
+        <!-- Lignes produits -->
+        <ul class="list-unstyled small mb-2" th:if="${!o.lines.isEmpty()}">
+          <li th:each="l : ${o.lines}" class="mb-1">
+            <i class="bi bi-box me-1"></i>
+            <span th:text="${l.product.name}">Produit</span>
+            <span class="text-muted">x<span th:text="${l.quantity}">1</span></span>
+          </li>
+        </ul>
+
+        <p class="fw-bold mt-auto mb-3" style="color:var(--bolas-accent);"
+           th:text="${#numbers.formatInteger(o.totalAmountCfa,0,'COMMA')} + ' CFA'">0 CFA</p>
+
+        <!-- Bouton validation -->
+        <form th:action="@{/vendor/orders/{id}/ready(id=${o.id})}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <button type="submit" class="btn btn-hero-solid w-100"
+                  onclick="return confirm('Marquer cette commande comme prête ?')">
+            <i class="bi bi-check-circle me-1"></i>Commande prête
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Déjà préparées -->
+  <h2 class="h5 fw-semibold mb-3 text-muted">Récemment préparées</h2>
+  <div th:if="${done.isEmpty()}" class="text-muted">Aucune commande préparée récemment.</div>
+  <div class="table-responsive admin-card" th:if="${!done.isEmpty()}">
+    <table class="table table-sm align-middle mb-0 small">
+      <thead class="table-light">
+        <tr>
+          <th>N° suivi</th><th>Client</th><th>Option</th><th>Montant</th><th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="o : ${done}">
+          <td th:text="${o.trackingNumber}">—</td>
+          <td th:text="${o.customerName}">—</td>
+          <td th:text="${o.deliveryOption.name() == 'HOME' ? 'Domicile' : 'Retrait'}">—</td>
+          <td th:text="${o.totalAmountCfa} + ' CFA'">—</td>
+          <td><span class="badge bg-success">Prête</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+</body>
+</html>

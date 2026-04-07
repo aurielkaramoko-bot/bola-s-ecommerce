@@ -49,22 +49,39 @@
         </li>
       </ul>
 
-      <!-- Bouton connexion droite -->
-      <div class="d-flex justify-content-center justify-content-lg-end pb-3 pb-lg-0">
-        <a class="btn btn-admin-pill me-2" th:href="@{/cart}">
+      <!-- Boutons droite -->
+      <div class="d-flex justify-content-center justify-content-lg-end align-items-center gap-2 pb-3 pb-lg-0">
+        <a class="btn btn-admin-pill" th:href="@{/cart}">
           <i class="bi bi-cart3 me-1"></i>
-          <span th:text="'Panier'">Panier</span>
+          <span>Panier</span>
           <span th:if="${cartItemCount != null and cartItemCount > 0}"
                 class="ms-1 badge rounded-pill"
                 style="background:#fff;color:#8B5E3C;border:1px solid rgba(255,255,255,.65);"
                 th:text="${cartItemCount}">0</span>
         </a>
-        <a class="btn btn-admin-pill" th:href="@{/admin/login}"
-           sec:authorize="!isAuthenticated()">
-          <i class="bi bi-person-lock me-1"></i> Connexion
-        </a>
+
+        <!-- Client connecté via session -->
+        <th:block th:if="${session.BOLAS_CUSTOMER != null}">
+          <span class="small fw-semibold" style="color:var(--bolas-accent);"
+                th:text="'Bonjour, ' + ${session.BOLAS_CUSTOMER.firstName}">Bonjour</span>
+          <form th:action="@{/customer/logout}" method="post" class="m-0">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="btn btn-admin-pill">
+              <i class="bi bi-box-arrow-right me-1"></i>Déconnexion
+            </button>
+          </form>
+        </th:block>
+
+        <!-- Pas de client connecté -->
+        <th:block th:if="${session.BOLAS_CUSTOMER == null}">
+          <a class="btn btn-admin-pill" th:href="@{/customer/login}">
+            <i class="bi bi-person me-1"></i>Connexion
+          </a>
+        </th:block>
+
+        <!-- Admin dashboard si admin connecté -->
         <a class="btn btn-admin-pill" th:href="@{/admin}"
-           sec:authorize="isAuthenticated()">
+           sec:authorize="hasRole('ADMIN')">
           <i class="bi bi-speedometer2 me-1"></i> Tableau de bord
         </a>
       </div>
