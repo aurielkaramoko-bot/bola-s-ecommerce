@@ -5,7 +5,7 @@
 <th:block th:fragment="card (p)">
   <article class="product-card-artisal d-flex flex-column">
 
-    <!-- Image + badges -->
+    <!-- Image / Vidéo + badges -->
     <div class="product-img-wrap flex-shrink-0">
       <span th:if="${p.onPromotion}" class="badge-promo">PROMO</span>
       <span class="badge-price">
@@ -13,9 +13,21 @@
               th:text="${#numbers.formatInteger(p.priceCfa,0,'COMMA')} + ' CFA'">0</span>
         <span th:text="${#numbers.formatInteger(p.effectivePriceCfa,0,'COMMA')} + ' CFA'">0 CFA</span>
       </span>
-      <img th:if="${p.imageUrl != null and !p.imageUrl.isEmpty()}"
+
+      <!-- Vidéo uploadée : aperçu autoplay silencieux -->
+      <video th:if="${p.videoUrl != null and !p.videoUrl.isEmpty()}"
+             th:src="${p.videoUrl}"
+             autoplay muted loop playsinline
+             style="width:100%;height:100%;object-fit:cover;display:block;"
+             th:attr="poster=${p.imageUrl}">
+      </video>
+
+      <!-- Image si pas de vidéo -->
+      <img th:if="${(p.videoUrl == null or p.videoUrl.isEmpty()) and (p.imageUrl != null and !p.imageUrl.isEmpty())}"
            th:src="${p.imageUrl}" th:alt="${p.name}" loading="lazy"/>
-      <div th:if="${p.imageUrl == null or p.imageUrl.isEmpty()}"
+
+      <!-- Placeholder si ni vidéo ni image -->
+      <div th:if="${(p.videoUrl == null or p.videoUrl.isEmpty()) and (p.imageUrl == null or p.imageUrl.isEmpty())}"
            class="d-flex align-items-center justify-content-center h-100 text-secondary">
         <i class="bi bi-image fs-1"></i>
       </div>
