@@ -100,12 +100,34 @@
           </button>
         </form>
       </div>
-      <!-- Commander via WhatsApp -->
-      <a id="whatsappCartBtn" href="#" target="_blank" rel="noopener"
-         class="btn-wa-full"
-         th:attr="data-wa=${whatsappNumber}">
-        <i class="bi bi-whatsapp me-2"></i>Commander via WhatsApp
-      </a>
+
+      <!-- Infos client avant commande -->
+      <form th:action="@{/cart/checkout}" method="post" id="checkoutForm">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <div class="row g-2 mb-3">
+          <div class="col-md-6">
+            <input type="text" class="form-control" name="customerName" required
+                   placeholder="Votre nom complet" maxlength="200"/>
+          </div>
+          <div class="col-md-6">
+            <input type="text" class="form-control" name="customerPhone" required
+                   placeholder="Votre téléphone (ex. 22890123456)" maxlength="40"/>
+          </div>
+          <div class="col-12">
+            <input type="text" class="form-control" name="customerAddress"
+                   placeholder="Votre adresse de livraison (optionnel)" maxlength="500"/>
+          </div>
+          <div class="col-md-6">
+            <select class="form-select" name="deliveryOption">
+              <option value="HOME">Livraison à domicile</option>
+              <option value="PICKUP">Retrait en boutique</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn-wa-full">
+          <i class="bi bi-whatsapp me-2"></i>Commander via WhatsApp
+        </button>
+      </form>
     </div>
   </div>
 
