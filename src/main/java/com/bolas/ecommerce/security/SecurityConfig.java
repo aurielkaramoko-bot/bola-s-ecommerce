@@ -4,6 +4,9 @@ import com.bolas.ecommerce.security.GoogleOAuth2SuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -27,6 +30,7 @@ public class SecurityConfig {
     private final RateLimitingFilter rateLimitingFilter;
     private final SensitiveCacheControlFilter sensitiveCacheControlFilter;
     private final GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler;
+    private final AdminUserDetailsService adminUserDetailsService;
     private final Environment environment;
 
     public SecurityConfig(BolasAuthenticationSuccessHandler successHandler,
@@ -34,13 +38,23 @@ public class SecurityConfig {
                           RateLimitingFilter rateLimitingFilter,
                           SensitiveCacheControlFilter sensitiveCacheControlFilter,
                           GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler,
+                          AdminUserDetailsService adminUserDetailsService,
                           Environment environment) {
         this.successHandler = successHandler;
         this.failureHandler = failureHandler;
         this.rateLimitingFilter = rateLimitingFilter;
         this.sensitiveCacheControlFilter = sensitiveCacheControlFilter;
         this.googleOAuth2SuccessHandler = googleOAuth2SuccessHandler;
+        this.adminUserDetailsService = adminUserDetailsService;
         this.environment = environment;
+    }
+
+    @Bean
+    public AuthenticationManager adminAuthenticationManager(PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(adminUserDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return new ProviderManager(provider);
     }
 
     @Bean
@@ -139,6 +153,9 @@ public class SecurityConfig {
                 .failureHandler(failureHandler)
                 .permitAll()
         );
+
+        // Lier explicitement l'AuthenticationManager admin au formLogin
+        http.authenticationManager(adminAuthenticationManager(passwordEncoder()));
 
         http.logout(logout -> logout
                 .logoutRequestMatcher(new AntPathRequestMatcher("/admin/logout", "POST"))
