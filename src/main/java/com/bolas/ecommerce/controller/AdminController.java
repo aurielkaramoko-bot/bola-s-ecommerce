@@ -1,8 +1,11 @@
 package com.bolas.ecommerce.controller;
 
 import com.bolas.ecommerce.dto.CourierUpdateDto;
+import com.bolas.ecommerce.dto.NewOrderDto;
 import com.bolas.ecommerce.model.Category;
 import com.bolas.ecommerce.model.CustomerOrder;
+import com.bolas.ecommerce.model.DeliveryOption;
+import com.bolas.ecommerce.model.OrderLine;
 import com.bolas.ecommerce.model.OrderStatus;
 import com.bolas.ecommerce.model.Product;
 import com.bolas.ecommerce.repository.CategoryRepository;
@@ -295,7 +298,42 @@ public class AdminController {
     public String orders(Model model) {
         model.addAttribute("pageTitle", "Commandes — Admin Bola's");
         model.addAttribute("orders", customerOrderRepository.findAllByOrderByCreatedAtDesc());
+        model.addAttribute("newOrder", new NewOrderDto());
+        model.addAttribute("products", productRepository.findByAvailableTrue());
         return "admin/orders";
+    }
+
+    @PostMapping("/admin/orders/new")
+    public String createOrder(@Valid @ModelAttribute("newOrder") NewOrderDto dto,
+                              BindingResult br,
+                              @RequestParam(required = false) Long productId,
+                              RedirectAttributes ra) {
+        if (br.hasErrors()) {
+            ra.addFlashAttribute("flashError", "Vérifiez les champs de la commande.");
+            return "redirect:/admin/orders";
+        }
+        CustomerOrder order = new CustomerOrder();
+        order.setTrackingNumber("BOL-" + UUID.randomUUID().toString().replace("-","").substring(0,8).toUpperCase());
+        order.setCustomerName(dto.getCustomerName());
+        order.setCustomerPhone(dto.getCustomerPhone());
+        order.setCustomerAddress(dto.getCustomerAddress());
+        order.setDeliveryOption(dto.getDeliveryOption() != null ? dto.getDeliveryOption() : DeliveryOption.HOME);
+        order.setTotalAmountCfa(dto.getTotalAmountCfa());
+        order.setDeliveryFeeCfa(dto.getDeliveryFeeCfa());
+
+        if (productId != null) {
+            productRepository.findById(productId).ifPresent(p -> {
+                OrderLine line = new OrderLine();
+                line.setProduct(p);
+                line.setQuantity(1);
+                line.setUnitPriceCfa(p.getEffectivePriceCfa());
+                order.addLine(line);
+            });
+        }
+        customerOrderRepository.save(order);
+        auditLogService.orderStatusChanged(order.getId(), order.getTrackingNumber(), "CREATED");
+        ra.addFlashAttribute("flashOk", "Commande " + order.getTrackingNumber() + " créée.");
+        return "redirect:/admin/orders";
     }
 
     @PostMapping("/admin/orders/{id}/status")
