@@ -132,6 +132,7 @@ public class SecurityConfig {
                         new AntPathRequestMatcher("/customer/login"),
                         new AntPathRequestMatcher("/customer/signup"),
                         new AntPathRequestMatcher("/customer/logout"),
+                        new AntPathRequestMatcher("/customer/oauth2/success"),
                         new AntPathRequestMatcher("/vendor/login"),
                         new AntPathRequestMatcher("/error")
                 ).permitAll()
@@ -168,11 +169,11 @@ public class SecurityConfig {
                 .deleteCookies("JSESSIONID")
         );
 
-        // OAuth2 Google — login client uniquement, pas de UserDetailsService
+        // OAuth2 Google — redirige vers un controller dédié qui gère la session
         http.oauth2Login(oauth2 -> oauth2
                 .loginPage("/customer/login")
-                .defaultSuccessUrl("/", true)
-                .successHandler(googleOAuth2SuccessHandler)
+                .defaultSuccessUrl("/customer/oauth2/success", true)
+                .failureUrl("/customer/login?error")
                 .userInfoEndpoint(userInfo -> userInfo
                         .oidcUserService(bolaOAuth2UserService)
                 )

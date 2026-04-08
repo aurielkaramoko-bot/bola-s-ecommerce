@@ -28,6 +28,8 @@ public class DatabaseMigrationConfig {
             // Utiliser une connexion séparée qui ne perturbe pas le pool JPA
             try (Connection conn = dataSource.getConnection()) {
                 conn.setAutoCommit(true);
+
+                // Migration 1 : contrainte status
                 try {
                     conn.createStatement().execute(
                         "ALTER TABLE shop_orders DROP CONSTRAINT IF EXISTS shop_orders_status_check"
@@ -45,6 +47,37 @@ public class DatabaseMigrationConfig {
                 } catch (SQLException e) {
                     log.warn("Migration: contrainte déjà à jour: {}", e.getMessage());
                 }
+
+                // Migration 2 : colonne google_id sur customers
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE customers ADD COLUMN IF NOT EXISTS google_id VARCHAR(200)"
+                    );
+                    log.info("Migration: colonne google_id ajoutée sur customers");
+                } catch (SQLException e) {
+                    log.warn("Migration google_id: {}", e.getMessage());
+                }
+
+                // Migration 3 : colonne country sur shop_orders
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE shop_orders ADD COLUMN IF NOT EXISTS country VARCHAR(2) DEFAULT 'TG'"
+                    );
+                    log.info("Migration: colonne country ajoutée sur shop_orders");
+                } catch (SQLException e) {
+                    log.warn("Migration country: {}", e.getMessage());
+                }
+
+                // Migration 4 : colonne video_url sur products
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE products ADD COLUMN IF NOT EXISTS video_url VARCHAR(2000)"
+                    );
+                    log.info("Migration: colonne video_url ajoutée sur products");
+                } catch (SQLException e) {
+                    log.warn("Migration video_url: {}", e.getMessage());
+                }
+
             } catch (Exception e) {
                 log.error("Migration échouée: {}", e.getMessage());
             }

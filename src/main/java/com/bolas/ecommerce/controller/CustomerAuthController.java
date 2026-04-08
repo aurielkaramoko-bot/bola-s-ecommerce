@@ -78,4 +78,20 @@ public class CustomerAuthController {
         session.removeAttribute("BOLAS_CUSTOMER");
         return "redirect:/";
     }
+
+    /** Appelé après succès OAuth2 Google — stocke le customer en session */
+    @GetMapping("/customer/oauth2/success")
+    public String oauth2Success(org.springframework.security.core.Authentication authentication,
+                                HttpSession session) {
+        if (authentication != null && authentication.getPrincipal() instanceof org.springframework.security.oauth2.core.oidc.user.OidcUser oidcUser) {
+            String googleId  = oidcUser.getAttribute("sub");
+            String email     = oidcUser.getAttribute("email");
+            String firstName = oidcUser.getAttribute("given_name");
+            String lastName  = oidcUser.getAttribute("family_name");
+            com.bolas.ecommerce.model.Customer customer =
+                    customerService.loginOrCreateGoogle(googleId, email, firstName, lastName);
+            session.setAttribute("BOLAS_CUSTOMER", customer);
+        }
+        return "redirect:/";
+    }
 }
