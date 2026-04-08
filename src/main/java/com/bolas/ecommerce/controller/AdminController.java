@@ -10,11 +10,14 @@ import com.bolas.ecommerce.model.OrderStatus;
 import com.bolas.ecommerce.model.Product;
 import com.bolas.ecommerce.model.VendorUser;
 import com.bolas.ecommerce.model.VendorStatus;
+import com.bolas.ecommerce.model.CourierApplication;
+import com.bolas.ecommerce.model.CourierApplicationStatus;
 import com.bolas.ecommerce.repository.CategoryRepository;
 import com.bolas.ecommerce.repository.CustomerOrderRepository;
 import com.bolas.ecommerce.repository.OrderLineRepository;
 import com.bolas.ecommerce.repository.ProductRepository;
 import com.bolas.ecommerce.repository.VendorUserRepository;
+import com.bolas.ecommerce.repository.CourierApplicationRepository;
 import com.bolas.ecommerce.service.AuditLogService;
 import com.bolas.ecommerce.service.CategoryCoverImageUrlService;
 import com.bolas.ecommerce.service.CategoryCoverImageUrlService.Resolution;
@@ -54,6 +57,7 @@ public class AdminController {
     private final OrderFlowService orderFlowService;
     private final VendorUserRepository vendorUserRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CourierApplicationRepository courierApplicationRepository;
 
     // --- ICI : RÉCUPÉRATION DE TA CLÉ API DEPUIS TON PC ---
     @Value("${google.maps.api.key}")
@@ -75,7 +79,8 @@ public class AdminController {
                            AuditLogService auditLogService,
                            OrderFlowService orderFlowService,
                            VendorUserRepository vendorUserRepository,
-                           PasswordEncoder passwordEncoder) {
+                           PasswordEncoder passwordEncoder,
+                           CourierApplicationRepository courierApplicationRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.customerOrderRepository = customerOrderRepository;
@@ -87,6 +92,7 @@ public class AdminController {
         this.orderFlowService = orderFlowService;
         this.vendorUserRepository = vendorUserRepository;
         this.passwordEncoder = passwordEncoder;
+        this.courierApplicationRepository = courierApplicationRepository;
     }
 
     @InitBinder
@@ -424,11 +430,14 @@ public class AdminController {
         model.addAttribute("vendors", vendorUserRepository.findAll());
         model.addAttribute("pendingVendors",
                 vendorUserRepository.findByVendorStatus(VendorStatus.PENDING));
-        // Vendeurs non-PENDING (ACTIVE + SUSPENDED)
         model.addAttribute("activeVendors",
                 vendorUserRepository.findAll().stream()
                         .filter(v -> v.getVendorStatus() != VendorStatus.PENDING)
                         .toList());
+        model.addAttribute("pendingCouriers",
+                courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.PENDING));
+        model.addAttribute("allCouriers",
+                courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.APPROVED));
         return "admin/vendors";
     }
 
@@ -490,6 +499,28 @@ public class AdminController {
     public String deleteVendor(@PathVariable Long id, RedirectAttributes ra) {
         vendorUserRepository.deleteById(id);
         ra.addFlashAttribute("flashOk", "Vendeur supprimé.");
+        return "redirect:/admin/vendors";
+    }
+
+    // ─── Demandes de livreurs ─────────────────────────────────────────────────
+
+    @PostMapping("/admin/couriers/{id}/approve")
+    public String approveCourier(@PathVariable Long id, RedirectAttributes ra) {
+        courierApplicationRepository.findById(id).ifPresent(app -> {
+            app.setStatus(CourierApplicationStatus.APPROVED);
+            courierApplicationRepository.save(app);
+        });
+        ra.addFlashAttribute("flashOk", "Livreur approuvé.");
+        return "redirect:/admin/vendors";
+    }
+
+    @PostMapping("/admin/couriers/{id}/reject")
+    public String rejectCourier(@PathVariable Long id, RedirectAttributes ra) {
+        courierApplicationRepository.findById(id).ifPresent(app -> {
+            app.setStatus(CourierApplicationStatus.REJECTED);
+            courierApplicationRepository.save(app);
+        });
+        ra.addFlashAttribute("flashOk", "Demande rejetée.");
         return "redirect:/admin/vendors";
     }
 

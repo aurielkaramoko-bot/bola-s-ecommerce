@@ -5,8 +5,7 @@ import com.bolas.ecommerce.repository.*;
 import com.bolas.ecommerce.service.IdDocumentVerificationService;
 import com.bolas.ecommerce.service.InputSanitizerService;
 import com.bolas.ecommerce.service.ImageUploadService;
-import com.bolas.ecommerce.service.WhatsAppNotificationService;
-import jakarta.servlet.http.HttpSession;
+import com.bolas.ecommerce.service.WhatsAppNotificationService;import jakarta.servlet.http.HttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -38,6 +37,7 @@ public class VendorController {
     private final WhatsAppNotificationService whatsAppService;
     private final InputSanitizerService      sanitizer;
     private final IdDocumentVerificationService idVerificationService;
+    private final CourierApplicationRepository courierApplicationRepository;
 
     public VendorController(CustomerOrderRepository orderRepository,
                             VendorUserRepository vendorUserRepository,
@@ -49,18 +49,20 @@ public class VendorController {
                             ImageUploadService imageUploadService,
                             WhatsAppNotificationService whatsAppService,
                             InputSanitizerService sanitizer,
-                            IdDocumentVerificationService idVerificationService) {
-        this.orderRepository          = orderRepository;
-        this.vendorUserRepository     = vendorUserRepository;
-        this.productRepository        = productRepository;
-        this.categoryRepository       = categoryRepository;
-        this.vendorCategoryRepository = vendorCategoryRepository;
-        this.chatMessageRepository    = chatMessageRepository;
-        this.passwordEncoder          = passwordEncoder;
-        this.imageUploadService       = imageUploadService;
-        this.whatsAppService          = whatsAppService;
-        this.sanitizer                = sanitizer;
-        this.idVerificationService    = idVerificationService;
+                            IdDocumentVerificationService idVerificationService,
+                            CourierApplicationRepository courierApplicationRepository) {
+        this.orderRepository               = orderRepository;
+        this.vendorUserRepository          = vendorUserRepository;
+        this.productRepository             = productRepository;
+        this.categoryRepository            = categoryRepository;
+        this.vendorCategoryRepository      = vendorCategoryRepository;
+        this.chatMessageRepository         = chatMessageRepository;
+        this.passwordEncoder               = passwordEncoder;
+        this.imageUploadService            = imageUploadService;
+        this.whatsAppService               = whatsAppService;
+        this.sanitizer                     = sanitizer;
+        this.idVerificationService         = idVerificationService;
+        this.courierApplicationRepository  = courierApplicationRepository;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -627,5 +629,94 @@ public class VendorController {
             chatMessageRepository.save(msg);
         }
         return "redirect:/vendor/messages/" + custId;
+    }
+
+    // ─── Proposer un livreur ──────────────────────────────────────────────────
+
+    @GetMapping("/couriers")
+    public String courierApplicationsPage(HttpSession session, Model model) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+        model.addAttribute("pageTitle", "Mes livreurs proposés — BOLA");
+        model.addAttribute("vendor", vendor);
+        model.addAttribute("applications",
+                courierApplicationRepository.findByVendorOrderBySubmittedAtDesc(vendor));
+        return "vendor/couriers";
+    }
+
+    @PostMapping("/couriers/propose")
+    public String proposeCourier(@RequestParam String courierName,
+                                 @RequestParam String courierPhone,
+                                 @RequestParam(required = false) String zone,
+                                 @RequestParam(value = "courierPhoto", required = false) MultipartFile courierPhoto,
+                                 @RequestParam(value = "courierIdDoc", required = false) MultipartFile courierIdDoc,
+                                 HttpSession session,
+                                 RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+
+        String cleanName  = sanitizer.sanitizeText(courierName);
+        String cleanPhone = sanitizer.sanitizeText(courierPhone);
+        String cleanZone  = sanitizer.sanitizeText(zone);
+
+        if (cleanName == null || cleanName.isBlank()) {
+            ra.addFlashAttribute("flashError", "Le nom du livreur est obligatoire.");
+            return "redirect:/vendor/couriers";
+        }
+        if (cleanPhone == null || cleanPhone.isBlank()) {
+            ra.addFlashAttribute("flashError", "Le téléphone du livreur est obligatoire.");
+            return "redirect:/vendor/couriers";
+        }
+        if (courierPhoto == null || courierPhoto.isEmpty()) {
+            ra.addFlashAttribute("flashError", "La photo du livreur est obligatoire.");
+            return "redirect:/vendor/couriers";
+        }
+        if (courierIdDoc == null || courierIdDoc.isEmpty()) {
+            ra.addFlashAttribute("flashError", "La pièce d'identité du livreur est obligatoire.");
+            return "redirect:/vendor/couriers";
+        }
+
+        // Upload photo livreur
+        String photoUrl;
+        try {
+            photoUrl = imageUploadService.store(courierPhoto);
+        } catch (IllegalArgumentException | IOException e) {
+            ra.addFlashAttribute("flashError", "Photo invalide : " + e.getMessage());
+            return "redirect:/vendor/couriers";
+        }
+
+        // Upload CNI livreur + scan Vision
+        String idDocUrl;
+        try {
+            idDocUrl = imageUploadService.store(courierIdDoc);
+        } catch (IllegalArgumentException | IOException e) {
+            ra.addFlashAttribute("flashError", "Pièce d'identité invalide : " + e.getMessage());
+            return "redirect:/vendor/couriers";
+        }
+
+        Boolean idVerified = idVerificationService.verify(courierIdDoc);
+        if (Boolean.FALSE.equals(idVerified)) {
+            ra.addFlashAttribute("flashError",
+                    "La pièce d'identité du livreur ne semble pas être un document officiel. " +
+                    "Veuillez uploader une photo nette de sa CNI, passeport ou permis.");
+            return "redirect:/vendor/couriers";
+        }
+
+        CourierApplication app = new CourierApplication();
+        app.setCourierName(cleanName);
+        app.setCourierPhone(cleanPhone);
+        app.setZone(cleanZone);
+        app.setPhotoUrl(photoUrl);
+        app.setIdDocumentUrl(idDocUrl);
+        app.setIdDocVerified(idVerified);
+        app.setVendor(vendor);
+        courierApplicationRepository.save(app);
+
+        ra.addFlashAttribute("flashOk", "Demande envoyée ! L'admin validera ce livreur sous 24h.");
+        return "redirect:/vendor/couriers";
     }
 }

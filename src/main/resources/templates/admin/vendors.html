@@ -120,6 +120,130 @@
         </div>
       </div>
 
+      <!-- ===== DEMANDES DE LIVREURS ===== -->
+      <div class="mb-5">
+        <h2 class="h5 fw-semibold mb-3" style="color:#8B5E3C;">
+          <i class="bi bi-bicycle me-2 text-primary"></i>Propositions de livreurs
+          <span th:if="${pendingCouriers != null and !pendingCouriers.isEmpty()}"
+                class="badge bg-warning text-dark ms-2"
+                th:text="${pendingCouriers.size()}">0</span>
+        </h2>
+
+        <div th:if="${pendingCouriers != null and !pendingCouriers.isEmpty()}" class="admin-card mb-3">
+          <div class="p-3 border-bottom small fw-semibold text-muted">En attente de validation</div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+              <thead class="table-light">
+                <tr>
+                  <th>Livreur</th>
+                  <th>Téléphone</th>
+                  <th>Zone</th>
+                  <th>Photo / CNI</th>
+                  <th>Proposé par</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="app : ${pendingCouriers}">
+                  <td th:text="${app.courierName}">—</td>
+                  <td>
+                    <a th:href="${'https://wa.me/' + app.courierPhone}" target="_blank"
+                       class="text-decoration-none">
+                      <i class="bi bi-whatsapp text-success me-1"></i>
+                      <span th:text="${app.courierPhone}">—</span>
+                    </a>
+                  </td>
+                  <td th:text="${app.zone ?: '—'}">—</td>
+                  <td style="min-width:160px;">
+                    <!-- Photo livreur -->
+                    <div class="mb-1">
+                      <span class="small text-muted d-block">Photo :</span>
+                      <a th:if="${app.photoUrl != null}" th:href="${app.photoUrl}" target="_blank">
+                        <img th:src="${app.photoUrl}" alt="Photo livreur"
+                             style="height:48px;width:48px;object-fit:cover;border-radius:50%;border:2px solid var(--bolas-accent);"/>
+                      </a>
+                      <span th:if="${app.photoUrl == null}" class="text-muted small">—</span>
+                    </div>
+                    <!-- CNI + badge Vision -->
+                    <div>
+                      <span class="small text-muted d-block">
+                        CNI/Passeport
+                        <span th:if="${app.idDocVerified == true}"
+                              class="badge bg-success ms-1">
+                          <i class="bi bi-shield-check"></i> Vérifié
+                        </span>
+                        <span th:if="${app.idDocVerified == false}"
+                              class="badge bg-danger ms-1">
+                          <i class="bi bi-shield-x"></i> Suspect
+                        </span>
+                        <span th:if="${app.idDocVerified == null}"
+                              class="badge bg-secondary ms-1">
+                          <i class="bi bi-eye-slash"></i> Manuel
+                        </span>
+                      </span>
+                      <a th:if="${app.idDocumentUrl != null}" th:href="${app.idDocumentUrl}" target="_blank">
+                        <img th:src="${app.idDocumentUrl}" alt="CNI livreur"
+                             style="height:48px;width:72px;object-fit:cover;border-radius:6px;border:1px solid #ddd;"/>
+                      </a>
+                      <span th:if="${app.idDocumentUrl == null}" class="text-muted small">—</span>
+                    </div>
+                  </td>
+                  <td th:text="${app.vendor?.shopName ?: app.vendor?.username ?: '—'}">—</td>
+                  <td th:text="${#temporals.format(app.submittedAt, 'dd/MM/yyyy')}">—</td>
+                  <td>
+                    <div class="d-flex gap-1">
+                      <form th:action="@{/admin/couriers/{id}/approve(id=${app.id})}" method="post" class="m-0">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <button type="submit" class="btn btn-sm btn-success">
+                          <i class="bi bi-check-circle me-1"></i>Approuver
+                        </button>
+                      </form>
+                      <form th:action="@{/admin/couriers/{id}/reject(id=${app.id})}" method="post" class="m-0"
+                            onsubmit="return confirm('Rejeter cette proposition ?')">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                          <i class="bi bi-x-circle me-1"></i>Rejeter
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Livreurs approuvés -->
+        <div th:if="${allCouriers != null and !allCouriers.isEmpty()}" class="admin-card">
+          <div class="p-3 border-bottom small fw-semibold text-muted">Livreurs approuvés</div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+              <thead class="table-light">
+                <tr><th>Livreur</th><th>Téléphone</th><th>Zone</th><th>Proposé par</th></tr>
+              </thead>
+              <tbody>
+                <tr th:each="app : ${allCouriers}">
+                  <td th:text="${app.courierName}">—</td>
+                  <td>
+                    <a th:href="${'https://wa.me/' + app.courierPhone}" target="_blank"
+                       class="text-decoration-none">
+                      <i class="bi bi-whatsapp text-success me-1"></i>
+                      <span th:text="${app.courierPhone}">—</span>
+                    </a>
+                  </td>
+                  <td th:text="${app.zone ?: '—'}">—</td>
+                  <td th:text="${app.vendor?.shopName ?: app.vendor?.username ?: '—'}">—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <p th:if="${(pendingCouriers == null or pendingCouriers.isEmpty()) and (allCouriers == null or allCouriers.isEmpty())}"
+           class="text-muted small">Aucune proposition de livreur pour l'instant.</p>
+      </div>
+
       <!-- ===== CRÉER UN VENDEUR DIRECTEMENT ===== -->
       <div class="admin-card p-4 mb-4" style="max-width:580px;">
         <h2 class="h6 fw-bold mb-3" style="color:#8B5E3C;">
