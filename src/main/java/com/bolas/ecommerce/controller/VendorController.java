@@ -78,16 +78,17 @@ public class VendorController {
             return "redirect:/vendor/login";
         }
         VendorUser v = opt.get();
-        if (!v.isActive()) {
-            if (v.getVendorStatus() == VendorStatus.PENDING) {
-                ra.addFlashAttribute("flashError",
-                        "Votre demande d'ouverture de boutique est en cours de validation. Nous vous contacterons sous 24h.");
-            } else {
-                ra.addFlashAttribute("flashError",
-                        "Votre compte vendeur a été suspendu. Contactez l'administration.");
-            }
+        // Vérifier le statut du vendeur (non le champ legacy 'active')
+        if (v.getVendorStatus() == VendorStatus.PENDING) {
+            ra.addFlashAttribute("flashError",
+                    "Votre demande d'ouverture de boutique est en cours de validation. Nous vous contacterons sous 24h.");
+            return "redirect:/vendor/login";
+        } else if (v.getVendorStatus() == VendorStatus.SUSPENDED) {
+            ra.addFlashAttribute("flashError",
+                    "Votre compte vendeur a été suspendu. Contactez l'administration.");
             return "redirect:/vendor/login";
         }
+        // vendorStatus == ACTIVE → connexion autorisée
         session.setAttribute(SESSION_KEY, v);
         return "redirect:/vendor/dashboard";
     }
