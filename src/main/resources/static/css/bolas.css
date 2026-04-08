@@ -1048,3 +1048,196 @@ body.bolas-body {
   font-size: .8rem;
   width: fit-content;
 }
+
+/* ============================================================
+   PASSWORD STRENGTH METER
+   ============================================================ */
+.bolas-pw-toggle {
+  cursor: pointer;
+  border: 1px solid var(--bolas-border);
+  background: transparent;
+  color: var(--bolas-muted);
+  transition: color .2s;
+}
+.bolas-pw-toggle:hover { color: var(--bolas-accent); }
+.bolas-pw-strength { margin-top: .4rem; }
+.pw-bar-track {
+  height: 5px;
+  background: var(--bolas-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.pw-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width .3s, background .3s;
+}
+.pw-fill.pw-weak        { background: #dc3545; }
+.pw-fill.pw-medium      { background: #f0a500; }
+.pw-fill.pw-strong      { background: #27ae60; }
+.pw-fill.pw-very-strong { background: #198754; }
+.pw-hints {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: .2rem;
+  font-size: .78rem;
+}
+.pw-label { font-weight: 600; }
+.pw-label.pw-weak        { color: #dc3545; }
+.pw-label.pw-medium      { color: #f0a500; }
+.pw-label.pw-strong      { color: #27ae60; }
+.pw-label.pw-very-strong { color: #198754; }
+.pw-tips { font-size: .72rem; }
+
+/* ============================================================
+   TRACKING PROGRESS BAR — 4 ÉTAPES
+   ============================================================ */
+.tracking-progress {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: relative;
+  padding: 0;
+  margin: 2rem auto;
+  max-width: 680px;
+}
+.tracking-progress::before {
+  content: '';
+  position: absolute;
+  top: 22px;
+  left: 10%;
+  right: 10%;
+  height: 4px;
+  background: var(--bolas-border);
+  z-index: 0;
+  border-radius: 2px;
+}
+.tracking-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+.tracking-step-dot {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--bolas-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  color: var(--bolas-muted);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  transition: background .3s, color .3s;
+}
+.tracking-step.done .tracking-step-dot {
+  background: var(--bolas-accent);
+  color: #fff;
+}
+.tracking-step.active .tracking-step-dot {
+  background: var(--bolas-accent);
+  color: #fff;
+  animation: tracking-pulse 1.5s ease-in-out infinite;
+}
+.tracking-step.cancelled .tracking-step-dot {
+  background: #dc3545;
+  color: #fff;
+}
+@keyframes tracking-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139,94,60,.4); }
+  50%      { box-shadow: 0 0 0 10px rgba(139,94,60,0); }
+}
+.tracking-step-label {
+  margin-top: .5rem;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--bolas-muted);
+  text-align: center;
+  line-height: 1.2;
+}
+.tracking-step.done .tracking-step-label,
+.tracking-step.active .tracking-step-label {
+  color: var(--bolas-accent);
+}
+.tracking-step.cancelled .tracking-step-label {
+  color: #dc3545;
+}
+/* Ligne de progression remplie */
+.tracking-progress-fill {
+  position: absolute;
+  top: 22px;
+  left: 10%;
+  height: 4px;
+  background: var(--bolas-accent);
+  z-index: 0;
+  border-radius: 2px;
+  transition: width .4s;
+}
+.tracking-progress-fill.cancelled {
+  background: #dc3545;
+}
+@media (max-width: 575.98px) {
+  .tracking-step-dot { width: 36px; height: 36px; font-size: .9rem; }
+  .tracking-step-label { font-size: .7rem; }
+  .tracking-progress::before,
+  .tracking-progress-fill { top: 18px; }
+}
+
+/* ============================================================
+   BOUTONS PAIEMENT (BIENTÔT)
+   ============================================================ */
+.btn-payment-coming {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  border: 1.5px solid var(--bolas-border);
+  background: #f8f6f4;
+  color: var(--bolas-muted);
+  border-radius: 999px;
+  padding: .55rem 1.2rem;
+  font-weight: 600;
+  font-size: .9rem;
+  opacity: .6;
+  cursor: not-allowed;
+  position: relative;
+  text-decoration: none;
+  transition: opacity .2s;
+}
+.btn-payment-coming:hover {
+  opacity: .75;
+}
+.btn-payment-coming .badge-coming {
+  font-size: .65rem;
+  background: var(--bolas-accent);
+  color: #fff;
+  padding: .15rem .45rem;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.payment-methods-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: .75rem;
+}
+.payment-methods-divider {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: 1rem 0 .5rem;
+  color: var(--bolas-muted);
+  font-size: .82rem;
+}
+.payment-methods-divider::before,
+.payment-methods-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--bolas-border);
+}

@@ -21,7 +21,12 @@
       </div>
       <div class="mb-3">
         <label for="password" class="form-label">Mot de passe</label>
-        <input type="password" class="form-control" id="password" name="password" required/>
+        <div class="input-group">
+          <input type="password" class="form-control bolas-pw-input" id="password" name="password" required/>
+          <button type="button" class="btn bolas-pw-toggle" data-target="password">
+            <i class="bi bi-eye"></i>
+          </button>
+        </div>
       </div>
       <button type="submit" class="btn btn-hero-solid w-100">Se connecter</button>
     </form>
@@ -49,5 +54,6 @@
 
 <div th:replace="~{fragments/footer :: footer}"></div>
 <th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+<script th:src="@{/js/password-utils.js}"></script>
 </body>
 </html>

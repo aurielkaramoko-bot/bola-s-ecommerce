@@ -12,7 +12,9 @@
   <!-- ===== HERO ===== -->
   <section class="hero-artisal">
     <span class="hero-badge">
-      <i class="bi bi-globe2 me-1"></i> La Marketplace du Togo
+      <span th:text="${countryFlag}" th:remove="tag">🌍</span>
+      <i class="bi bi-globe2 me-1"></i>
+      <span th:text="${countryName}">La Marketplace du Togo</span>
     </span>
     <h1 class="display-5">Des milliers de vendeurs,<br>un seul endroit pour tout trouver</h1>
     <p class="lead">BOLA réunit artisans, boutiques et commerçants locaux. Commandez en toute confiance, livraison suivie chez vous.</p>

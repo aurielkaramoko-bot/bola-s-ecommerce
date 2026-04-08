@@ -121,9 +121,175 @@
           Appeler
         </a>
       </div>
+
+      <!-- Séparateur paiement -->
+      <div class="payment-methods-divider">
+        <span>Paiement en ligne</span>
+      </div>
+
+      <!-- Boutons paiement Mobile Money (inactifs) -->
+      <div class="payment-methods-group">
+        <span class="btn-payment-coming" title="Bientôt disponible">
+          <i class="bi bi-phone"></i> Flooz
+          <span class="badge-coming">Bientôt</span>
+        </span>
+        <span class="btn-payment-coming" title="Bientôt disponible">
+          <i class="bi bi-phone"></i> T-Money
+          <span class="badge-coming">Bientôt</span>
+        </span>
+        <span class="btn-payment-coming" title="Bientôt disponible">
+          <i class="bi bi-phone"></i> Wave
+          <span class="badge-coming">Bientôt</span>
+        </span>
+        <span class="btn-payment-coming" title="Bientôt disponible">
+          <i class="bi bi-credit-card"></i> CinetPay
+          <span class="badge-coming">Bientôt</span>
+        </span>
+      </div>
+      <p class="small text-muted mt-1">
+        <i class="bi bi-info-circle me-1"></i>Le paiement à la livraison est disponible dès maintenant.
+      </p>
+
+      <!-- Bouton Chat + Signaler -->
+      <div class="d-flex flex-wrap gap-2 mt-3 pt-3" style="border-top:1px solid var(--bolas-border);">
+        <a th:if="${product.vendor != null}" th:href="@{/chat/{id}(id=${product.vendor.id})}"
+           class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-chat-dots me-1"></i>Contacter le vendeur
+        </a>
+        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#reportModal">
+          <i class="bi bi-flag me-1"></i>Signaler
+        </button>
+      </div>
     </div>
   </div>
+
+  <!-- ===== AVIS CLIENTS ===== -->
+  <div class="mt-5 pt-4" style="border-top:1px solid var(--bolas-border);">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h2 class="h5 fw-bold mb-0" style="color:var(--bolas-accent);">
+        <i class="bi bi-star-fill me-2"></i>Avis clients
+      </h2>
+      <div th:if="${reviewCount > 0}" class="d-flex align-items-center gap-2">
+        <span class="fw-bold" style="font-size:1.5rem;color:var(--bolas-accent);"
+              th:text="${#numbers.formatDecimal(avgRating,1,1)}">0.0</span>
+        <div>
+          <div>
+            <th:block th:each="star : ${#numbers.sequence(1,5)}">
+              <i th:class="${star <= avgRating ? 'bi bi-star-fill' : 'bi bi-star'}"
+                 style="color:#f0a500;font-size:.9rem;"></i>
+            </th:block>
+          </div>
+          <span class="small text-muted" th:text="${reviewCount} + ' avis'">0 avis</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Avis existants -->
+    <div th:if="${reviews != null and !reviews.isEmpty()}">
+      <div th:each="r : ${reviews}" class="admin-card p-3 mb-2">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <strong class="small" th:text="${r.reviewerName}">Nom</strong>
+          <div>
+            <th:block th:each="star : ${#numbers.sequence(1,5)}">
+              <i th:class="${star <= r.rating ? 'bi bi-star-fill' : 'bi bi-star'}"
+                 style="color:#f0a500;font-size:.75rem;"></i>
+            </th:block>
+          </div>
+          <span class="small text-muted ms-auto"
+                th:text="${#temporals.format(r.createdAt, 'dd/MM/yyyy')}">01/01/2025</span>
+        </div>
+        <p class="small text-muted mb-0" th:if="${r.comment != null}"
+           th:text="${r.comment}">Commentaire</p>
+      </div>
+    </div>
+    <div th:if="${reviews == null or reviews.isEmpty()}" class="text-muted small mb-3">
+      <i class="bi bi-chat-right-text me-1"></i>Aucun avis pour le moment. Soyez le premier !
+    </div>
+
+    <!-- Formulaire nouvel avis -->
+    <div class="admin-card p-3 mt-3">
+      <h3 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);">Laisser un avis</h3>
+      <form th:action="@{/products/{id}/review(id=${product.id})}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <div class="row g-2">
+          <div class="col-md-6">
+            <input type="text" class="form-control form-control-sm" name="reviewerName"
+                   required placeholder="Votre nom" maxlength="150"/>
+          </div>
+          <div class="col-md-6">
+            <input type="email" class="form-control form-control-sm" name="reviewerEmail"
+                   placeholder="Email (optionnel)" maxlength="200"/>
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Note</label>
+            <div class="d-flex gap-1" id="star-rating">
+              <input type="hidden" name="rating" id="rating-value" value="5"/>
+              <i class="bi bi-star-fill" data-val="1" style="cursor:pointer;color:#f0a500;font-size:1.3rem;"></i>
+              <i class="bi bi-star-fill" data-val="2" style="cursor:pointer;color:#f0a500;font-size:1.3rem;"></i>
+              <i class="bi bi-star-fill" data-val="3" style="cursor:pointer;color:#f0a500;font-size:1.3rem;"></i>
+              <i class="bi bi-star-fill" data-val="4" style="cursor:pointer;color:#f0a500;font-size:1.3rem;"></i>
+              <i class="bi bi-star-fill" data-val="5" style="cursor:pointer;color:#f0a500;font-size:1.3rem;"></i>
+            </div>
+          </div>
+          <div class="col-12">
+            <textarea class="form-control form-control-sm" name="comment" rows="2"
+                      placeholder="Votre avis (optionnel)" maxlength="1000"></textarea>
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-hero-solid btn-sm px-4">
+              <i class="bi bi-send me-1"></i>Envoyer
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
 </main>
+
+<!-- ===== MODAL SIGNALEMENT ===== -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="border-color:var(--bolas-border);">
+        <h5 class="modal-title" style="color:var(--bolas-accent);">
+          <i class="bi bi-flag me-2"></i>Signaler ce produit
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form th:action="@{/report}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <input type="hidden" name="targetType" value="PRODUCT"/>
+        <input type="hidden" name="targetId" th:value="${product.id}"/>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Votre email</label>
+            <input type="email" class="form-control" name="reporterEmail"
+                   placeholder="Pour que nous puissions vous recontacter" maxlength="200"/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Raison du signalement <span class="text-danger">*</span></label>
+            <select class="form-select" name="reason" required>
+              <option value="">Choisir une raison</option>
+              <option value="Produit contrefait">Produit contrefait</option>
+              <option value="Description trompeuse">Description trompeuse</option>
+              <option value="Prix abusif">Prix abusif</option>
+              <option value="Contenu inapproprié">Contenu inapproprié</option>
+              <option value="Arnaque suspectée">Arnaque suspectée</option>
+              <option value="Autre">Autre</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-color:var(--bolas-border);">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-flag me-1"></i>Signaler
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
 <div th:replace="~{fragments/popular-section :: popular}"></div>
 <div th:replace="~{fragments/footer :: footer}"></div>
@@ -167,6 +333,25 @@
     updateLink();
   })();
   /*]]>*/
+</script>
+<script>
+  // Star rating selector
+  (function() {
+    var box = document.getElementById('star-rating');
+    var input = document.getElementById('rating-value');
+    if (!box || !input) return;
+    var stars = box.querySelectorAll('i');
+    function setStars(n) {
+      input.value = n;
+      stars.forEach(function(s) {
+        var v = parseInt(s.getAttribute('data-val'));
+        s.className = v <= n ? 'bi bi-star-fill' : 'bi bi-star';
+      });
+    }
+    stars.forEach(function(s) {
+      s.addEventListener('click', function() { setStars(parseInt(this.getAttribute('data-val'))); });
+    });
+  })();
 </script>
 </body>
 </html>

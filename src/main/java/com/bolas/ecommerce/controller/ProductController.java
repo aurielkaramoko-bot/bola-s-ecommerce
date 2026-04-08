@@ -3,6 +3,7 @@ package com.bolas.ecommerce.controller;
 import com.bolas.ecommerce.model.Product;
 import com.bolas.ecommerce.repository.CategoryRepository;
 import com.bolas.ecommerce.repository.ProductRepository;
+import com.bolas.ecommerce.repository.ReviewRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -15,16 +16,19 @@ public class ProductController {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final ReviewRepository reviewRepository;
 
     private final String whatsappNumber;
     private final String shopPhone;
 
     public ProductController(ProductRepository productRepository,
                              CategoryRepository categoryRepository,
+                             ReviewRepository reviewRepository,
                              @Value("${whatsapp.number}") String whatsappNumber,
                              @Value("${bolas.shop.phone}") String shopPhone) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
+        this.reviewRepository = reviewRepository;
         this.whatsappNumber = whatsappNumber;
         this.shopPhone = shopPhone;
     }
@@ -45,7 +49,7 @@ public class ProductController {
                 ? productRepository.findByAvailableTrueAndCategory_IdAndPriceCfaBetween(categoryId, min, max)
                 : productRepository.findByAvailableTrueAndPriceCfaBetween(min, max);
 
-        model.addAttribute("pageTitle", "Produits — Bola's");
+        model.addAttribute("pageTitle", "Produits — BOLA");
         model.addAttribute("products", products);
         model.addAttribute("categories", categoryRepository.findAll());
         model.addAttribute("selectedCategoryId", categoryId);
@@ -57,10 +61,24 @@ public class ProductController {
     @GetMapping("/products/{id}")
     public String detail(@PathVariable Long id, Model model) {
         Product product = productRepository.findById(id).filter(Product::isAvailable).orElseThrow();
-        model.addAttribute("pageTitle", product.getName() + " — Bola's");
+        model.addAttribute("pageTitle", product.getName() + " — BOLA");
         model.addAttribute("product", product);
         model.addAttribute("whatsappNumber", whatsappNumber);
         model.addAttribute("shopPhone", shopPhone);
+
+        // Avis produit
+        var reviews = reviewRepository.findByProductAndApprovedTrueOrderByCreatedAtDesc(product);
+        double avgRating = reviewRepository.averageRatingByProduct(product);
+        long reviewCount = reviewRepository.countByProductAndApprovedTrue(product);
+        model.addAttribute("reviews", reviews);
+        model.addAttribute("avgRating", avgRating);
+        model.addAttribute("reviewCount", reviewCount);
+
+        // Produits populaires
+        model.addAttribute("popularProducts",
+                productRepository.findTop6ByAvailableTrueOrderByFeaturedDescIdDesc());
+
         return "product-detail";
     }
 }
+

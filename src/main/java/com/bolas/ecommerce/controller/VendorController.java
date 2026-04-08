@@ -3,6 +3,7 @@ package com.bolas.ecommerce.controller;
 import com.bolas.ecommerce.model.*;
 import com.bolas.ecommerce.repository.*;
 import com.bolas.ecommerce.service.ImageUploadService;
+import com.bolas.ecommerce.service.WhatsAppNotificationService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
@@ -12,8 +13,10 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/vendor")
@@ -22,40 +25,54 @@ public class VendorController {
     private static final String SESSION_KEY   = "BOLAS_VENDOR";
     private static final int    GRATUIT_LIMIT = 10;
 
-    private final CustomerOrderRepository orderRepository;
-    private final VendorUserRepository    vendorUserRepository;
-    private final ProductRepository       productRepository;
-    private final CategoryRepository      categoryRepository;
-    private final PasswordEncoder         passwordEncoder;
-    private final ImageUploadService      imageUploadService;
+    private final CustomerOrderRepository   orderRepository;
+    private final VendorUserRepository       vendorUserRepository;
+    private final ProductRepository          productRepository;
+    private final CategoryRepository         categoryRepository;
+    private final VendorCategoryRepository   vendorCategoryRepository;
+    private final ChatMessageRepository      chatMessageRepository;
+    private final PasswordEncoder            passwordEncoder;
+    private final ImageUploadService         imageUploadService;
+    private final WhatsAppNotificationService whatsAppService;
 
     public VendorController(CustomerOrderRepository orderRepository,
                             VendorUserRepository vendorUserRepository,
                             ProductRepository productRepository,
                             CategoryRepository categoryRepository,
+                            VendorCategoryRepository vendorCategoryRepository,
+                            ChatMessageRepository chatMessageRepository,
                             PasswordEncoder passwordEncoder,
-                            ImageUploadService imageUploadService) {
-        this.orderRepository      = orderRepository;
-        this.vendorUserRepository = vendorUserRepository;
-        this.productRepository    = productRepository;
-        this.categoryRepository   = categoryRepository;
-        this.passwordEncoder      = passwordEncoder;
-        this.imageUploadService   = imageUploadService;
+                            ImageUploadService imageUploadService,
+                            WhatsAppNotificationService whatsAppService) {
+        this.orderRepository          = orderRepository;
+        this.vendorUserRepository     = vendorUserRepository;
+        this.productRepository        = productRepository;
+        this.categoryRepository       = categoryRepository;
+        this.vendorCategoryRepository = vendorCategoryRepository;
+        this.chatMessageRepository    = chatMessageRepository;
+        this.passwordEncoder          = passwordEncoder;
+        this.imageUploadService       = imageUploadService;
+        this.whatsAppService          = whatsAppService;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    /** Récupère le vendeur en session, ou null s'il n'est pas connecté. */
     private VendorUser currentVendor(HttpSession session) {
         Object obj = session.getAttribute(SESSION_KEY);
         if (obj instanceof VendorUser v) return v;
         return null;
     }
 
-    /** Vérifie la session vendeur et redirige vers login si absent. */
     private String requireVendor(HttpSession session) {
         if (currentVendor(session) == null) return "redirect:/vendor/login";
-        return null; // OK
+        return null;
+    }
+
+    /** Catégories autorisées pour ce vendeur */
+    private List<Category> allowedCategories(VendorUser vendor) {
+        List<Category> cats = vendorCategoryRepository.findCategoriesByVendor(vendor);
+        // Si aucune restriction → toutes les catégories (rétro-compatible)
+        return cats.isEmpty() ? categoryRepository.findAll() : cats;
     }
 
     // ─── Authentification ─────────────────────────────────────────────────────
@@ -78,17 +95,16 @@ public class VendorController {
             return "redirect:/vendor/login";
         }
         VendorUser v = opt.get();
-        // Vérifier le statut du vendeur (non le champ legacy 'active')
-        if (v.getVendorStatus() == VendorStatus.PENDING) {
-            ra.addFlashAttribute("flashError",
-                    "Votre demande d'ouverture de boutique est en cours de validation. Nous vous contacterons sous 24h.");
-            return "redirect:/vendor/login";
-        } else if (v.getVendorStatus() == VendorStatus.SUSPENDED) {
-            ra.addFlashAttribute("flashError",
-                    "Votre compte vendeur a été suspendu. Contactez l'administration.");
+        if (!v.isActive()) {
+            if (v.getVendorStatus() == VendorStatus.PENDING) {
+                ra.addFlashAttribute("flashError",
+                        "Votre demande d'ouverture de boutique est en cours de validation. Nous vous contacterons sous 24h.");
+            } else {
+                ra.addFlashAttribute("flashError",
+                        "Votre compte vendeur a été suspendu. Contactez l'administration.");
+            }
             return "redirect:/vendor/login";
         }
-        // vendorStatus == ACTIVE → connexion autorisée
         session.setAttribute(SESSION_KEY, v);
         return "redirect:/vendor/dashboard";
     }
@@ -105,6 +121,7 @@ public class VendorController {
     public String registerPage(HttpSession session, Model model) {
         if (currentVendor(session) != null) return "redirect:/vendor/dashboard";
         model.addAttribute("pageTitle", "Ouvrir ma boutique — BOLA");
+        model.addAttribute("categories", categoryRepository.findAll());
         return "vendor/register";
     }
 
@@ -115,13 +132,18 @@ public class VendorController {
                                  @RequestParam(required = false) String email,
                                  @RequestParam String password,
                                  @RequestParam(required = false) String shopDescription,
+                                 @RequestParam(required = false) List<Long> categoryIds,
+                                 @RequestParam(required = false) String requestedNiche,
+                                 @RequestParam(value = "logoFile", required = false) MultipartFile logoFile,
+                                 @RequestParam(value = "idDocFile", required = false) MultipartFile idDocFile,
                                  RedirectAttributes ra) {
+        // Validations
         if (password == null || password.length() < 6) {
             ra.addFlashAttribute("flashError", "Le mot de passe doit faire au moins 6 caractères.");
             return "redirect:/vendor/register";
         }
         if (vendorUserRepository.findByUsername(username.trim()).isPresent()) {
-            ra.addFlashAttribute("flashError", "Ce nom d'utilisateur est déjà pris. Choisissez-en un autre.");
+            ra.addFlashAttribute("flashError", "Ce nom d'utilisateur est déjà pris.");
             return "redirect:/vendor/register";
         }
         if (email != null && !email.isBlank() &&
@@ -140,11 +162,53 @@ public class VendorController {
         v.setActive(false);
         v.setVendorStatus(VendorStatus.PENDING);
         v.setPlan(VendorPlan.GRATUIT);
+
+        // Niche demandée
+        if (requestedNiche != null && !requestedNiche.isBlank()) {
+            v.setRequestedNiche(requestedNiche.trim());
+        }
+
+        // Upload photo boutique
+        try {
+            if (logoFile != null && !logoFile.isEmpty()) {
+                v.setLogoUrl(imageUploadService.store(logoFile));
+            }
+        } catch (IllegalArgumentException | IOException e) {
+            // Non bloquant
+        }
+
+        // Upload pièce d'identité
+        try {
+            if (idDocFile != null && !idDocFile.isEmpty()) {
+                v.setIdDocumentUrl(imageUploadService.store(idDocFile));
+            }
+        } catch (IllegalArgumentException | IOException e) {
+            // Non bloquant
+        }
+
         vendorUserRepository.save(v);
 
+        // Sauvegarder les catégories choisies
+        String catNames = "";
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            for (Long catId : categoryIds) {
+                categoryRepository.findById(catId).ifPresent(cat -> {
+                    vendorCategoryRepository.save(new VendorCategory(v, cat));
+                });
+            }
+            catNames = categoryIds.stream()
+                    .map(id -> categoryRepository.findById(id).map(Category::getName).orElse("?"))
+                    .collect(Collectors.joining(", "));
+        }
+
+        // Générer lien WhatsApp admin
+        String waLink = whatsAppService.buildVendorRegistrationLink(
+                v.getShopName(), v.getUsername(), v.getPhone(),
+                catNames, v.getRequestedNiche());
+
         ra.addFlashAttribute("flashOk",
-                "✅ Demande envoyée ! Notre équipe validera votre boutique sous 24h. " +
-                "Vous recevrez une confirmation par WhatsApp ou email.");
+                "✅ Demande envoyée ! Notre équipe validera votre boutique sous 24h.");
+        ra.addFlashAttribute("waNotifLink", waLink);
         return "redirect:/vendor/register";
     }
 
@@ -156,7 +220,6 @@ public class VendorController {
         if (redirect != null) return redirect;
 
         VendorUser vendor = currentVendor(session);
-        // Rafraîchir depuis BDD (données à jour)
         vendor = vendorUserRepository.findById(vendor.getId()).orElse(vendor);
         session.setAttribute(SESSION_KEY, vendor);
 
@@ -170,6 +233,7 @@ public class VendorController {
         model.addAttribute("pendingOrders",   pendingOrders);
         model.addAttribute("confirmedOrders", confirmedOrders);
         model.addAttribute("gratuitLimit",    GRATUIT_LIMIT);
+        model.addAttribute("allowedCategories", allowedCategories(vendor));
         model.addAttribute("products",
                 productRepository.findByVendor(vendor).stream()
                         .limit(5).toList());
@@ -246,7 +310,7 @@ public class VendorController {
             model.addAttribute("pageTitle", "Mes produits — BOLA");
             model.addAttribute("vendor",   vendor);
             model.addAttribute("flashError",
-                    "Limite atteinte (10 produits max en Pack Débutant). Passez au Pack Pro pour en ajouter davantage.");
+                    "Limite atteinte (10 produits max en Pack Débutant). Passez au Pack Pro.");
             model.addAttribute("products",  productRepository.findByVendor(vendor));
             model.addAttribute("gratuitLimit", GRATUIT_LIMIT);
             model.addAttribute("limitReached", true);
@@ -262,7 +326,8 @@ public class VendorController {
         model.addAttribute("pageTitle",  "Ajouter un produit — BOLA");
         model.addAttribute("vendor",     vendor);
         model.addAttribute("product",    p);
-        model.addAttribute("categories", categoryRepository.findAll());
+        // Seules les catégories autorisées du vendeur
+        model.addAttribute("categories", allowedCategories(vendor));
         model.addAttribute("isEdit",     false);
         return "vendor/product-form";
     }
@@ -286,17 +351,24 @@ public class VendorController {
 
         VendorUser vendor = currentVendor(session);
 
-        // Vérification limite
         if (vendor.getPlan() == VendorPlan.GRATUIT &&
                 productRepository.countByVendor(vendor) >= GRATUIT_LIMIT) {
             ra.addFlashAttribute("flashError",
-                    "Limite de 10 produits atteinte. Passez au Pack Pro pour continuer.");
+                    "Limite de 10 produits atteinte. Passez au Pack Pro.");
             return "redirect:/vendor/products";
         }
 
         Category category = categoryRepository.findById(categoryId).orElse(null);
         if (category == null) {
             ra.addFlashAttribute("flashError", "Catégorie invalide.");
+            return "redirect:/vendor/products/add";
+        }
+
+        // Vérifier que le vendeur a accès à cette catégorie
+        List<Category> allowed = allowedCategories(vendor);
+        if (!allowed.isEmpty() && allowed.stream().noneMatch(c -> c.getId().equals(categoryId))) {
+            ra.addFlashAttribute("flashError",
+                    "Vous n'avez pas accès à cette catégorie. Demandez l'accès depuis votre dashboard.");
             return "redirect:/vendor/products/add";
         }
 
@@ -312,7 +384,6 @@ public class VendorController {
         p.setFeatured(false);
         p.setVendor(vendor);
 
-        // Image
         try {
             if (imageFile != null && !imageFile.isEmpty()) {
                 p.setImageUrl(imageUploadService.store(imageFile));
@@ -347,7 +418,7 @@ public class VendorController {
         model.addAttribute("pageTitle",  "Modifier le produit — BOLA");
         model.addAttribute("vendor",     vendor);
         model.addAttribute("product",    p);
-        model.addAttribute("categories", categoryRepository.findAll());
+        model.addAttribute("categories", allowedCategories(vendor));
         model.addAttribute("isEdit",     true);
         return "vendor/product-form";
     }
@@ -425,5 +496,78 @@ public class VendorController {
         productRepository.deleteById(id);
         ra.addFlashAttribute("flashOk", "Produit supprimé.");
         return "redirect:/vendor/products";
+    }
+
+    // ─── Messages vendeur ───────────────────────────────────────────────────────────
+
+    @GetMapping("/messages")
+    public String messagesInbox(HttpSession session, Model model) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+        List<String> customerIds = chatMessageRepository.findDistinctCustomersByVendor(vendor);
+        List<ChatMessage> conversations = customerIds.stream()
+                .map(cid -> chatMessageRepository.findFirstByVendorAndCustomerIdentifierOrderBySentAtDesc(vendor, cid))
+                .filter(m -> m != null)
+                .sorted((a, b) -> b.getSentAt().compareTo(a.getSentAt()))
+                .toList();
+
+        long unread = chatMessageRepository.countByVendorAndReadByVendorFalseAndSenderType(vendor, "CUSTOMER");
+
+        model.addAttribute("pageTitle",    "Messages — BOLA Vendeur");
+        model.addAttribute("vendor",       vendor);
+        model.addAttribute("conversations", conversations);
+        model.addAttribute("unreadCount",  unread);
+        return "vendor/messages";
+    }
+
+    @GetMapping("/messages/{custId}")
+    public String messageThread(@PathVariable String custId,
+                                HttpSession session,
+                                Model model) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+        List<ChatMessage> messages = chatMessageRepository
+                .findByVendorAndCustomerIdentifierOrderBySentAtAsc(vendor, custId);
+
+        // Marquer comme lus par le vendeur
+        messages.stream()
+                .filter(m -> "CUSTOMER".equals(m.getSenderType()) && !m.isReadByVendor())
+                .forEach(m -> { m.setReadByVendor(true); chatMessageRepository.save(m); });
+
+        String customerName = messages.isEmpty() ? custId : 
+                (messages.get(0).getCustomerName() != null ? messages.get(0).getCustomerName() : custId);
+
+        model.addAttribute("pageTitle",     "Chat avec " + customerName + " — BOLA");
+        model.addAttribute("vendor",        vendor);
+        model.addAttribute("messages",      messages);
+        model.addAttribute("customerName",  customerName);
+        model.addAttribute("custId",        custId);
+        return "vendor/message-thread";
+    }
+
+    @PostMapping("/messages/{custId}/send")
+    public String sendMessageToCustomer(@PathVariable String custId,
+                                        @RequestParam String message,
+                                        HttpSession session) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+        if (message != null && !message.isBlank()) {
+            ChatMessage msg = new ChatMessage();
+            msg.setVendor(vendor);
+            msg.setCustomerIdentifier(custId);
+            msg.setSenderType("VENDOR");
+            msg.setMessage(message.trim());
+            msg.setSentAt(Instant.now());
+            msg.setReadByVendor(true);
+            msg.setReadByCustomer(false);
+            chatMessageRepository.save(msg);
+        }
+        return "redirect:/vendor/messages/" + custId;
     }
 }

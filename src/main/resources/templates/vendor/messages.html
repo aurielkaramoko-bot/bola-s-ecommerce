@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Messages — BOLA Vendeur</title>
+</head>
+<body class="bolas-body">
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container py-4 flex-grow-1" style="max-width:720px;">
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a th:href="@{/vendor/dashboard}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h1 class="h4 fw-bold mb-0" style="color:var(--bolas-accent);">
+      <i class="bi bi-chat-dots me-2"></i>Messages
+    </h1>
+    <span th:if="${unreadCount > 0}" class="badge" style="background:var(--bolas-accent);"
+          th:text="${unreadCount} + ' non lu(s)'">0</span>
+  </div>
+
+  <!-- Liste des conversations -->
+  <div th:if="${conversations.isEmpty()}" class="admin-card p-5 text-center text-muted">
+    <i class="bi bi-inbox" style="font-size:2.5rem;opacity:.3;display:block;"></i>
+    <p class="mt-2 mb-0">Aucune conversation. Les messages de vos clients apparaîtront ici.</p>
+  </div>
+
+  <div th:each="conv : ${conversations}" class="admin-card p-3 mb-2">
+    <a th:href="@{/vendor/messages/{custId}(custId=${conv.customerIdentifier})}"
+       class="d-flex align-items-center gap-3 text-decoration-none" style="color:var(--bolas-text);">
+      <div style="width:44px;height:44px;background:var(--bolas-light);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="bi bi-person" style="font-size:1.2rem;color:var(--bolas-accent);"></i>
+      </div>
+      <div class="flex-grow-1">
+        <div class="fw-semibold small" th:text="${conv.customerName ?: conv.customerIdentifier}">Client</div>
+        <div class="small text-muted text-truncate" style="max-width:400px;"
+             th:text="${conv.message}">Dernier message...</div>
+      </div>
+      <div class="text-end flex-shrink-0">
+        <span class="small text-muted"
+              th:text="${#temporals.format(conv.sentAt,'dd/MM HH:mm')}">12:00</span>
+        <span th:if="${!conv.readByVendor and conv.senderType == 'CUSTOMER'}"
+              class="badge rounded-pill ms-1" style="background:var(--bolas-accent);">Nouveau</span>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+</body>
+</html>

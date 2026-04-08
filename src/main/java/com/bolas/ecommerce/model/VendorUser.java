@@ -43,6 +43,16 @@ public class VendorUser {
     @Column(name = "logo_url", length = 2000)
     private String logoUrl;
 
+    /** URL de la pièce d'identité (pour vérification admin) */
+    @Size(max = 2000)
+    @Column(name = "id_document_url", length = 2000)
+    private String idDocumentUrl;
+
+    /** Niche/catégorie demandée si elle n'existe pas dans la liste */
+    @Size(max = 300)
+    @Column(name = "requested_niche", length = 300)
+    private String requestedNiche;
+
     /** Plan d'abonnement : GRATUIT (max 10 produits) ou PRO */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
@@ -87,6 +97,12 @@ public class VendorUser {
 
     public String getLogoUrl() { return logoUrl; }
     public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
+
+    public String getIdDocumentUrl() { return idDocumentUrl; }
+    public void setIdDocumentUrl(String idDocumentUrl) { this.idDocumentUrl = idDocumentUrl; }
+
+    public String getRequestedNiche() { return requestedNiche; }
+    public void setRequestedNiche(String requestedNiche) { this.requestedNiche = requestedNiche; }
 
     public VendorPlan getPlan() { return plan; }
     public void setPlan(VendorPlan plan) { this.plan = plan; }

@@ -148,9 +148,13 @@ public class SecurityConfig {
                 .requestMatchers(new AntPathRequestMatcher("/h2-console/**")).access((authentication, context) ->
                         new org.springframework.security.authorization.AuthorizationDecision(!isProdProfile()))
                 .requestMatchers(
+                        // Vendor routes : auth gérée manuellement via HttpSession dans VendorController
                         new AntPathRequestMatcher("/vendor"),
-                        new AntPathRequestMatcher("/vendor/**")
-                ).hasAnyRole("VENDOR", "ADMIN")
+                        new AntPathRequestMatcher("/vendor/**"),
+                        // Chat et signalement : publics (chat nécessite session client, vérifié dans controller)
+                        new AntPathRequestMatcher("/chat/**"),
+                        new AntPathRequestMatcher("/report")
+                ).permitAll()
                 .requestMatchers(
                         new AntPathRequestMatcher("/admin"),
                         new AntPathRequestMatcher("/admin/**")
