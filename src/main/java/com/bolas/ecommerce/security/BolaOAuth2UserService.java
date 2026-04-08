@@ -20,23 +20,6 @@ public class BolaOAuth2UserService extends OidcUserService {
 
     @Override
     public OidcUser loadUser(OidcUserRequest userRequest) throws OAuth2AuthenticationException {
-        OidcUser oidcUser = super.loadUser(userRequest);
-
-        try {
-            String googleId  = oidcUser.getAttribute("sub");
-            String email     = oidcUser.getAttribute("email");
-            String firstName = oidcUser.getAttribute("given_name");
-            String lastName  = oidcUser.getAttribute("family_name");
-
-            System.err.println("=== GOOGLE LOGIN === googleId=" + googleId + " email=" + email);
-            customerService.loginOrCreateGoogle(googleId, email, firstName, lastName);
-            System.err.println("=== GOOGLE LOGIN OK ===");
-        } catch (Exception e) {
-            System.err.println("=== GOOGLE LOGIN ERROR === " + e.getMessage());
-            e.printStackTrace();
-            throw new OAuth2AuthenticationException(e.getMessage());
-        }
-
-        return oidcUser;
+        return super.loadUser(userRequest);
     }
 }

@@ -176,10 +176,10 @@ public class SecurityConfig {
                 .deleteCookies("JSESSIONID")
         );
 
-        // OAuth2 Google — redirige vers un controller dédié qui gère la session
+        // OAuth2 Google
         http.oauth2Login(oauth2 -> oauth2
                 .loginPage("/customer/login")
-                .defaultSuccessUrl("/customer/oauth2/success", true)
+                .successHandler(googleOAuth2SuccessHandler)
                 .failureUrl("/customer/login?error")
                 .userInfoEndpoint(userInfo -> userInfo
                         .oidcUserService(bolaOAuth2UserService)
