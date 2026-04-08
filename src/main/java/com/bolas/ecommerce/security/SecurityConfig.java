@@ -31,6 +31,7 @@ public class SecurityConfig {
     private final SensitiveCacheControlFilter sensitiveCacheControlFilter;
     private final GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler;
     private final AdminUserDetailsService adminUserDetailsService;
+    private final BolaOAuth2UserService bolaOAuth2UserService;
     private final Environment environment;
 
     public SecurityConfig(BolasAuthenticationSuccessHandler successHandler,
@@ -39,6 +40,7 @@ public class SecurityConfig {
                           SensitiveCacheControlFilter sensitiveCacheControlFilter,
                           GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler,
                           AdminUserDetailsService adminUserDetailsService,
+                          BolaOAuth2UserService bolaOAuth2UserService,
                           Environment environment) {
         this.successHandler = successHandler;
         this.failureHandler = failureHandler;
@@ -46,6 +48,7 @@ public class SecurityConfig {
         this.sensitiveCacheControlFilter = sensitiveCacheControlFilter;
         this.googleOAuth2SuccessHandler = googleOAuth2SuccessHandler;
         this.adminUserDetailsService = adminUserDetailsService;
+        this.bolaOAuth2UserService = bolaOAuth2UserService;
         this.environment = environment;
     }
 
@@ -171,7 +174,7 @@ public class SecurityConfig {
                 .defaultSuccessUrl("/", true)
                 .successHandler(googleOAuth2SuccessHandler)
                 .userInfoEndpoint(userInfo -> userInfo
-                        .userAuthoritiesMapper(authorities -> authorities)
+                        .oidcUserService(bolaOAuth2UserService)
                 )
         );
 
