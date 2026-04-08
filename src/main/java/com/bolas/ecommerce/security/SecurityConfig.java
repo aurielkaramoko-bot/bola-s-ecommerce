@@ -109,9 +109,8 @@ public class SecurityConfig {
                     }
                 });
 
-        if (isProdProfile()) {
-            http.requiresChannel(channel -> channel.anyRequest().requiresSecure());
-        }
+        // Render gère HTTPS au niveau proxy — on ne force pas HTTPS ici
+        // (server.forward-headers-strategy=framework suffit)
 
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers(

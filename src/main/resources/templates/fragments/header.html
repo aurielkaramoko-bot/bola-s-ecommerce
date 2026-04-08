@@ -4,7 +4,7 @@
 <head th:fragment="head (title)">
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title th:text="${title} ?: 'Bola\'s'">Bola's</title>
+  <title th:text="${title} ?: 'BOLA — La Marketplace du Togo'">BOLA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&amp;display=swap" rel="stylesheet"/>
@@ -20,7 +20,7 @@
   <div class="container-fluid px-3 px-lg-5">
 
     <!-- Logo gauche -->
-    <a class="navbar-brand site-logo" th:href="@{/}">Bola's</a>
+    <a class="navbar-brand site-logo" th:href="@{/}">BOLA</a>
 
     <!-- Toggler mobile -->
     <button class="navbar-toggler border-0" type="button"
@@ -51,6 +51,12 @@
 
       <!-- Boutons droite -->
       <div class="d-flex justify-content-center justify-content-lg-end align-items-center gap-2 pb-3 pb-lg-0">
+
+        <!-- Bouton "Vendre sur BOLA" toujours visible -->
+        <a class="btn btn-sell-bola" th:href="@{/vendor/login}">
+          <i class="bi bi-shop me-1"></i>Vendre sur BOLA
+        </a>
+
         <a class="btn btn-admin-pill" th:href="@{/cart}">
           <i class="bi bi-cart3 me-1"></i>
           <span>Panier</span>

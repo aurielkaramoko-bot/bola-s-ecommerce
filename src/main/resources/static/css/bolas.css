@@ -815,3 +815,236 @@ body.bolas-body {
     max-width: 180px;
   }
 }
+
+/* ============================================================
+   BOLA MARKETPLACE — Styles additionnels
+   ============================================================ */
+
+/* Bouton "Vendre sur BOLA" dans la navbar */
+.btn-sell-bola {
+  background: linear-gradient(135deg, var(--bolas-accent), #a0714a);
+  color: var(--bolas-white) !important;
+  border: none;
+  border-radius: 999px;
+  padding: 0.45rem 1.2rem !important;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 8px rgba(139,94,60,.3);
+}
+.btn-sell-bola:hover {
+  background: linear-gradient(135deg, var(--bolas-dark), #8B5E3C);
+  color: var(--bolas-white) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(139,94,60,.4);
+}
+
+/* ============================================================
+   HERO STATS
+   ============================================================ */
+.hero-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 2.5rem;
+  flex-wrap: wrap;
+}
+.hero-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.hero-stat-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--bolas-accent);
+  line-height: 1;
+}
+.hero-stat-label {
+  font-size: 0.82rem;
+  color: var(--bolas-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+.hero-stat-sep {
+  width: 1px;
+  height: 40px;
+  background: var(--bolas-border);
+}
+@media (max-width: 575.98px) {
+  .hero-stats { gap: 1rem; }
+  .hero-stat-number { font-size: 1.5rem; }
+  .hero-stat-sep { height: 30px; }
+}
+
+/* ============================================================
+   SECTION "VENDRE SUR BOLA"
+   ============================================================ */
+.sell-on-bola-section {
+  background: linear-gradient(160deg, #fff9f5 0%, #fff 100%);
+  border-top: 1px solid var(--bolas-border);
+  border-bottom: 1px solid var(--bolas-border);
+}
+.sell-bola-card {
+  background: var(--bolas-white);
+  border: 1.5px solid var(--bolas-border);
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 12px 48px rgba(139,94,60,.08);
+  position: relative;
+  overflow: hidden;
+}
+.sell-bola-card::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139,94,60,.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+.sell-bola-badge {
+  display: inline-block;
+  background: var(--bolas-light);
+  color: var(--bolas-accent);
+  font-size: .82rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  padding: .3rem .9rem;
+  border-radius: 999px;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(139,94,60,.2);
+}
+.sell-bola-title {
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: var(--bolas-text);
+  line-height: 1.2;
+  margin-bottom: .75rem;
+}
+.sell-bola-desc {
+  color: var(--bolas-muted);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  max-width: 480px;
+}
+.btn-sell-bola-main {
+  background: var(--bolas-accent);
+  color: var(--bolas-white) !important;
+  border: 2px solid var(--bolas-accent);
+  border-radius: 999px;
+  padding: .7rem 1.8rem;
+  font-weight: 700;
+  font-size: 1rem;
+  transition: background .2s, transform .15s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 0 4px 16px rgba(139,94,60,.25);
+}
+.btn-sell-bola-main:hover {
+  background: var(--bolas-dark);
+  border-color: var(--bolas-dark);
+  color: var(--bolas-white) !important;
+  transform: translateY(-2px);
+}
+.btn-sell-bola-outline {
+  border: 2px solid var(--bolas-accent);
+  color: var(--bolas-accent) !important;
+  border-radius: 999px;
+  padding: .7rem 1.8rem;
+  font-weight: 600;
+  font-size: 1rem;
+  background: transparent;
+  transition: background .2s, color .2s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+.btn-sell-bola-outline:hover {
+  background: var(--bolas-accent);
+  color: var(--bolas-white) !important;
+}
+.sell-bola-features {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+.sell-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.sell-feature-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bolas-light);
+  color: var(--bolas-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  border: 1px solid rgba(139,94,60,.2);
+}
+.sell-feature-item strong {
+  display: block;
+  color: var(--bolas-text);
+  font-weight: 700;
+  font-size: .97rem;
+  line-height: 1.2;
+}
+.sell-feature-item p {
+  color: var(--bolas-muted);
+  font-size: .87rem;
+  margin: .15rem 0 0;
+}
+
+/* ============================================================
+   BOUTON GOOGLE LOGIN
+   ============================================================ */
+.btn-google-login {
+  border: 1.5px solid var(--bolas-border);
+  color: var(--bolas-text) !important;
+  background: var(--bolas-white);
+  border-radius: 999px;
+  padding: .6rem 1.2rem;
+  font-weight: 600;
+  font-size: .95rem;
+  transition: border-color .2s, box-shadow .2s, background .2s;
+  text-decoration: none;
+}
+.btn-google-login:hover {
+  border-color: var(--bolas-accent);
+  box-shadow: 0 2px 10px rgba(139,94,60,.12);
+  background: var(--bolas-light);
+}
+
+/* ============================================================
+   FOOTER BADGES
+   ============================================================ */
+.footer-badges {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  margin-top: .5rem;
+}
+.footer-badge {
+  display: inline-block;
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.7);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 999px;
+  padding: .2rem .7rem;
+  font-size: .8rem;
+  width: fit-content;
+}

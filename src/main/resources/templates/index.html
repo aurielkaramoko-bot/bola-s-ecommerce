@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
 <head th:replace="~{fragments/header :: head(title=${pageTitle})}">
-  <title>Bola's</title>
+  <title>BOLA — La Marketplace du Togo</title>
 </head>
 <body class="bolas-body">
 <div th:replace="~{fragments/header :: navbar}"></div>
@@ -12,17 +12,34 @@
   <!-- ===== HERO ===== -->
   <section class="hero-artisal">
     <span class="hero-badge">
-      <i class="bi bi-bag-heart me-1"></i> Boutique en ligne
+      <i class="bi bi-globe2 me-1"></i> La Marketplace du Togo
     </span>
-    <h1 class="display-5">Vos envies à portée de clic,<br>livraison suivie chez vous</h1>
-    <p class="lead">Parcourez les catégories Bola's, commandez par WhatsApp et suivez votre livreur sur la carte en temps réel.</p>
+    <h1 class="display-5">Des milliers de vendeurs,<br>un seul endroit pour tout trouver</h1>
+    <p class="lead">BOLA réunit artisans, boutiques et commerçants locaux. Commandez en toute confiance, livraison suivie chez vous.</p>
     <div class="d-flex flex-wrap justify-content-center gap-3">
       <a th:href="@{/products}" class="btn btn-hero-solid">
-        <i class="bi bi-bag me-2"></i>Voir nos produits
+        <i class="bi bi-bag me-2"></i>Découvrir les boutiques
       </a>
-      <a class="btn btn-hero-outline" href="#contact">
-        <i class="bi bi-telephone me-2"></i>Contactez-nous
+      <a class="btn btn-hero-outline" th:href="@{/vendor/login}">
+        <i class="bi bi-shop me-2"></i>Vendre sur BOLA
       </a>
+    </div>
+    <!-- Stats rapides -->
+    <div class="hero-stats">
+      <div class="hero-stat-item">
+        <span class="hero-stat-number">500+</span>
+        <span class="hero-stat-label">Vendeurs</span>
+      </div>
+      <div class="hero-stat-sep"></div>
+      <div class="hero-stat-item">
+        <span class="hero-stat-number">10k+</span>
+        <span class="hero-stat-label">Produits</span>
+      </div>
+      <div class="hero-stat-sep"></div>
+      <div class="hero-stat-item">
+        <span class="hero-stat-number">2</span>
+        <span class="hero-stat-label">Pays</span>
+      </div>
     </div>
   </section>
 
@@ -63,7 +80,7 @@
           Voir tout <i class="bi bi-arrow-right"></i>
         </a>
       </div>
-      <p class="section-subtitle">Explorez notre sélection par univers</p>
+      <p class="section-subtitle">Explorez par univers — des milliers de vendeurs vous attendent</p>
 
       <div class="products-scroll-wrap">
         <button class="scroll-btn scroll-btn-left" onclick="scrollCards('cat-scroll',-1)" aria-label="Précédent">
@@ -104,6 +121,63 @@
     </div>
   </section>
 
+  <!-- ===== SECTION "VENDRE SUR BOLA" ===== -->
+  <section class="sell-on-bola-section py-5">
+    <div class="container">
+      <div class="sell-bola-card">
+        <div class="row align-items-center g-4">
+          <div class="col-12 col-md-7">
+            <span class="sell-bola-badge">
+              <i class="bi bi-stars me-1"></i> Rejoignez BOLA
+            </span>
+            <h2 class="sell-bola-title">Ouvrez votre boutique<br>sur BOLA aujourd'hui</h2>
+            <p class="sell-bola-desc">Que vous soyez artisan, revendeur ou grande enseigne — BOLA vous donne accès à des milliers de clients au Togo et en Côte d'Ivoire. Démarrez gratuitement.</p>
+            <div class="d-flex flex-wrap gap-3 mt-3">
+              <a th:href="@{/vendor/login}" class="btn btn-sell-bola-main">
+                <i class="bi bi-shop me-2"></i>Ouvrir ma boutique
+              </a>
+              <a th:href="@{/contact}" class="btn btn-sell-bola-outline">
+                <i class="bi bi-chat-dots me-2"></i>Nous contacter
+              </a>
+            </div>
+          </div>
+          <div class="col-12 col-md-5">
+            <div class="sell-bola-features">
+              <div class="sell-feature-item">
+                <div class="sell-feature-icon"><i class="bi bi-check-circle-fill"></i></div>
+                <div>
+                  <strong>Démarrage gratuit</strong>
+                  <p>Petites boutiques : accessible à tous</p>
+                </div>
+              </div>
+              <div class="sell-feature-item">
+                <div class="sell-feature-icon"><i class="bi bi-phone-fill"></i></div>
+                <div>
+                  <strong>Mobile Money intégré</strong>
+                  <p>TMoney, Moov Money — paiement sécurisé</p>
+                </div>
+              </div>
+              <div class="sell-feature-item">
+                <div class="sell-feature-icon"><i class="bi bi-globe2"></i></div>
+                <div>
+                  <strong>Visibilité internationale</strong>
+                  <p>Vendez au Togo, en Côte d'Ivoire et au-delà</p>
+                </div>
+              </div>
+              <div class="sell-feature-item">
+                <div class="sell-feature-icon"><i class="bi bi-bar-chart-fill"></i></div>
+                <div>
+                  <strong>Tableau de bord vendeur</strong>
+                  <p>Gérez vos produits, commandes et revenus</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== AVANTAGES ===== -->
   <section class="py-5">
     <div class="container">
@@ -120,13 +194,13 @@
         </div>
         <div class="col-6 col-md-3">
           <i class="bi bi-shield-check fs-2 text-accent mb-2 d-block"></i>
-          <p class="fw-semibold mb-0" style="color:var(--bolas-text)">Sélection qualité</p>
-          <p class="small text-muted mb-0">Des articles choisis pour vous</p>
+          <p class="fw-semibold mb-0" style="color:var(--bolas-text)">Paiement sécurisé</p>
+          <p class="small text-muted mb-0">Mobile Money &amp; séquestre</p>
         </div>
         <div class="col-6 col-md-3">
-          <i class="bi bi-cash-coin fs-2 text-accent mb-2 d-block"></i>
-          <p class="fw-semibold mb-0" style="color:var(--bolas-text)">Paiement à la livraison</p>
-          <p class="small text-muted mb-0">En toute confiance</p>
+          <i class="bi bi-people fs-2 text-accent mb-2 d-block"></i>
+          <p class="fw-semibold mb-0" style="color:var(--bolas-text)">500+ vendeurs</p>
+          <p class="small text-muted mb-0">Artisans &amp; boutiques locales</p>
         </div>
       </div>
     </div>

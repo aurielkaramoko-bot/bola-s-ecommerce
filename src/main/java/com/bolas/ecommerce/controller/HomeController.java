@@ -19,7 +19,7 @@ public class HomeController {
 
     @GetMapping("/")
     public String home(Model model) {
-        model.addAttribute("pageTitle", "Accueil — Bola's");
+        model.addAttribute("pageTitle", "BOLA — La Marketplace du Togo");
         model.addAttribute("featuredProducts", productRepository.findByAvailableTrueAndFeaturedTrue());
         model.addAttribute("categories", categoryRepository.findAll());
         model.addAttribute("popularProducts", productRepository.findTop6ByAvailableTrueOrderByFeaturedDescIdDesc());
@@ -28,7 +28,7 @@ public class HomeController {
 
     @GetMapping("/contact")
     public String contact(Model model) {
-        model.addAttribute("pageTitle", "Contact — Bola's");
+        model.addAttribute("pageTitle", "Contact — BOLA");
         return "contact";
     }
 }

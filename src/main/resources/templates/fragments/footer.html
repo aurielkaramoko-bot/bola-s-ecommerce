@@ -20,8 +20,8 @@
 
       <!-- Colonne 1 : Marque -->
       <div class="col-12 col-md-4">
-        <span class="footer-logo">Bola's</span>
-        <p class="footer-tagline">Boutique en ligne — produits sélectionnés avec soin, livrés chez vous.</p>
+        <span class="footer-logo">BOLA</span>
+        <p class="footer-tagline">La marketplace du Togo — des milliers de vendeurs, une seule plateforme. Artisans, boutiques et commerçants locaux réunis pour vous.</p>
         <div class="footer-social">
           <a th:href="|https://wa.me/${shopPhone}|" aria-label="WhatsApp" target="_blank" rel="noopener">
             <i class="bi bi-whatsapp"></i>
@@ -44,9 +44,15 @@
         </ul>
       </div>
 
-      <!-- Colonne 3 : Contact -->
+      <!-- Colonne 3 : Pour les vendeurs -->
       <div class="col-6 col-md-3">
-        <h5>Contact</h5>
+        <h5>Vendeurs</h5>
+        <ul>
+          <li><a th:href="@{/vendor/login}">Ouvrir ma boutique</a></li>
+          <li><a th:href="@{/customer/login}">Espace client</a></li>
+          <li><a th:href="@{/contact}">Nous contacter</a></li>
+        </ul>
+        <h5 class="mt-3">Contact</h5>
         <ul>
           <li>
             <a th:href="|tel:+${shopPhone}|">
@@ -75,14 +81,19 @@
           <li><span style="color:rgba(255,255,255,.6)">Paiement à la livraison</span></li>
           <li><span style="color:rgba(255,255,255,.6)">Livraison à domicile</span></li>
           <li><span style="color:rgba(255,255,255,.6)">Retrait en boutique</span></li>
+          <li><span style="color:rgba(255,255,255,.6)">Mobile Money disponible</span></li>
         </ul>
+        <div class="footer-badges mt-2">
+          <span class="footer-badge"><i class="bi bi-shield-check me-1"></i>Paiement sécurisé</span>
+          <span class="footer-badge"><i class="bi bi-geo-alt me-1"></i>Togo &amp; Côte d'Ivoire</span>
+        </div>
       </div>
     </div>
 
     <!-- Bas de footer -->
     <div class="footer-bottom">
       <span th:text="${T(java.time.Year).now()}">2026</span>
-      &copy; Bola's. Tous droits réservés.
+      &copy; BOLA Marketplace. Tous droits réservés. — La marketplace made in Togo.
     </div>
   </div>
 

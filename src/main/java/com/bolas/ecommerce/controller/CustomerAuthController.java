@@ -24,7 +24,7 @@ public class CustomerAuthController {
     @GetMapping("/customer/login")
     public String loginPage(HttpSession session, Model model) {
         if (session.getAttribute("BOLAS_CUSTOMER") != null) return "redirect:/";
-        model.addAttribute("pageTitle", "Connexion — Bola's");
+        model.addAttribute("pageTitle", "Connexion — BOLA");
         return "customer/login";
     }
 
@@ -45,7 +45,7 @@ public class CustomerAuthController {
     @GetMapping("/customer/signup")
     public String signupPage(HttpSession session, Model model) {
         if (session.getAttribute("BOLAS_CUSTOMER") != null) return "redirect:/";
-        model.addAttribute("pageTitle", "Créer un compte — Bola's");
+        model.addAttribute("pageTitle", "Créer un compte — BOLA");
         return "customer/signup";
     }
 

@@ -30,6 +30,11 @@ public class GlobalModelAdvice {
         return email != null ? email : "";
     }
 
+    @ModelAttribute("shopName")
+    public String shopName(@Value("${bolas.shop.name:BOLA}") String name) {
+        return name != null ? name : "BOLA";
+    }
+
     @ModelAttribute("cartItemCount")
     public int cartItemCount(HttpSession session) {
         return cartService.totalItems(session);
