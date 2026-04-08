@@ -60,6 +60,13 @@ public class SecurityConfig {
         return new ProviderManager(provider);
     }
 
+    public DaoAuthenticationProvider adminAuthProvider(PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(adminUserDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return provider;
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -154,11 +161,13 @@ public class SecurityConfig {
                 .loginProcessingUrl("/admin/login-process")
                 .usernameParameter("username")
                 .passwordParameter("password")
-                .authenticationManager(adminAuthenticationManager(passwordEncoder()))
                 .successHandler(successHandler)
                 .failureHandler(failureHandler)
                 .permitAll()
         );
+
+        // Injecter l'AuthenticationManager admin via le builder
+        http.authenticationProvider(adminAuthProvider(passwordEncoder()));
 
         http.logout(logout -> logout
                 .logoutRequestMatcher(new AntPathRequestMatcher("/admin/logout", "POST"))
