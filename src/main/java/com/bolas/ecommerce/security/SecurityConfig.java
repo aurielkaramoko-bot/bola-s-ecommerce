@@ -165,10 +165,14 @@ public class SecurityConfig {
                 .deleteCookies("JSESSIONID")
         );
 
-        // OAuth2 Google — login client uniquement
+        // OAuth2 Google — login client uniquement, pas de UserDetailsService
         http.oauth2Login(oauth2 -> oauth2
                 .loginPage("/customer/login")
+                .defaultSuccessUrl("/", true)
                 .successHandler(googleOAuth2SuccessHandler)
+                .userInfoEndpoint(userInfo -> userInfo
+                        .userAuthoritiesMapper(authorities -> authorities)
+                )
         );
 
         http.addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
