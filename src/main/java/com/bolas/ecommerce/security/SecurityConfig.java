@@ -154,13 +154,11 @@ public class SecurityConfig {
                 .loginProcessingUrl("/admin/login-process")
                 .usernameParameter("username")
                 .passwordParameter("password")
+                .authenticationManager(adminAuthenticationManager(passwordEncoder()))
                 .successHandler(successHandler)
                 .failureHandler(failureHandler)
                 .permitAll()
         );
-
-        // Lier explicitement l'AuthenticationManager admin au formLogin
-        http.authenticationManager(adminAuthenticationManager(passwordEncoder()));
 
         http.logout(logout -> logout
                 .logoutRequestMatcher(new AntPathRequestMatcher("/admin/logout", "POST"))
