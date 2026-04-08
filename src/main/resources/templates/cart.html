@@ -106,6 +106,22 @@
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
         <input type="hidden" name="clientLatitude"  id="clientLat"/>
         <input type="hidden" name="clientLongitude" id="clientLng"/>
+
+        <!-- Avertissement si pas connecté -->
+        <div th:if="${session.BOLAS_CUSTOMER == null}"
+             class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-person-exclamation fs-5"></i>
+          <div>
+            Vous devez être connecté pour commander.
+            <a th:href="@{/customer/login}" class="fw-semibold" style="color:var(--bolas-accent);">
+              Se connecter
+            </a>
+            ou
+            <a th:href="@{/customer/signup}" class="fw-semibold" style="color:var(--bolas-accent);">
+              Créer un compte
+            </a>
+          </div>
+        </div>
         <div class="row g-2 mb-3">
           <div class="col-md-6">
             <input type="text" class="form-control" name="customerName" required

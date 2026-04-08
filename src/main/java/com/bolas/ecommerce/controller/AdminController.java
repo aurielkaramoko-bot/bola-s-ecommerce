@@ -449,6 +449,13 @@ public class AdminController {
         return "redirect:/admin/vendors";
     }
 
+    @PostMapping("/admin/vendors/{id}/delete")
+    public String deleteVendor(@PathVariable Long id, RedirectAttributes ra) {
+        vendorUserRepository.deleteById(id);
+        ra.addFlashAttribute("flashOk", "Vendeur supprimé.");
+        return "redirect:/admin/vendors";
+    }
+
     private String baseUrl(HttpServletRequest request) {
         return request.getScheme() + "://" + request.getServerName()
                 + (request.getServerPort() != 80 && request.getServerPort() != 443
