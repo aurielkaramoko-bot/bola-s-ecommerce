@@ -9,6 +9,7 @@ import com.bolas.ecommerce.model.OrderLine;
 import com.bolas.ecommerce.model.OrderStatus;
 import com.bolas.ecommerce.model.Product;
 import com.bolas.ecommerce.model.VendorUser;
+import com.bolas.ecommerce.model.VendorStatus;
 import com.bolas.ecommerce.repository.CategoryRepository;
 import com.bolas.ecommerce.repository.CustomerOrderRepository;
 import com.bolas.ecommerce.repository.OrderLineRepository;
@@ -105,6 +106,8 @@ public class AdminController {
         model.addAttribute("categoryCount", categoryRepository.count());
         model.addAttribute("orderCount", customerOrderRepository.count());
         model.addAttribute("recentOrders", customerOrderRepository.findTop10ByOrderByCreatedAtDesc());
+        model.addAttribute("pendingVendorCount",
+                vendorUserRepository.countByVendorStatus(VendorStatus.PENDING));
 
         List<Category> categories = categoryRepository.findAll();
         List<String> chartLabels = new ArrayList<>();
@@ -417,8 +420,15 @@ public class AdminController {
 
     @GetMapping("/admin/vendors")
     public String vendors(Model model) {
-        model.addAttribute("pageTitle", "Vendeurs — Admin Bola's");
+        model.addAttribute("pageTitle", "Vendeurs — Admin BOLA");
         model.addAttribute("vendors", vendorUserRepository.findAll());
+        model.addAttribute("pendingVendors",
+                vendorUserRepository.findByVendorStatus(VendorStatus.PENDING));
+        // Vendeurs non-PENDING (ACTIVE + SUSPENDED)
+        model.addAttribute("activeVendors",
+                vendorUserRepository.findAll().stream()
+                        .filter(v -> v.getVendorStatus() != VendorStatus.PENDING)
+                        .toList());
         return "admin/vendors";
     }
 
@@ -426,6 +436,8 @@ public class AdminController {
     public String saveVendor(@RequestParam String username,
                              @RequestParam String password,
                              @RequestParam String phone,
+                             @RequestParam(required = false) String shopName,
+                             @RequestParam(required = false) String email,
                              RedirectAttributes ra) {
         if (vendorUserRepository.findByUsername(username).isPresent()) {
             ra.addFlashAttribute("flashError", "Ce nom d'utilisateur existe déjà.");
@@ -435,8 +447,12 @@ public class AdminController {
         v.setUsername(username.trim());
         v.setPasswordHash(passwordEncoder.encode(password));
         v.setPhone(phone.trim());
+        if (shopName != null && !shopName.isBlank()) v.setShopName(shopName.trim());
+        if (email != null && !email.isBlank()) v.setEmail(email.trim());
+        v.setActive(true);  // Créé par admin = actif directement
+        v.setVendorStatus(com.bolas.ecommerce.model.VendorStatus.ACTIVE);
         vendorUserRepository.save(v);
-        ra.addFlashAttribute("flashOk", "Vendeur créé.");
+        ra.addFlashAttribute("flashOk", "Vendeur créé et activé.");
         return "redirect:/admin/vendors";
     }
 
@@ -446,6 +462,27 @@ public class AdminController {
         v.setActive(!v.isActive());
         vendorUserRepository.save(v);
         ra.addFlashAttribute("flashOk", v.isActive() ? "Vendeur activé." : "Vendeur désactivé.");
+        return "redirect:/admin/vendors";
+    }
+
+    @PostMapping("/admin/vendors/{id}/approve")
+    public String approveVendor(@PathVariable Long id, RedirectAttributes ra) {
+        VendorUser v = vendorUserRepository.findById(id).orElseThrow();
+        v.setActive(true);
+        v.setVendorStatus(VendorStatus.ACTIVE);
+        vendorUserRepository.save(v);
+        ra.addFlashAttribute("flashOk",
+                "Boutique \"" + v.getDisplayName() + "\" approuvée et activée !");
+        return "redirect:/admin/vendors";
+    }
+
+    @PostMapping("/admin/vendors/{id}/suspend")
+    public String suspendVendor(@PathVariable Long id, RedirectAttributes ra) {
+        VendorUser v = vendorUserRepository.findById(id).orElseThrow();
+        v.setActive(false);
+        v.setVendorStatus(VendorStatus.SUSPENDED);
+        vendorUserRepository.save(v);
+        ra.addFlashAttribute("flashOk", "Vendeur suspendu.");
         return "redirect:/admin/vendors";
     }
 

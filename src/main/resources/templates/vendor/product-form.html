@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Produit — BOLA</title>
+</head>
+<body class="bolas-body">
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container py-4 flex-grow-1" style="max-width:720px;">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a th:href="@{/vendor/products}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h1 class="h4 fw-bold mb-0" style="color:var(--bolas-accent);"
+        th:text="${isEdit} ? 'Modifier le produit' : 'Ajouter un produit'">Produit</h1>
+  </div>
+
+  <div th:if="${flashError}" class="alert alert-danger" th:text="${flashError}"></div>
+
+  <div class="admin-card p-4">
+    <form th:action="${isEdit} ? @{/vendor/products/{id}/edit(id=${product.id})} : @{/vendor/products/add}"
+          method="post" enctype="multipart/form-data" id="vendor-product-form">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+      <div class="row g-3">
+
+        <!-- Nom -->
+        <div class="col-12">
+          <label for="prod-name" class="form-label fw-semibold small">
+            Nom du produit <span class="text-danger">*</span>
+          </label>
+          <input type="text" class="form-control" id="prod-name" name="name"
+                 th:value="${product.name}"
+                 required maxlength="200"
+                 placeholder="ex. Robe wax taille 38"/>
+        </div>
+
+        <!-- Prix + Promo -->
+        <div class="col-md-6">
+          <label for="prod-price" class="form-label fw-semibold small">
+            Prix (FCFA) <span class="text-danger">*</span>
+          </label>
+          <div class="input-group">
+            <input type="number" class="form-control" id="prod-price" name="priceCfa"
+                   th:value="${product.priceCfa}"
+                   required min="1" placeholder="ex. 15000"/>
+            <span class="input-group-text">FCFA</span>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label for="prod-promo" class="form-label fw-semibold small">
+            Prix promo (optionnel)
+          </label>
+          <div class="input-group">
+            <input type="number" class="form-control" id="prod-promo" name="promoPriceCfa"
+                   th:value="${product.promoPriceCfa}"
+                   min="1" placeholder="Laisser vide si sans promo"/>
+            <span class="input-group-text">FCFA</span>
+          </div>
+        </div>
+
+        <!-- Catégorie -->
+        <div class="col-md-6">
+          <label for="prod-cat" class="form-label fw-semibold small">
+            Catégorie <span class="text-danger">*</span>
+          </label>
+          <select class="form-select" id="prod-cat" name="categoryId" required>
+            <option value="">— Choisir une catégorie —</option>
+            <option th:each="c : ${categories}"
+                    th:value="${c.id}"
+                    th:text="${c.name}"
+                    th:selected="${product.category != null and product.category.id == c.id}">
+            </option>
+          </select>
+        </div>
+
+        <!-- Livraison -->
+        <div class="col-md-6">
+          <label for="prod-delivery-price" class="form-label fw-semibold small">
+            Frais de livraison (FCFA)
+          </label>
+          <div class="input-group">
+            <input type="number" class="form-control" id="prod-delivery-price"
+                   name="deliveryPriceCfa"
+                   th:value="${product.deliveryPriceCfa ?: 0}"
+                   min="0" placeholder="0 = gratuit"/>
+            <span class="input-group-text">FCFA</span>
+          </div>
+        </div>
+
+        <!-- Image URL -->
+        <div class="col-12">
+          <label for="prod-image-url" class="form-label fw-semibold small">URL de l'image</label>
+          <input type="url" class="form-control" id="prod-image-url" name="imageUrl"
+                 th:value="${product.imageUrl}"
+                 placeholder="https://... (ou uploadez ci-dessous)"/>
+        </div>
+
+        <!-- Image file upload -->
+        <div class="col-12">
+          <label for="prod-image-file" class="form-label fw-semibold small">Uploader une image</label>
+          <input type="file" class="form-control" id="prod-image-file" name="imageFile"
+                 accept="image/*"/>
+          <div class="form-text">JPEG/PNG/WebP, max 5 Mo. Prioritaire sur l'URL.</div>
+          <!-- Aperçu image existante -->
+          <div th:if="${product.imageUrl != null}" class="mt-2">
+            <img th:src="${product.imageUrl}" alt="Image actuelle"
+                 style="height:80px;border-radius:8px;object-fit:cover;"/>
+            <span class="small text-muted ms-2">Image actuelle</span>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="col-12">
+          <label for="prod-desc" class="form-label fw-semibold small">Description</label>
+          <textarea class="form-control" id="prod-desc" name="description"
+                    maxlength="8000" rows="4"
+                    placeholder="Décrivez votre produit : matière, taille, couleurs disponibles..."
+                    th:text="${product.description}"></textarea>
+        </div>
+
+        <!-- Options -->
+        <div class="col-md-6">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="prod-available"
+                   name="available" value="true"
+                   th:checked="${product.available == null or product.available}"/>
+            <label class="form-check-label small fw-semibold" for="prod-available">
+              Produit disponible à la vente
+            </label>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="prod-delivery"
+                   name="deliveryAvailable" value="true"
+                   th:checked="${product.deliveryAvailable == null or product.deliveryAvailable}"/>
+            <label class="form-check-label small fw-semibold" for="prod-delivery">
+              Livraison disponible
+            </label>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="col-12 d-flex gap-2 pt-2">
+          <button type="submit" id="btn-save-product" class="btn btn-hero-solid">
+            <i class="bi bi-check-circle me-2"></i>
+            <span th:text="${isEdit} ? 'Enregistrer les modifications' : 'Ajouter le produit'">Sauvegarder</span>
+          </button>
+          <a th:href="@{/vendor/products}" class="btn btn-outline-secondary">Annuler</a>
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+</body>
+</html>

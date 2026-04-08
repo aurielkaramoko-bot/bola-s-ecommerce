@@ -13,6 +13,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.persistence.Transient;
 
 @Entity
 @Table(name = "products")
@@ -67,6 +68,14 @@ public class Product {
     @Size(max = 2000)
     @Column(name = "video_url", length = 2000)
     private String videoUrl;
+
+    /**
+     * Vendeur propriétaire de ce produit.
+     * null = produit appartenant directement à BOLA (ajouté par admin).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vendor_id")
+    private VendorUser vendor;
 
     public Long getId() {
         return id;
@@ -171,4 +180,7 @@ public class Product {
     public void setVideoUrl(String videoUrl) {
         this.videoUrl = videoUrl;
     }
+
+    public VendorUser getVendor() { return vendor; }
+    public void setVendor(VendorUser vendor) { this.vendor = vendor; }
 }

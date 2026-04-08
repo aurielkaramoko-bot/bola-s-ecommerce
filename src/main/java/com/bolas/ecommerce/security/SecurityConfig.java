@@ -140,6 +140,9 @@ public class SecurityConfig {
                         new AntPathRequestMatcher("/customer/logout"),
                         new AntPathRequestMatcher("/customer/oauth2/success"),
                         new AntPathRequestMatcher("/vendor/login"),
+                        new AntPathRequestMatcher("/vendor/login-process"),
+                        new AntPathRequestMatcher("/vendor/register"),
+                        new AntPathRequestMatcher("/vendor/logout"),
                         new AntPathRequestMatcher("/error")
                 ).permitAll()
                 .requestMatchers(new AntPathRequestMatcher("/h2-console/**")).access((authentication, context) ->

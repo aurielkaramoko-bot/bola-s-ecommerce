@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Mon espace vendeur — BOLA</title>
+</head>
+<body class="bolas-body">
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container py-4 flex-grow-1">
+
+  <!-- Header vendeur -->
+  <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+    <div style="width:56px;height:56px;background:linear-gradient(135deg,#8B5E3C,#C49A6C);border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <i class="bi bi-shop-window" style="font-size:1.5rem;color:#fff;"></i>
+    </div>
+    <div>
+      <h1 class="h4 fw-bold mb-0" style="color:var(--bolas-accent);"
+          th:text="${vendor.displayName}">Ma boutique</h1>
+      <span class="badge me-1"
+            th:classappend="${vendor.plan.name() == 'PRO'} ? 'text-bg-warning' : 'bg-secondary'"
+            th:text="${vendor.plan.name() == 'PRO'} ? '⭐ Pack Pro' : 'Pack Débutant'">Pack</span>
+      <span class="badge bg-success">Actif</span>
+    </div>
+    <div class="ms-auto d-flex gap-2">
+      <a th:href="@{/vendor/products}" id="btn-my-products" class="btn btn-hero-solid btn-sm">
+        <i class="bi bi-bag me-1"></i>Mes produits
+      </a>
+      <a th:href="@{/vendor/logout}" id="btn-vendor-logout" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-box-arrow-right me-1"></i>Déconnexion
+      </a>
+    </div>
+  </div>
+
+  <!-- Alertes flash -->
+  <div th:if="${flashOk}" class="alert alert-success mb-3" th:text="${flashOk}"></div>
+  <div th:if="${flashError}" class="alert alert-danger mb-3" th:text="${flashError}"></div>
+
+  <!-- Stats cards -->
+  <div class="row g-3 mb-4">
+    <!-- Produits -->
+    <div class="col-6 col-md-3">
+      <div class="admin-card p-3 text-center">
+        <i class="bi bi-box-seam" style="font-size:1.6rem;color:var(--bolas-accent);"></i>
+        <div class="h3 fw-bold mt-1 mb-0" th:text="${productCount}">0</div>
+        <div class="small text-muted">Produits</div>
+        <div th:if="${vendor.plan.name() == 'GRATUIT'}" class="small text-muted">
+          / <span th:text="${gratuitLimit}">10</span> max
+        </div>
+      </div>
+    </div>
+
+    <!-- Barre de capacité plan GRATUIT -->
+    <div class="col-6 col-md-3">
+      <div class="admin-card p-3 text-center">
+        <i class="bi bi-hourglass-split" style="font-size:1.6rem;color:#f39c12;"></i>
+        <div class="h3 fw-bold mt-1 mb-0" th:text="${pendingOrders}">0</div>
+        <div class="small text-muted">Commandes en attente</div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-3">
+      <div class="admin-card p-3 text-center">
+        <i class="bi bi-check2-circle" style="font-size:1.6rem;color:#27ae60;"></i>
+        <div class="h3 fw-bold mt-1 mb-0" th:text="${confirmedOrders}">0</div>
+        <div class="small text-muted">Commandes confirmées</div>
+      </div>
+    </div>
+
+    <div class="col-6 col-md-3">
+      <div class="admin-card p-3 text-center">
+        <i class="bi bi-graph-up-arrow" style="font-size:1.6rem;color:#8B5E3C;"></i>
+        <div class="h3 fw-bold mt-1 mb-0">—</div>
+        <div class="small text-muted">Stats Pack Pro</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Limite plan GRATUIT -->
+  <div th:if="${vendor.plan.name() == 'GRATUIT'}" class="admin-card p-3 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-1">
+      <span class="small fw-semibold">Capacité produits (Pack Débutant)</span>
+      <span class="small text-muted" th:text="${productCount} + '/' + ${gratuitLimit}">0/10</span>
+    </div>
+    <div class="progress" style="height:8px;border-radius:4px;">
+      <div class="progress-bar"
+           style="background:var(--bolas-accent);"
+           th:style="'width:' + (${productCount} * 100 / ${gratuitLimit}) + '%;'"
+           role="progressbar"></div>
+    </div>
+    <div class="mt-2 small text-muted">
+      Passez au <strong>Pack Pro</strong> pour des produits illimités.
+      <a th:href="@{/contact}" style="color:var(--bolas-accent);">Nous contacter →</a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- Derniers produits -->
+    <div class="col-12 col-lg-7">
+      <div class="admin-card">
+        <div class="d-flex align-items-center justify-content-between p-3 border-bottom">
+          <h2 class="h6 fw-bold mb-0" style="color:var(--bolas-accent);">
+            <i class="bi bi-box-seam me-2"></i>Mes derniers produits
+          </h2>
+          <a th:href="@{/vendor/products}" class="btn btn-sm btn-hero-solid" id="btn-see-all-products">
+            Voir tout
+          </a>
+        </div>
+        <div th:if="${products.isEmpty()}" class="p-4 text-center text-muted">
+          <i class="bi bi-box" style="font-size:2rem;opacity:.3;"></i>
+          <p class="mt-2 mb-0">Aucun produit encore. <a th:href="@{/vendor/products/add}" style="color:var(--bolas-accent);">Ajouter le premier →</a></p>
+        </div>
+        <div class="table-responsive" th:if="${!products.isEmpty()}">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light">
+              <tr>
+                <th>Produit</th>
+                <th>Prix</th>
+                <th>Dispo</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="p : ${products}">
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <img th:src="${p.imageUrl}" th:if="${p.imageUrl != null}"
+                         style="width:36px;height:36px;object-fit:cover;border-radius:6px;"
+                         alt=""/>
+                    <span th:text="${p.name}">Produit</span>
+                  </div>
+                </td>
+                <td>
+                  <span th:text="${#numbers.formatInteger(p.effectivePriceCfa,1,'COMMA')} + ' FCFA'"
+                        th:style="${p.onPromotion}? 'color:var(--bolas-accent);font-weight:600;' : ''">
+                  </span>
+                </td>
+                <td>
+                  <span th:if="${p.available}" class="badge bg-success">Oui</span>
+                  <span th:if="${!p.available}" class="badge bg-secondary">Non</span>
+                </td>
+                <td>
+                  <a th:href="@{/vendor/products/{id}/edit(id=${p.id})}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="col-12 col-lg-5">
+      <div class="admin-card p-3 mb-3">
+        <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);">
+          <i class="bi bi-lightning me-2"></i>Actions rapides
+        </h2>
+        <div class="d-grid gap-2">
+          <a th:href="@{/vendor/products/add}" id="btn-add-product" class="btn btn-hero-solid text-start">
+            <i class="bi bi-plus-circle me-2"></i>Ajouter un produit
+          </a>
+          <a th:href="@{/vendor/orders}" id="btn-my-orders" class="btn btn-outline-secondary text-start">
+            <i class="bi bi-receipt me-2"></i>Voir mes commandes
+          </a>
+          <a th:href="@{/products}" id="btn-see-shop" target="_blank" class="btn btn-outline-secondary text-start">
+            <i class="bi bi-eye me-2"></i>Voir ma boutique (aperçu)
+          </a>
+          <a th:href="@{/contact}" class="btn btn-outline-secondary text-start">
+            <i class="bi bi-headset me-2"></i>Contacter le support BOLA
+          </a>
+        </div>
+      </div>
+
+      <!-- Infos boutique -->
+      <div class="admin-card p-3">
+        <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);">
+          <i class="bi bi-info-circle me-2"></i>Informations boutique
+        </h2>
+        <ul class="list-unstyled small mb-0">
+          <li class="mb-2">
+            <span class="text-muted">Identifiant :</span>
+            <strong th:text="${vendor.username}" class="ms-1">—</strong>
+          </li>
+          <li class="mb-2" th:if="${vendor.shopName != null}">
+            <span class="text-muted">Boutique :</span>
+            <strong th:text="${vendor.shopName}" class="ms-1">—</strong>
+          </li>
+          <li class="mb-2">
+            <span class="text-muted">Téléphone :</span>
+            <a th:href="${'https://wa.me/' + vendor.phone}" class="ms-1" target="_blank">
+              <i class="bi bi-whatsapp text-success me-1"></i>
+              <span th:text="${vendor.phone}">—</span>
+            </a>
+          </li>
+          <li th:if="${vendor.email != null}">
+            <span class="text-muted">Email :</span>
+            <span th:text="${vendor.email}" class="ms-1">—</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+</body>
+</html>
