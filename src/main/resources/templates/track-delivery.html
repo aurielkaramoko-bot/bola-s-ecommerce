@@ -28,7 +28,9 @@
     <p class="fw-bold fs-5 mb-3" th:text="${tracking.trackingNumber}">BOL</p>
     <p class="small text-muted mb-1" th:text="'Statut'">St</p>
     <p class="mb-0">
-      <span th:if="${tracking.status.name() == 'PENDING'}" class="badge rounded-pill" style="background:#8B5E3C;color:#fff;" th:text="'En attente'">—</span>
+      <span th:if="${tracking.status.name() == 'PENDING'}" class="badge rounded-pill" style="background:#8B5E3C;color:#fff;" th:text="'En attente de validation'">—</span>
+      <span th:if="${tracking.status.name() == 'CONFIRMED'}" class="badge rounded-pill" style="background:#f0a500;color:#fff;" th:text="'Commande validée — en préparation'">—</span>
+      <span th:if="${tracking.status.name() == 'READY'}" class="badge rounded-pill" style="background:#0d6efd;color:#fff;" th:text="'Prête — en attente de livraison'">—</span>
       <span th:if="${tracking.status.name() == 'IN_DELIVERY'}" class="badge rounded-pill" style="background:#6f4a30;color:#fff;" th:text="'En cours de livraison'">—</span>
       <span th:if="${tracking.status.name() == 'DELIVERED'}" class="badge rounded-pill bg-success" th:text="'Livrée'">—</span>
       <span th:if="${tracking.status.name() == 'CANCELLED'}" class="badge rounded-pill bg-secondary" th:text="'Annulée'">—</span>
@@ -77,7 +79,8 @@
     <div id="map-tracking" class="shadow-sm"
          th:attr="data-shop-lat=${shopLatitude},data-shop-lng=${shopLongitude},
                   data-client-lat=${tracking.clientLatitude},data-client-lng=${tracking.clientLongitude},
-                  data-courier-lat=${tracking.courierLatitude},data-courier-lng=${tracking.courierLongitude}"></div>
+                  data-courier-lat=${tracking.courierLatitude},data-courier-lng=${tracking.courierLongitude},
+                  data-country=${tracking.country}"></div>
     <p class="small text-muted mt-2 text-center" th:text="'Carte actualisée toutes les 30 secondes en cas de livraison en cours.'">Aide</p>
   </div>
 
@@ -171,10 +174,22 @@
       var clientLng = parseFloat(el.getAttribute('data-client-lng'));
       var cLat = parseFloat(el.getAttribute('data-courier-lat'));
       var cLng = parseFloat(el.getAttribute('data-courier-lng'));
+      var country = el.getAttribute('data-country') || 'TG';
 
-      var center = { lat: shopLat, lng: shopLng };
+      // Coordonnées par défaut selon le pays
+      var countryDefaults = {
+        'TG': { lat: 6.1375, lng: 1.2123, zoom: 13 },
+        'CI': { lat: 5.3600, lng: -3.9903, zoom: 13 }
+      };
+      var defaults = countryDefaults[country] || countryDefaults['TG'];
+
+      // Utiliser les coords boutique si valides, sinon défaut pays
+      var baseLat = !isNaN(shopLat) ? shopLat : defaults.lat;
+      var baseLng = !isNaN(shopLng) ? shopLng : defaults.lng;
+
+      var center = { lat: baseLat, lng: baseLng };
       if (!isNaN(clientLat) && !isNaN(clientLng)) {
-        center = { lat: (shopLat + clientLat) / 2, lng: (shopLng + clientLng) / 2 };
+        center = { lat: (baseLat + clientLat) / 2, lng: (baseLng + clientLng) / 2 };
       }
 
       var map = new google.maps.Map(el, {
@@ -188,7 +203,7 @@
       });
 
       new google.maps.Marker({
-        position: { lat: shopLat, lng: shopLng },
+        position: { lat: baseLat, lng: baseLng },
         map: map,
         title: 'Bola\'s',
         icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#d9534f', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 }

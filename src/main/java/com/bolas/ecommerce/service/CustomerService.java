@@ -72,25 +72,22 @@ public class CustomerService {
 
     /**
      * Génère un tracking number unique style :
-     * BOL-MAR150396-X4K2
-     * = BOL + 3 lettres prénom + JJMMAA date naissance + 4 chars aléatoires
-     * Si pas de date de naissance → BOL-MAR-X4K2F8
+     * BOL-TG-MAR150396-X4K2
+     * = BOL + pays + 3 lettres prénom + JJMMAA date naissance + 4 chars aléatoires
      */
-    public String generateTrackingNumber(Customer customer) {
-        String prefix = "BOL-" + customer.getFirstNameNormalized();
+    public String generateTrackingNumber(Customer customer, String country) {
+        String countryCode = (country != null && !country.isBlank()) ? country.toUpperCase() : "TG";
+        String prefix = "BOL-" + countryCode + "-" + customer.getFirstNameNormalized();
         String datePart = customer.getBirthDate() != null
                 ? customer.getBirthDate().format(BIRTH_FMT)
                 : "";
         String suffix = randomChars(4);
+        return prefix + datePart + "-" + suffix;
+    }
 
-        String candidate = prefix + datePart + "-" + suffix;
-        // Garantit l'unicité (très rare collision mais on vérifie)
-        int attempts = 0;
-        while (attempts++ < 10) {
-            // On ne stocke pas encore, juste on vérifie via le repo si besoin
-            return candidate;
-        }
-        return candidate;
+    /** Surcharge sans pays — défaut Togo */
+    public String generateTrackingNumber(Customer customer) {
+        return generateTrackingNumber(customer, "TG");
     }
 
     private String randomChars(int length) {

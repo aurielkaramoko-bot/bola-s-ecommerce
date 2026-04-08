@@ -100,6 +100,7 @@ public class CartController {
                            @RequestParam String customerPhone,
                            @RequestParam(required = false, defaultValue = "") String customerAddress,
                            @RequestParam(defaultValue = "HOME") String deliveryOption,
+                           @RequestParam(required = false, defaultValue = "TG") String country,
                            @RequestParam(required = false) Double clientLatitude,
                            @RequestParam(required = false) Double clientLongitude,
                            HttpSession session,
@@ -124,11 +125,12 @@ public class CartController {
         Customer customer = (Customer) session.getAttribute("BOLAS_CUSTOMER");
         String trackingNumber;
         if (customer != null) {
-            trackingNumber = customerService.generateTrackingNumber(customer);
+            trackingNumber = customerService.generateTrackingNumber(customer, country);
         } else {
-            trackingNumber = "BOL-" + UUID.randomUUID().toString().replace("-","").substring(0,8).toUpperCase();
+            trackingNumber = "BOL-" + country.toUpperCase() + "-" + UUID.randomUUID().toString().replace("-","").substring(0,8).toUpperCase();
         }
         order.setTrackingNumber(trackingNumber);
+        order.setCountry(country.toUpperCase());
         order.setCustomerName(customerName.trim());
         order.setCustomerPhone(customerPhone.trim());
         order.setCustomerAddress(customerAddress.trim());

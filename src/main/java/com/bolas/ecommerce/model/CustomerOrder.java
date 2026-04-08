@@ -73,6 +73,11 @@ public class CustomerOrder {
     @Column(length = 64, unique = true)
     private String courierToken;
 
+    /** Pays de livraison : TG = Togo, CI = Côte d'Ivoire */
+    @Size(max = 2)
+    @Column(length = 2)
+    private String country = "TG";
+
     /** Téléphone du livreur (affiché au client pour appel / WhatsApp). */
     @Size(max = 40)
     @Column(length = 40)
@@ -191,6 +196,9 @@ public class CustomerOrder {
 
     public String getCourierToken() { return courierToken; }
     public void setCourierToken(String courierToken) { this.courierToken = courierToken; }
+
+    public String getCountry() { return country != null ? country : "TG"; }
+    public void setCountry(String country) { this.country = country; }
 
     public String getCourierPhone() {
         return courierPhone;

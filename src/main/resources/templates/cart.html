@@ -143,6 +143,13 @@
               <option value="PICKUP">Retrait en boutique</option>
             </select>
           </div>
+          <div class="col-md-6">
+            <label class="form-label small">Pays de livraison</label>
+            <select class="form-select" name="country" id="countrySelect">
+              <option value="TG">🇹🇬 Togo</option>
+              <option value="CI">🇨🇮 Côte d'Ivoire</option>
+            </select>
+          </div>
           <!-- Bouton GPS — visible seulement si livraison à domicile -->
           <div class="col-md-6" id="gpsBlock">
             <button type="button" class="btn btn-outline-secondary w-100" onclick="getLocation()">
