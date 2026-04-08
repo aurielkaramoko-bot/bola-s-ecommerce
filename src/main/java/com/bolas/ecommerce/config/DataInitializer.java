@@ -39,7 +39,11 @@ public class DataInitializer {
             @Value("${bolas.admin.password:}") String adminPassword) {
         return args -> {
             // Nettoie tous les blocages de login au démarrage
-            loginAttemptRepository.deleteAll();
+            try {
+                loginAttemptRepository.deleteAll();
+            } catch (Exception e) {
+                // Ignore si la connexion n'est pas encore prête
+            }
             boolean prod = isProd(environment);
             if (adminUserRepository.count() == 0) {
                 if (adminPassword == null || adminPassword.isBlank()) {

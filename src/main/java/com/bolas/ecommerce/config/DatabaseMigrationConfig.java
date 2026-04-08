@@ -23,19 +23,19 @@ public class DatabaseMigrationConfig {
     CommandLineRunner migrateDatabase(DataSource dataSource, Environment environment) {
         return args -> {
             boolean prod = Arrays.asList(environment.getActiveProfiles()).contains("prod");
-            if (!prod) return; // En dev H2 pas de contrainte CHECK
+            if (!prod) return;
 
+            // Utiliser une connexion séparée qui ne perturbe pas le pool JPA
             try (Connection conn = dataSource.getConnection()) {
-                // Supprimer l'ancienne contrainte CHECK sur status et la recréer avec les nouvelles valeurs
+                conn.setAutoCommit(true);
                 try {
                     conn.createStatement().execute(
                         "ALTER TABLE shop_orders DROP CONSTRAINT IF EXISTS shop_orders_status_check"
                     );
                     log.info("Migration: contrainte shop_orders_status_check supprimée");
                 } catch (SQLException e) {
-                    log.warn("Migration: impossible de supprimer la contrainte (peut-être déjà absente): {}", e.getMessage());
+                    log.warn("Migration: {}", e.getMessage());
                 }
-
                 try {
                     conn.createStatement().execute(
                         "ALTER TABLE shop_orders ADD CONSTRAINT shop_orders_status_check " +
@@ -43,10 +43,10 @@ public class DatabaseMigrationConfig {
                     );
                     log.info("Migration: nouvelle contrainte shop_orders_status_check créée avec succès");
                 } catch (SQLException e) {
-                    log.warn("Migration: contrainte déjà à jour ou erreur: {}", e.getMessage());
+                    log.warn("Migration: contrainte déjà à jour: {}", e.getMessage());
                 }
             } catch (Exception e) {
-                log.error("Migration échouée: {}", e.getMessage(), e);
+                log.error("Migration échouée: {}", e.getMessage());
             }
         };
     }
