@@ -124,6 +124,7 @@ public class SecurityConfig {
                         new AntPathRequestMatcher("/uploads/**"),
                         new AntPathRequestMatcher("/webjars/**"),
                         new AntPathRequestMatcher("/admin/login"),
+                        new AntPathRequestMatcher("/admin/login-process"),
                         new AntPathRequestMatcher("/admin/login-error"),
                         new AntPathRequestMatcher("/customer/login"),
                         new AntPathRequestMatcher("/customer/signup"),
@@ -146,7 +147,7 @@ public class SecurityConfig {
 
         http.formLogin(form -> form
                 .loginPage("/admin/login")
-                .loginProcessingUrl("/admin/login")
+                .loginProcessingUrl("/admin/login-process")
                 .usernameParameter("username")
                 .passwordParameter("password")
                 .successHandler(successHandler)
