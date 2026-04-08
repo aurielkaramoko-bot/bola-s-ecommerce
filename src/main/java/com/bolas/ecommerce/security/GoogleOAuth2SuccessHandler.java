@@ -5,9 +5,9 @@ import com.bolas.ecommerce.service.CustomerService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -27,19 +27,32 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException {
-        OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
+        String googleId, email, firstName, lastName;
 
-        String googleId  = oauthUser.getAttribute("sub");
-        String email     = oauthUser.getAttribute("email");
-        String firstName = oauthUser.getAttribute("given_name");
-        String lastName  = oauthUser.getAttribute("family_name");
+        if (authentication.getPrincipal() instanceof OidcUser oidcUser) {
+            googleId  = oidcUser.getAttribute("sub");
+            email     = oidcUser.getAttribute("email");
+            firstName = oidcUser.getAttribute("given_name");
+            lastName  = oidcUser.getAttribute("family_name");
+        } else {
+            OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
+            googleId  = oauthUser.getAttribute("sub");
+            email     = oauthUser.getAttribute("email");
+            firstName = oauthUser.getAttribute("given_name");
+            lastName  = oauthUser.getAttribute("family_name");
+        }
 
-        Customer customer = customerService.loginOrCreateGoogle(googleId, email, firstName, lastName);
+        System.err.println("=== GOOGLE SUCCESS === googleId=" + googleId + " email=" + email);
 
-        // Stocker le customer en session
-        HttpSession session = request.getSession();
-        session.setAttribute("BOLAS_CUSTOMER", customer);
-
-        response.sendRedirect("/");
+        try {
+            Customer customer = customerService.loginOrCreateGoogle(googleId, email, firstName, lastName);
+            HttpSession session = request.getSession();
+            session.setAttribute("BOLAS_CUSTOMER", customer);
+            response.sendRedirect("/");
+        } catch (Exception e) {
+            System.err.println("=== GOOGLE SUCCESS ERROR === " + e.getMessage());
+            e.printStackTrace();
+            response.sendRedirect("/customer/login?error");
+        }
     }
 }
