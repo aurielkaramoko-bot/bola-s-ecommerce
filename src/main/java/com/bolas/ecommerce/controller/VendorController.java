@@ -2,6 +2,8 @@ package com.bolas.ecommerce.controller;
 
 import com.bolas.ecommerce.model.*;
 import com.bolas.ecommerce.repository.*;
+import com.bolas.ecommerce.service.IdDocumentVerificationService;
+import com.bolas.ecommerce.service.InputSanitizerService;
 import com.bolas.ecommerce.service.ImageUploadService;
 import com.bolas.ecommerce.service.WhatsAppNotificationService;
 import jakarta.servlet.http.HttpSession;
@@ -34,6 +36,8 @@ public class VendorController {
     private final PasswordEncoder            passwordEncoder;
     private final ImageUploadService         imageUploadService;
     private final WhatsAppNotificationService whatsAppService;
+    private final InputSanitizerService      sanitizer;
+    private final IdDocumentVerificationService idVerificationService;
 
     public VendorController(CustomerOrderRepository orderRepository,
                             VendorUserRepository vendorUserRepository,
@@ -43,7 +47,9 @@ public class VendorController {
                             ChatMessageRepository chatMessageRepository,
                             PasswordEncoder passwordEncoder,
                             ImageUploadService imageUploadService,
-                            WhatsAppNotificationService whatsAppService) {
+                            WhatsAppNotificationService whatsAppService,
+                            InputSanitizerService sanitizer,
+                            IdDocumentVerificationService idVerificationService) {
         this.orderRepository          = orderRepository;
         this.vendorUserRepository     = vendorUserRepository;
         this.productRepository        = productRepository;
@@ -53,6 +59,8 @@ public class VendorController {
         this.passwordEncoder          = passwordEncoder;
         this.imageUploadService       = imageUploadService;
         this.whatsAppService          = whatsAppService;
+        this.sanitizer                = sanitizer;
+        this.idVerificationService    = idVerificationService;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -134,74 +142,124 @@ public class VendorController {
                                  @RequestParam(required = false) String shopDescription,
                                  @RequestParam(required = false) List<Long> categoryIds,
                                  @RequestParam(required = false) String requestedNiche,
+                                 @RequestParam(value = "selectedPlan", required = false, defaultValue = "GRATUIT") String selectedPlan,
                                  @RequestParam(value = "logoFile", required = false) MultipartFile logoFile,
                                  @RequestParam(value = "idDocFile", required = false) MultipartFile idDocFile,
                                  RedirectAttributes ra) {
-        // Validations
-        if (password == null || password.length() < 6) {
-            ra.addFlashAttribute("flashError", "Le mot de passe doit faire au moins 6 caractères.");
+
+        // ── Sanitisation des champs texte ──────────────────────────────────────
+        String cleanShopName    = sanitizer.sanitizeText(shopName);
+        String cleanUsername    = sanitizer.sanitizeText(username);
+        String cleanPhone       = sanitizer.sanitizeText(phone);
+        String cleanEmail       = (email != null && !email.isBlank()) ? sanitizer.sanitizeText(email) : null;
+        String cleanDesc        = sanitizer.sanitizeText(shopDescription);
+        String cleanNiche       = sanitizer.sanitizeText(requestedNiche);
+
+        // ── Validations ────────────────────────────────────────────────────────
+        if (cleanShopName == null || cleanShopName.isBlank()) {
+            ra.addFlashAttribute("flashError", "Le nom de la boutique est obligatoire.");
             return "redirect:/vendor/register";
         }
-        if (vendorUserRepository.findByUsername(username.trim()).isPresent()) {
+        if (cleanUsername == null || cleanUsername.isBlank()) {
+            ra.addFlashAttribute("flashError", "L'identifiant est obligatoire.");
+            return "redirect:/vendor/register";
+        }
+        if (!cleanUsername.matches("[a-zA-Z0-9._-]+")) {
+            ra.addFlashAttribute("flashError", "L'identifiant ne peut contenir que des lettres, chiffres, tirets et points.");
+            return "redirect:/vendor/register";
+        }
+        if (password == null || password.length() < 8) {
+            ra.addFlashAttribute("flashError", "Le mot de passe doit faire au moins 8 caractères.");
+            return "redirect:/vendor/register";
+        }
+        // Photo de boutique obligatoire
+        if (logoFile == null || logoFile.isEmpty()) {
+            ra.addFlashAttribute("flashError", "La photo de boutique / logo est obligatoire.");
+            return "redirect:/vendor/register";
+        }
+        // Pièce d'identité obligatoire
+        if (idDocFile == null || idDocFile.isEmpty()) {
+            ra.addFlashAttribute("flashError", "La pièce d'identité est obligatoire pour valider votre boutique.");
+            return "redirect:/vendor/register";
+        }
+        if (vendorUserRepository.findByUsername(cleanUsername).isPresent()) {
             ra.addFlashAttribute("flashError", "Ce nom d'utilisateur est déjà pris.");
             return "redirect:/vendor/register";
         }
-        if (email != null && !email.isBlank() &&
-                vendorUserRepository.findByEmail(email.trim()).isPresent()) {
+        if (cleanEmail != null && vendorUserRepository.findByEmail(cleanEmail).isPresent()) {
             ra.addFlashAttribute("flashError", "Cet email est déjà utilisé.");
             return "redirect:/vendor/register";
         }
 
+        // ── Plan choisi ────────────────────────────────────────────────────────
+        VendorPlan plan;
+        try {
+            plan = VendorPlan.valueOf(selectedPlan.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            plan = VendorPlan.GRATUIT;
+        }
+
+        // ── Upload photo boutique (obligatoire, magic bytes vérifiés) ──────────
+        String logoUrl = null;
+        try {
+            logoUrl = imageUploadService.store(logoFile);
+        } catch (IllegalArgumentException | IOException e) {
+            ra.addFlashAttribute("flashError", "Photo de boutique invalide : " + e.getMessage());
+            return "redirect:/vendor/register";
+        }
+
+        // ── Upload pièce d'identité (obligatoire, magic bytes vérifiés) ────────
+        String idDocUrl = null;
+        try {
+            idDocUrl = imageUploadService.store(idDocFile);
+        } catch (IllegalArgumentException | IOException e) {
+            ra.addFlashAttribute("flashError", "Pièce d'identité invalide : " + e.getMessage());
+            return "redirect:/vendor/register";
+        }
+
+        // ── Scan Vision API — vérification que c'est bien un document d'identité ──
+        Boolean idVerified = idVerificationService.verify(idDocFile);
+        if (Boolean.FALSE.equals(idVerified)) {
+            // Vision a analysé l'image et n'a trouvé aucun mot-clé de document officiel
+            ra.addFlashAttribute("flashError",
+                    "La pièce d'identité soumise ne semble pas être un document officiel (CNI, passeport, permis). " +
+                    "Veuillez uploader une photo nette de votre document.");
+            return "redirect:/vendor/register";
+        }
+        // idVerified == null → clé Vision non configurée, on laisse passer (admin vérifie manuellement)
+
+        // ── Création du vendeur ────────────────────────────────────────────────
         VendorUser v = new VendorUser();
-        v.setUsername(username.trim());
-        v.setShopName(shopName.trim());
-        v.setPhone(phone.trim());
-        v.setEmail(email != null ? email.trim() : null);
-        v.setShopDescription(shopDescription != null ? shopDescription.trim() : null);
+        v.setUsername(cleanUsername);
+        v.setShopName(cleanShopName);
+        v.setPhone(cleanPhone);
+        v.setEmail(cleanEmail);
+        v.setShopDescription(cleanDesc);
         v.setPasswordHash(passwordEncoder.encode(password));
         v.setActive(false);
         v.setVendorStatus(VendorStatus.PENDING);
-        v.setPlan(VendorPlan.GRATUIT);
-
-        // Niche demandée
-        if (requestedNiche != null && !requestedNiche.isBlank()) {
-            v.setRequestedNiche(requestedNiche.trim());
-        }
-
-        // Upload photo boutique
-        try {
-            if (logoFile != null && !logoFile.isEmpty()) {
-                v.setLogoUrl(imageUploadService.store(logoFile));
-            }
-        } catch (IllegalArgumentException | IOException e) {
-            // Non bloquant
-        }
-
-        // Upload pièce d'identité
-        try {
-            if (idDocFile != null && !idDocFile.isEmpty()) {
-                v.setIdDocumentUrl(imageUploadService.store(idDocFile));
-            }
-        } catch (IllegalArgumentException | IOException e) {
-            // Non bloquant
+        v.setPlan(plan);
+        v.setLogoUrl(logoUrl);
+        v.setIdDocumentUrl(idDocUrl);
+        v.setIdDocVerified(idVerified);
+        if (cleanNiche != null && !cleanNiche.isBlank()) {
+            v.setRequestedNiche(cleanNiche);
         }
 
         vendorUserRepository.save(v);
 
-        // Sauvegarder les catégories choisies
+        // ── Catégories ─────────────────────────────────────────────────────────
         String catNames = "";
         if (categoryIds != null && !categoryIds.isEmpty()) {
             for (Long catId : categoryIds) {
-                categoryRepository.findById(catId).ifPresent(cat -> {
-                    vendorCategoryRepository.save(new VendorCategory(v, cat));
-                });
+                categoryRepository.findById(catId).ifPresent(cat ->
+                        vendorCategoryRepository.save(new VendorCategory(v, cat)));
             }
             catNames = categoryIds.stream()
                     .map(id -> categoryRepository.findById(id).map(Category::getName).orElse("?"))
                     .collect(Collectors.joining(", "));
         }
 
-        // Générer lien WhatsApp admin
         String waLink = whatsAppService.buildVendorRegistrationLink(
                 v.getShopName(), v.getUsername(), v.getPhone(),
                 catNames, v.getRequestedNiche());

@@ -17,9 +17,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RateLimitingFilter extends OncePerRequestFilter {
 
     private static final long WINDOW_SECONDS = 60;
-    private static final int API_LIMIT     = 100;
-    private static final int LOGIN_LIMIT   = 5;
-    private static final int TRACKING_LIMIT = 20; // anti-énumération numéros de commande
+    private static final int API_LIMIT      = 100;
+    private static final int LOGIN_LIMIT    = 5;
+    private static final int REGISTER_LIMIT = 3;   // max 3 inscriptions/min par IP
+    private static final int TRACKING_LIMIT = 20;
 
     private final Map<String, Counter> counters = new ConcurrentHashMap<>();
 
@@ -44,6 +45,19 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         }
         if ("/admin/login".equals(uri) && "POST".equalsIgnoreCase(request.getMethod())) {
             if (isLimited("login:" + ip, now, LOGIN_LIMIT)) {
+                reject(response);
+                return;
+            }
+        }
+        // Rate limiting vendor login et inscription
+        if ("/vendor/login-process".equals(uri) && "POST".equalsIgnoreCase(request.getMethod())) {
+            if (isLimited("vendor-login:" + ip, now, LOGIN_LIMIT)) {
+                reject(response);
+                return;
+            }
+        }
+        if ("/vendor/register".equals(uri) && "POST".equalsIgnoreCase(request.getMethod())) {
+            if (isLimited("vendor-register:" + ip, now, REGISTER_LIMIT)) {
                 reject(response);
                 return;
             }

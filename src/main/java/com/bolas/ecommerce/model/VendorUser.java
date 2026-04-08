@@ -72,6 +72,15 @@ public class VendorUser {
     @Column(nullable = false)
     private boolean active = false;
 
+    /**
+     * Résultat du scan Vision API sur la pièce d'identité :
+     *  null      → pas encore analysé
+     *  true      → document d'identité détecté
+     *  false     → document non reconnu (photo aléatoire)
+     */
+    @Column(name = "id_doc_verified")
+    private Boolean idDocVerified;
+
     // ─── Getters / Setters ────────────────────────────────────────────────────
 
     public Long getId() { return id; }
@@ -112,6 +121,9 @@ public class VendorUser {
 
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
+
+    public Boolean getIdDocVerified() { return idDocVerified; }
+    public void setIdDocVerified(Boolean idDocVerified) { this.idDocVerified = idDocVerified; }
 
     /** Nom d'affichage : priorité shopName, sinon username */
     public String getDisplayName() {

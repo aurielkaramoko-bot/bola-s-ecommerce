@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -26,6 +27,15 @@ public class ImageUploadService {
     );
     private static final long MAX_SIZE = 5 * 1024 * 1024;       // 5 MB images
     private static final long MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100 MB vidéos
+
+    // ─── Magic bytes (signatures réelles des fichiers) ────────────────────────
+    // JPEG : FF D8 FF
+    private static final byte[] MAGIC_JPEG = {(byte)0xFF, (byte)0xD8, (byte)0xFF};
+    // PNG  : 89 50 4E 47 0D 0A 1A 0A
+    private static final byte[] MAGIC_PNG  = {(byte)0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+    // WebP : RIFF????WEBP
+    private static final byte[] MAGIC_WEBP_RIFF = {0x52, 0x49, 0x46, 0x46}; // "RIFF"
+    private static final byte[] MAGIC_WEBP_MARK = {0x57, 0x45, 0x42, 0x50}; // "WEBP" at offset 8
 
     private final Path uploadDir;
     private final Cloudinary cloudinary;
@@ -64,12 +74,51 @@ public class ImageUploadService {
         if (file.getSize() > MAX_SIZE) {
             throw new IllegalArgumentException("Fichier trop volumineux (max 5 Mo).");
         }
+        // Vérification des magic bytes — empêche les fichiers déguisés
+        verifyImageMagicBytes(file, contentType);
 
         if (cloudinaryEnabled) {
             return uploadToCloudinary(file);
         } else {
             return saveLocally(file, contentType);
         }
+    }
+
+    /**
+     * Vérifie que les premiers octets du fichier correspondent bien au type déclaré.
+     * Empêche un attaquant de renommer un fichier malveillant en .jpg.
+     */
+    private void verifyImageMagicBytes(MultipartFile file, String contentType) throws IOException {
+        byte[] header = new byte[12];
+        try (InputStream is = file.getInputStream()) {
+            int read = is.read(header);
+            if (read < 3) {
+                throw new IllegalArgumentException("Fichier invalide ou trop court.");
+            }
+        }
+        boolean valid = switch (contentType) {
+            case "image/jpeg" -> startsWith(header, MAGIC_JPEG);
+            case "image/png"  -> startsWith(header, MAGIC_PNG);
+            case "image/webp" -> startsWith(header, MAGIC_WEBP_RIFF)
+                    && header.length >= 12
+                    && header[8] == MAGIC_WEBP_MARK[0]
+                    && header[9] == MAGIC_WEBP_MARK[1]
+                    && header[10] == MAGIC_WEBP_MARK[2]
+                    && header[11] == MAGIC_WEBP_MARK[3];
+            default -> false;
+        };
+        if (!valid) {
+            throw new IllegalArgumentException(
+                    "Le contenu du fichier ne correspond pas au type déclaré. Fichier refusé.");
+        }
+    }
+
+    private boolean startsWith(byte[] data, byte[] prefix) {
+        if (data.length < prefix.length) return false;
+        for (int i = 0; i < prefix.length; i++) {
+            if (data[i] != prefix[i]) return false;
+        }
+        return true;
     }
 
     /**

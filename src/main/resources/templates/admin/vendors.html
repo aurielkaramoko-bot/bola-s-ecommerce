@@ -34,6 +34,7 @@
                   <th>Téléphone</th>
                   <th>Email</th>
                   <th>Description</th>
+                  <th>Photo / CNI</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -54,6 +55,42 @@
                   <td class="text-muted" style="max-width:200px;">
                     <span th:text="${v.shopDescription ?: '—'}"
                           style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;display:block;">—</span>
+                  </td>
+                  <!-- Photos -->
+                  <td style="min-width:160px;">
+                    <!-- Photo boutique -->
+                    <div class="mb-1">
+                      <span class="small text-muted d-block">Logo :</span>
+                      <a th:if="${v.logoUrl != null}" th:href="${v.logoUrl}" target="_blank">
+                        <img th:src="${v.logoUrl}" alt="Logo boutique"
+                             style="height:48px;width:48px;object-fit:cover;border-radius:6px;border:1px solid #ddd;"/>
+                      </a>
+                      <span th:if="${v.logoUrl == null}" class="text-muted small">—</span>
+                    </div>
+                    <!-- Pièce d'identité + badge Vision -->
+                    <div>
+                      <span class="small text-muted d-block">
+                        CNI/Passeport
+                        <!-- Badge résultat Vision -->
+                        <span th:if="${v.idDocVerified == true}"
+                              class="badge bg-success ms-1" title="Document reconnu par Vision AI">
+                          <i class="bi bi-shield-check"></i> Vérifié
+                        </span>
+                        <span th:if="${v.idDocVerified == false}"
+                              class="badge bg-danger ms-1" title="Document non reconnu par Vision AI">
+                          <i class="bi bi-shield-x"></i> Suspect
+                        </span>
+                        <span th:if="${v.idDocVerified == null}"
+                              class="badge bg-secondary ms-1" title="Vision AI non configurée">
+                          <i class="bi bi-eye-slash"></i> Manuel
+                        </span>
+                      </span>
+                      <a th:if="${v.idDocumentUrl != null}" th:href="${v.idDocumentUrl}" target="_blank">
+                        <img th:src="${v.idDocumentUrl}" alt="Pièce d'identité"
+                             style="height:48px;width:72px;object-fit:cover;border-radius:6px;border:1px solid #ddd;"/>
+                      </a>
+                      <span th:if="${v.idDocumentUrl == null}" class="text-muted small">—</span>
+                    </div>
                   </td>
                   <td>
                     <div class="d-flex gap-1">
