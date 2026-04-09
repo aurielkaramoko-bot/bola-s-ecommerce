@@ -75,7 +75,7 @@ public class HomeController {
         model.addAttribute("countryCount", countryRepository.countByActiveTrue());
         // Bannières PREMIUM
         model.addAttribute("premiumBanners",
-                vendorUserRepository.findActivePremiumWithBanner(com.bolas.ecommerce.model.VendorPlan.PREMIUM));
+                vendorUserRepository.findActivePremiumWithBanner());
         return "index";
     }
 

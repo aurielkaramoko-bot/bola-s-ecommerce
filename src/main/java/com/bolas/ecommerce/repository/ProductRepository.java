@@ -25,8 +25,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         AND p.priceCfa BETWEEN :min AND :max
         ORDER BY p.sponsored DESC, p.id DESC
         """)
-    List<Product> findByAvailableTrueAndCategory_IdAndPriceCfaBetween(
-        @org.springframework.data.repository.query.Param("categoryId") Long categoryId,
+    List<Product> findByAvailableTrueAndCategory_IdAndPriceCfaBetween(        @org.springframework.data.repository.query.Param("categoryId") Long categoryId,
         @org.springframework.data.repository.query.Param("min") Long min,
         @org.springframework.data.repository.query.Param("max") Long max);
 
@@ -66,43 +65,35 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         @org.springframework.data.repository.query.Param("q") String q,
         @org.springframework.data.repository.query.Param("categoryId") Long categoryId);
 
-    /** Produits mis en avant UNIQUEMENT pour vendeurs PRO/PRO_LOCAL/PREMIUM (homepage)
-     *  + tous les produits admin (vendor IS NULL) disponibles
-     *  PREMIUM apparaît en premier, puis PRO_LOCAL/PRO, triés par featured puis id */
-    @org.springframework.data.jpa.repository.Query("""
-        SELECT p FROM Product p
-        WHERE p.available = true
-        AND (
-          p.vendor IS NULL
-          OR (p.featured = true AND p.vendor.plan IN (
-            com.bolas.ecommerce.model.VendorPlan.PRO,
-            com.bolas.ecommerce.model.VendorPlan.PRO_LOCAL,
-            com.bolas.ecommerce.model.VendorPlan.PREMIUM))
-        )
-        ORDER BY
-          CASE WHEN p.vendor IS NULL THEN 0
-               WHEN p.vendor.plan = com.bolas.ecommerce.model.VendorPlan.PREMIUM THEN 1
-               ELSE 2 END ASC,
-          p.id DESC
-        """)
-    List<Product> findFeaturedForHomepage();
-
-    /** Articles populaires UNIQUEMENT pour vendeurs PRO/PRO_LOCAL/PREMIUM (homepage)
-     *  + tous les produits admin (vendor IS NULL)
+    /** Produits mis en avant pour vendeurs PRO/PRO_LOCAL/PREMIUM + produits admin
      *  PREMIUM apparaît en premier */
     @org.springframework.data.jpa.repository.Query("""
         SELECT p FROM Product p
         WHERE p.available = true
         AND (
           p.vendor IS NULL
-          OR p.vendor.plan IN (
-            com.bolas.ecommerce.model.VendorPlan.PRO,
-            com.bolas.ecommerce.model.VendorPlan.PRO_LOCAL,
-            com.bolas.ecommerce.model.VendorPlan.PREMIUM)
+          OR (p.featured = true AND p.vendor.plan IN ('PRO','PRO_LOCAL','PREMIUM'))
         )
         ORDER BY
           CASE WHEN p.vendor IS NULL THEN 0
-               WHEN p.vendor.plan = com.bolas.ecommerce.model.VendorPlan.PREMIUM THEN 1
+               WHEN p.vendor.plan = 'PREMIUM' THEN 1
+               ELSE 2 END ASC,
+          p.id DESC
+        """)
+    List<Product> findFeaturedForHomepage();
+
+    /** Articles populaires pour vendeurs PRO/PRO_LOCAL/PREMIUM + produits admin
+     *  PREMIUM apparaît en premier */
+    @org.springframework.data.jpa.repository.Query("""
+        SELECT p FROM Product p
+        WHERE p.available = true
+        AND (
+          p.vendor IS NULL
+          OR p.vendor.plan IN ('PRO','PRO_LOCAL','PREMIUM')
+        )
+        ORDER BY
+          CASE WHEN p.vendor IS NULL THEN 0
+               WHEN p.vendor.plan = 'PREMIUM' THEN 1
                ELSE 2 END ASC,
           p.featured DESC,
           p.id DESC

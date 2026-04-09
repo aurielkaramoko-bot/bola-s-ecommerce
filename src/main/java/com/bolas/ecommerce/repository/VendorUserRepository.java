@@ -23,6 +23,6 @@ public interface VendorUserRepository extends JpaRepository<VendorUser, Long> {
     long countByVendorStatus(VendorStatus vendorStatus);
 
     /** Vendeurs PREMIUM actifs avec une bannière configurée */
-    @Query("SELECT v FROM VendorUser v WHERE v.active = true AND v.plan = :plan AND v.bannerUrl IS NOT NULL")
-    List<VendorUser> findActivePremiumWithBanner(@org.springframework.data.repository.query.Param("plan") VendorPlan plan);
+    @Query("SELECT v FROM VendorUser v WHERE v.active = true AND v.plan = 'PREMIUM' AND v.bannerUrl IS NOT NULL")
+    List<VendorUser> findActivePremiumWithBanner();
 }
