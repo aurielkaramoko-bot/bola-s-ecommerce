@@ -12,12 +12,15 @@ import com.bolas.ecommerce.model.VendorUser;
 import com.bolas.ecommerce.model.VendorStatus;
 import com.bolas.ecommerce.model.CourierApplication;
 import com.bolas.ecommerce.model.CourierApplicationStatus;
+import com.bolas.ecommerce.model.Country;
 import com.bolas.ecommerce.repository.CategoryRepository;
 import com.bolas.ecommerce.repository.CustomerOrderRepository;
 import com.bolas.ecommerce.repository.OrderLineRepository;
 import com.bolas.ecommerce.repository.ProductRepository;
 import com.bolas.ecommerce.repository.VendorUserRepository;
 import com.bolas.ecommerce.repository.CourierApplicationRepository;
+import com.bolas.ecommerce.repository.CountryRepository;
+import com.bolas.ecommerce.service.WhatsAppNotificationService;
 import com.bolas.ecommerce.service.AuditLogService;
 import com.bolas.ecommerce.service.CategoryCoverImageUrlService;
 import com.bolas.ecommerce.service.CategoryCoverImageUrlService.Resolution;
@@ -58,6 +61,8 @@ public class AdminController {
     private final VendorUserRepository vendorUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final CourierApplicationRepository courierApplicationRepository;
+    private final WhatsAppNotificationService whatsAppNotificationService;
+    private final CountryRepository countryRepository;
 
     // --- ICI : RÉCUPÉRATION DE TA CLÉ API DEPUIS TON PC ---
     @Value("${google.maps.api.key}")
@@ -80,7 +85,9 @@ public class AdminController {
                            OrderFlowService orderFlowService,
                            VendorUserRepository vendorUserRepository,
                            PasswordEncoder passwordEncoder,
-                           CourierApplicationRepository courierApplicationRepository) {
+                           CourierApplicationRepository courierApplicationRepository,
+                           WhatsAppNotificationService whatsAppNotificationService,
+                           CountryRepository countryRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.customerOrderRepository = customerOrderRepository;
@@ -93,6 +100,8 @@ public class AdminController {
         this.vendorUserRepository = vendorUserRepository;
         this.passwordEncoder = passwordEncoder;
         this.courierApplicationRepository = courierApplicationRepository;
+        this.whatsAppNotificationService = whatsAppNotificationService;
+        this.countryRepository = countryRepository;
     }
 
     @InitBinder
@@ -486,17 +495,45 @@ public class AdminController {
     }
 
     @PostMapping("/admin/vendors/{id}/suspend")
-    public String suspendVendor(@PathVariable Long id, RedirectAttributes ra) {
+    public String suspendVendor(@PathVariable Long id,
+                                @RequestParam(required = false, defaultValue = "true") boolean soft,
+                                @RequestParam(required = false, defaultValue = "") String reason,
+                                RedirectAttributes ra) {
         VendorUser v = vendorUserRepository.findById(id).orElseThrow();
         v.setActive(false);
         v.setVendorStatus(VendorStatus.SUSPENDED);
+        v.setSoftSuspend(soft);
+        v.setSuspensionReason(reason.isBlank() ? null : reason.trim());
+
+        // Suspension totale → masquer tous ses produits
+        if (!soft) {
+            productRepository.findByVendor(v).forEach(p -> {
+                p.setAvailable(false);
+                productRepository.save(p);
+            });
+        }
         vendorUserRepository.save(v);
-        ra.addFlashAttribute("flashOk", "Vendeur suspendu.");
+
+        // Notifier le vendeur via WhatsApp si téléphone disponible
+        String waLink = whatsAppNotificationService.buildVendorSuspensionLink(
+                v.getPhone(), v.getDisplayName(), soft, reason.isBlank() ? null : reason.trim());
+        ra.addFlashAttribute("flashOk", "Vendeur suspendu (" + (soft ? "douce" : "totale") + ").");
+        ra.addFlashAttribute("waSuspendLink", waLink);
         return "redirect:/admin/vendors";
     }
 
     @PostMapping("/admin/vendors/{id}/delete")
     public String deleteVendor(@PathVariable Long id, RedirectAttributes ra) {
+        VendorUser v = vendorUserRepository.findById(id).orElseThrow();
+        // Détacher les produits du vendeur avant suppression
+        productRepository.findByVendor(v).forEach(p -> {
+            p.setVendor(null);
+            productRepository.save(p);
+        });
+        // Supprimer les catégories liées
+        vendorCategoryRepository.deleteByVendor(v);
+        // Supprimer les demandes livreurs liées
+        courierApplicationRepository.deleteByVendor(v);
         vendorUserRepository.deleteById(id);
         ra.addFlashAttribute("flashOk", "Vendeur supprimé.");
         return "redirect:/admin/vendors";
@@ -524,7 +561,45 @@ public class AdminController {
         return "redirect:/admin/vendors";
     }
 
-    private String baseUrl(HttpServletRequest request) {
+    // ─── Gestion des pays ─────────────────────────────────────────────────────
+
+    @GetMapping("/admin/countries")
+    public String countries(Model model) {
+        model.addAttribute("pageTitle", "Pays — Admin BOLA");
+        model.addAttribute("countries", countryRepository.findAll());
+        return "admin/countries";
+    }
+
+    @PostMapping("/admin/countries")
+    public String saveCountry(@RequestParam String code,
+                              @RequestParam String name,
+                              @RequestParam(required = false, defaultValue = "") String flag,
+                              RedirectAttributes ra) {
+        Country c = new Country();
+        c.setCode(code.trim().toUpperCase());
+        c.setName(inputSanitizerService.sanitizeText(name));
+        c.setFlag(flag.trim());
+        c.setActive(true);
+        countryRepository.save(c);
+        ra.addFlashAttribute("flashOk", "Pays ajouté : " + c.getName());
+        return "redirect:/admin/countries";
+    }
+
+    @PostMapping("/admin/countries/{id}/toggle")
+    public String toggleCountry(@PathVariable Long id, RedirectAttributes ra) {
+        countryRepository.findById(id).ifPresent(c -> {
+            c.setActive(!c.isActive());
+            countryRepository.save(c);
+        });
+        return "redirect:/admin/countries";
+    }
+
+    @PostMapping("/admin/countries/{id}/delete")
+    public String deleteCountry(@PathVariable Long id, RedirectAttributes ra) {
+        countryRepository.deleteById(id);
+        ra.addFlashAttribute("flashOk", "Pays supprimé.");
+        return "redirect:/admin/countries";
+    }
         return request.getScheme() + "://" + request.getServerName()
                 + (request.getServerPort() != 80 && request.getServerPort() != 443
                 ? ":" + request.getServerPort() : "");

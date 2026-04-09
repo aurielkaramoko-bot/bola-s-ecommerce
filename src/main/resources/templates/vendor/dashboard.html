@@ -17,8 +17,11 @@
       <h1 class="h4 fw-bold mb-0" style="color:var(--bolas-accent);"
           th:text="${vendor.displayName}">Ma boutique</h1>
       <span class="badge me-1"
-            th:classappend="${vendor.plan.name() == 'PRO'} ? 'text-bg-warning' : 'bg-secondary'"
-            th:text="${vendor.plan.name() == 'PRO'} ? '⭐ Pack Pro' : 'Pack Débutant'">Pack</span>
+            th:classappend="${vendor.plan.name() == 'PREMIUM'} ? 'text-bg-warning' :
+                             (${vendor.plan.name() == 'PRO_LOCAL' or vendor.plan.name() == 'PRO'} ? 'text-bg-warning' : 'bg-secondary')"
+            th:text="${vendor.plan.name() == 'PREMIUM'} ? '⭐ Pack Premium' :
+                      (${vendor.plan.name() == 'PRO_LOCAL'} ? '⭐ Pack Pro Local' :
+                      (${vendor.plan.name() == 'PRO'} ? '⭐ Pack Pro' : 'Pack Débutant'))">Pack</span>
       <span class="badge bg-success">Actif</span>
     </div>
     <div class="ms-auto d-flex gap-2">
@@ -88,7 +91,7 @@
            role="progressbar"></div>
     </div>
     <div class="mt-2 small text-muted">
-      Passez au <strong>Pack Pro</strong> pour des produits illimités.
+      Passez au <strong>Pack Pro Local (3 000 FCFA)</strong> ou <strong>Pack Premium (10 000 FCFA)</strong> pour des produits illimités et une visibilité sur la page d'accueil.
       <a th:href="@{/contact}" style="color:var(--bolas-accent);">Nous contacter →</a>
     </div>
   </div>

@@ -5,7 +5,8 @@ import com.bolas.ecommerce.repository.*;
 import com.bolas.ecommerce.service.IdDocumentVerificationService;
 import com.bolas.ecommerce.service.InputSanitizerService;
 import com.bolas.ecommerce.service.ImageUploadService;
-import com.bolas.ecommerce.service.WhatsAppNotificationService;import jakarta.servlet.http.HttpSession;
+import com.bolas.ecommerce.service.WhatsAppNotificationService;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -69,12 +70,19 @@ public class VendorController {
 
     private VendorUser currentVendor(HttpSession session) {
         Object obj = session.getAttribute(SESSION_KEY);
-        if (obj instanceof VendorUser v) return v;
-        return null;
+        if (!(obj instanceof VendorUser v)) return null;
+        // Revalider en base à chaque requête — détecte suspension immédiate
+        return vendorUserRepository.findById(v.getId())
+                .filter(fresh -> fresh.isActive() && fresh.getVendorStatus() == VendorStatus.ACTIVE)
+                .orElse(null);
     }
 
     private String requireVendor(HttpSession session) {
-        if (currentVendor(session) == null) return "redirect:/vendor/login";
+        VendorUser v = currentVendor(session);
+        if (v == null) {
+            session.removeAttribute(SESSION_KEY); // nettoie la session si suspendu
+            return "redirect:/vendor/login";
+        }
         return null;
     }
 
@@ -268,9 +276,7 @@ public class VendorController {
 
         ra.addFlashAttribute("flashOk",
                 "✅ Demande envoyée ! Notre équipe validera votre boutique sous 24h.");
-        ra.addFlashAttribute("waNotifLink", waLink);
-        return "redirect:/vendor/register";
-    }
+        return "redirect:" + waLink;    }
 
     // ─── Dashboard vendeur ────────────────────────────────────────────────────
 
@@ -716,7 +722,11 @@ public class VendorController {
         app.setVendor(vendor);
         courierApplicationRepository.save(app);
 
+        // Notifier l'admin automatiquement via WhatsApp
+        String waLink = whatsAppService.buildCourierProposalLink(
+                vendor.getDisplayName(), cleanName, cleanPhone, cleanZone);
+
         ra.addFlashAttribute("flashOk", "Demande envoyée ! L'admin validera ce livreur sous 24h.");
-        return "redirect:/vendor/couriers";
+        return "redirect:" + waLink;
     }
 }

@@ -19,13 +19,21 @@
     <h1 class="display-5">Des milliers de vendeurs,<br>un seul endroit pour tout trouver</h1>
     <p class="lead">BOLA réunit artisans, boutiques et commerçants locaux. Commandez en toute confiance, livraison suivie chez vous.</p>
     <div class="d-flex flex-wrap justify-content-center gap-3">
-      <a th:href="@{/products}" class="btn btn-hero-solid">
+      <a th:href="@{/boutiques}" class="btn btn-hero-solid">
         <i class="bi bi-bag me-2"></i>Découvrir les boutiques
       </a>
       <a class="btn btn-hero-outline" th:href="@{/vendor/login}">
         <i class="bi bi-shop me-2"></i>Vendre sur BOLA
       </a>
     </div>
+    <!-- Barre de recherche rapide -->
+    <form th:action="@{/products}" method="get" class="d-flex gap-2 justify-content-center mt-4" style="max-width:480px;margin:0 auto;">
+      <input type="text" name="q" class="form-control" placeholder="Rechercher un produit..."
+             maxlength="200" autocomplete="off" style="border-radius:999px;padding:.6rem 1.2rem;"/>
+      <button type="submit" class="btn btn-hero-solid" style="border-radius:999px;white-space:nowrap;">
+        <i class="bi bi-search me-1"></i>Chercher
+      </button>
+    </form>
     <!-- Stats rapides -->
     <div class="hero-stats">
       <div class="hero-stat-item">
@@ -39,7 +47,7 @@
       </div>
       <div class="hero-stat-sep"></div>
       <div class="hero-stat-item">
-        <span class="hero-stat-number">2</span>
+        <span class="hero-stat-number" th:text="${countryCount > 0 ? countryCount : 2}">2</span>
         <span class="hero-stat-label">Pays</span>
       </div>
     </div>

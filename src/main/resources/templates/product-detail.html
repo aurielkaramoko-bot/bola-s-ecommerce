@@ -110,12 +110,14 @@
 
       <!-- Boutons d'action -->
       <div class="d-flex flex-wrap gap-3">
-        <a href="#" target="_blank" rel="noopener noreferrer"
-           id="whatsappBtn" class="btn btn-wa px-4"
-           th:attr="data-whatsapp=${whatsappNumber}">
-          <i class="bi bi-whatsapp"></i>
-          Commander via WhatsApp
-        </a>
+        <form th:action="@{/products/{id}/whatsapp-order(id=${product.id})}" method="post" id="waOrderForm">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" name="deliveryOption" id="waDeliveryOption" value="HOME"/>
+          <button type="submit" class="btn btn-wa px-4">
+            <i class="bi bi-whatsapp"></i>
+            Commander via WhatsApp
+          </button>
+        </form>
         <a th:href="|tel:+${shopPhone}|" class="btn btn-call-brown px-4">
           <i class="bi bi-telephone"></i>
           Appeler
@@ -296,42 +298,12 @@
 
 <script th:inline="javascript" th:if="${product != null}">
   /*<![CDATA[*/
-  (function () {
-    var btn = document.getElementById('whatsappBtn');
-    if (!btn) return;
-    var wa = btn.getAttribute('data-whatsapp');
-    var productName = /*[[${product.name}]]*/ '';
-    var price       = /*[[${product.effectivePriceCfa}]]*/ 0;
-    var deliveryFee = /*[[${product.deliveryPriceCfa}]]*/ 0;
-    var deliveryOk  = /*[[${product.deliveryAvailable}]]*/ false;
-
-    function buildMessage() {
-      var pickup = document.getElementById('optPickup');
-      var isPickup = pickup && pickup.checked;
-      var opt = isPickup ? 'Retrait en boutique' : 'Livraison à domicile';
-      var lines = [
-        "Bonjour Bola's 👋",
-        "Je souhaite commander :",
-        "📦 Produit : " + productName,
-        "💰 Prix : " + price + " CFA",
-        "🚚 Option : " + opt
-      ];
-      if (!isPickup && deliveryOk && deliveryFee > 0) {
-        lines.push("(+ " + deliveryFee + " CFA de livraison)");
-      }
-      return encodeURIComponent(lines.join("\n"));
-    }
-
-    function updateLink() {
-      if (!wa) return;
-      btn.setAttribute('href', "https://wa.me/" + wa + "?text=" + buildMessage());
-    }
-
-    document.querySelectorAll('input[name="deliveryOption"]').forEach(function (el) {
-      el.addEventListener('change', updateLink);
+  // Synchronise l'option de livraison choisie avec le formulaire WhatsApp
+  document.querySelectorAll('input[name="deliveryOption"]').forEach(function(el) {
+    el.addEventListener('change', function() {
+      document.getElementById('waDeliveryOption').value = this.value;
     });
-    updateLink();
-  })();
+  });
   /*]]>*/
 </script>
 <script>

@@ -11,4 +11,5 @@ public interface CourierApplicationRepository extends JpaRepository<CourierAppli
     List<CourierApplication> findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus status);
     List<CourierApplication> findByVendorOrderBySubmittedAtDesc(VendorUser vendor);
     long countByStatus(CourierApplicationStatus status);
+    void deleteByVendor(VendorUser vendor);
 }

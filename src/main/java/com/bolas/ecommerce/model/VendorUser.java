@@ -81,6 +81,18 @@ public class VendorUser {
     @Column(name = "id_doc_verified")
     private Boolean idDocVerified;
 
+    /** Raison de la suspension (visible dans le message d'erreur au vendeur) */
+    @Column(name = "suspension_reason", length = 500)
+    private String suspensionReason;
+
+    /**
+     * Type de suspension :
+     *  true  → douce : vendeur bloqué mais produits restent visibles
+     *  false → totale : produits masqués automatiquement
+     */
+    @Column(name = "soft_suspend")
+    private boolean softSuspend = true;
+
     // ─── Getters / Setters ────────────────────────────────────────────────────
 
     public Long getId() { return id; }
@@ -124,6 +136,12 @@ public class VendorUser {
 
     public Boolean getIdDocVerified() { return idDocVerified; }
     public void setIdDocVerified(Boolean idDocVerified) { this.idDocVerified = idDocVerified; }
+
+    public String getSuspensionReason() { return suspensionReason; }
+    public void setSuspensionReason(String suspensionReason) { this.suspensionReason = suspensionReason; }
+
+    public boolean isSoftSuspend() { return softSuspend; }
+    public void setSoftSuspend(boolean softSuspend) { this.softSuspend = softSuspend; }
 
     /** Nom d'affichage : priorité shopName, sinon username */
     public String getDisplayName() {

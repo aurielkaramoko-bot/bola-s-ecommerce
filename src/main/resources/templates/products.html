@@ -11,10 +11,19 @@
   <h1 class="h2 section-title">Nos produits</h1>
   <p class="section-subtitle">Filtrez par catégorie et par fourchette de prix (CFA)</p>
 
-  <!-- Filtres -->
+  <!-- Filtres + Recherche -->
   <form th:action="@{/products}" method="get"
         class="row g-3 justify-content-center mb-5 p-4 rounded-3 border admin-card mx-auto"
         style="max-width:900px;">
+    <!-- Barre de recherche -->
+    <div class="col-12">
+      <label for="q" class="form-label small fw-semibold">
+        <i class="bi bi-search me-1"></i>Rechercher un produit
+      </label>
+      <input type="text" class="form-control" id="q" name="q"
+             th:value="${q}" placeholder="Ex : robe, chaussures, téléphone..."
+             maxlength="200" autocomplete="off"/>
+    </div>
     <div class="col-md-4">
       <label for="categoryId" class="form-label small fw-semibold">Catégorie</label>
       <select class="form-select" id="categoryId" name="categoryId">
@@ -41,6 +50,14 @@
       </button>
     </div>
   </form>
+
+  <!-- Résultat de recherche -->
+  <div th:if="${q != null}" class="mb-3 text-muted small">
+    <i class="bi bi-search me-1"></i>
+    Résultats pour <strong th:text="${q}"></strong>
+    — <span th:text="${products.size()}">0</span> produit(s) trouvé(s)
+    <a th:href="@{/products}" class="ms-2" style="color:var(--bolas-accent);">Effacer</a>
+  </div>
 
   <!-- Grille produits -->
   <div class="row g-3 justify-content-start"

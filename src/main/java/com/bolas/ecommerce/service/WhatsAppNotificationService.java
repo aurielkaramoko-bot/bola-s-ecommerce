@@ -75,5 +75,43 @@ public class WhatsAppNotificationService {
                 + URLEncoder.encode(msg, StandardCharsets.UTF_8);
     }
 
+    /**
+     * Construit un lien WhatsApp pour notifier le vendeur de sa suspension.
+     */
+    public String buildVendorSuspensionLink(String vendorPhone, String shopNameVendor,
+                                             boolean soft, String reason) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(soft ? "⚠️" : "🚫").append(" *Votre boutique sur ").append(shopName).append(" a été suspendue*\n\n");
+        if (reason != null && !reason.isBlank()) {
+            sb.append("📋 *Raison :* ").append(reason).append("\n\n");
+        }
+        if (soft) {
+            sb.append("ℹ️ Suspension temporaire — vos produits restent visibles.\n");
+        } else {
+            sb.append("ℹ️ Suspension totale — vos produits ont été masqués.\n");
+        }
+        sb.append("\nContactez-nous pour régulariser votre situation.");
+        return "https://wa.me/" + vendorPhone + "?text="
+                + URLEncoder.encode(sb.toString(), StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Construit le lien WhatsApp pour notifier l'admin d'une nouvelle proposition de livreur.
+     */
+    public String buildCourierProposalLink(String vendorShopName, String courierName,
+                                            String courierPhone, String zone) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("🚴 *Nouvelle proposition de livreur sur ").append(shopName).append("* !\n\n");
+        sb.append("🏪 *Vendeur :* ").append(vendorShopName).append("\n");
+        sb.append("👤 *Livreur :* ").append(courierName).append("\n");
+        sb.append("📞 *Téléphone :* ").append(courierPhone).append("\n");
+        if (zone != null && !zone.isBlank()) {
+            sb.append("📍 *Zone :* ").append(zone).append("\n");
+        }
+        sb.append("\n→ Validez depuis l'admin BOLA");
+        return "https://wa.me/" + adminWhatsApp + "?text="
+                + URLEncoder.encode(sb.toString(), StandardCharsets.UTF_8);
+    }
+
     public String getAdminWhatsApp() { return adminWhatsApp; }
 }

@@ -1,13 +1,17 @@
 package com.bolas.ecommerce.controller;
 
 import com.bolas.ecommerce.repository.CategoryRepository;
+import com.bolas.ecommerce.repository.CountryRepository;
 import com.bolas.ecommerce.repository.ProductRepository;
+import com.bolas.ecommerce.repository.VendorUserRepository;
+import com.bolas.ecommerce.model.VendorStatus;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
@@ -15,10 +19,17 @@ public class HomeController {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final VendorUserRepository vendorUserRepository;
+    private final CountryRepository countryRepository;
 
-    public HomeController(ProductRepository productRepository, CategoryRepository categoryRepository) {
+    public HomeController(ProductRepository productRepository,
+                          CategoryRepository categoryRepository,
+                          VendorUserRepository vendorUserRepository,
+                          CountryRepository countryRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
+        this.vendorUserRepository = vendorUserRepository;
+        this.countryRepository = countryRepository;
     }
 
     @GetMapping("/")
@@ -58,10 +69,31 @@ public class HomeController {
         model.addAttribute("countryCode", country);
         model.addAttribute("countryName", countryName);
         model.addAttribute("countryFlag", countryFlag);
-        model.addAttribute("featuredProducts", productRepository.findByAvailableTrueAndFeaturedTrue());
+        model.addAttribute("featuredProducts", productRepository.findFeaturedForHomepage());
         model.addAttribute("categories", categoryRepository.findAll());
-        model.addAttribute("popularProducts", productRepository.findTop6ByAvailableTrueOrderByFeaturedDescIdDesc());
+        model.addAttribute("popularProducts", productRepository.findPopularForHomepage());
+        // Compteur pays dynamique
+        model.addAttribute("countryCount", countryRepository.countByActiveTrue());
         return "index";
+    }
+
+    @GetMapping("/boutiques")
+    public String boutiques(Model model) {
+        model.addAttribute("pageTitle", "Boutiques — BOLA");
+        model.addAttribute("vendors",
+                vendorUserRepository.findByVendorStatus(VendorStatus.ACTIVE));
+        return "boutiques";
+    }
+
+    @GetMapping("/boutiques/{id}")
+    public String boutiqueDetail(@PathVariable Long id, Model model) {
+        var vendor = vendorUserRepository.findById(id)
+                .filter(v -> v.getVendorStatus() == VendorStatus.ACTIVE)
+                .orElseThrow();
+        model.addAttribute("pageTitle", vendor.getDisplayName() + " — BOLA");
+        model.addAttribute("vendor", vendor);
+        model.addAttribute("products", productRepository.findByVendorAndAvailableTrue(vendor));
+        return "boutique-detail";
     }
 
     @GetMapping("/contact")
