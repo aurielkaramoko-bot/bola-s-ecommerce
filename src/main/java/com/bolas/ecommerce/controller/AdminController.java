@@ -600,6 +600,8 @@ public class AdminController {
         ra.addFlashAttribute("flashOk", "Pays supprimé.");
         return "redirect:/admin/countries";
     }
+
+    private String baseUrl(HttpServletRequest request) {
         return request.getScheme() + "://" + request.getServerName()
                 + (request.getServerPort() != 80 && request.getServerPort() != 443
                 ? ":" + request.getServerPort() : "");
