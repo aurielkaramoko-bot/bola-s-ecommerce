@@ -20,6 +20,7 @@ import com.bolas.ecommerce.repository.ProductRepository;
 import com.bolas.ecommerce.repository.VendorUserRepository;
 import com.bolas.ecommerce.repository.CourierApplicationRepository;
 import com.bolas.ecommerce.repository.CountryRepository;
+import com.bolas.ecommerce.repository.VendorCategoryRepository;
 import com.bolas.ecommerce.service.WhatsAppNotificationService;
 import com.bolas.ecommerce.service.AuditLogService;
 import com.bolas.ecommerce.service.CategoryCoverImageUrlService;
@@ -63,6 +64,7 @@ public class AdminController {
     private final CourierApplicationRepository courierApplicationRepository;
     private final WhatsAppNotificationService whatsAppNotificationService;
     private final CountryRepository countryRepository;
+    private final VendorCategoryRepository vendorCategoryRepository;
 
     // --- ICI : RÉCUPÉRATION DE TA CLÉ API DEPUIS TON PC ---
     @Value("${google.maps.api.key}")
@@ -87,7 +89,8 @@ public class AdminController {
                            PasswordEncoder passwordEncoder,
                            CourierApplicationRepository courierApplicationRepository,
                            WhatsAppNotificationService whatsAppNotificationService,
-                           CountryRepository countryRepository) {
+                           CountryRepository countryRepository,
+                           VendorCategoryRepository vendorCategoryRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.customerOrderRepository = customerOrderRepository;
@@ -102,6 +105,7 @@ public class AdminController {
         this.courierApplicationRepository = courierApplicationRepository;
         this.whatsAppNotificationService = whatsAppNotificationService;
         this.countryRepository = countryRepository;
+        this.vendorCategoryRepository = vendorCategoryRepository;
     }
 
     @InitBinder
