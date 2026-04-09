@@ -10,7 +10,6 @@ import com.bolas.ecommerce.model.OrderStatus;
 import com.bolas.ecommerce.model.Product;
 import com.bolas.ecommerce.model.VendorUser;
 import com.bolas.ecommerce.model.VendorStatus;
-import com.bolas.ecommerce.model.CourierApplication;
 import com.bolas.ecommerce.model.CourierApplicationStatus;
 import com.bolas.ecommerce.model.Country;
 import com.bolas.ecommerce.repository.CategoryRepository;
@@ -249,9 +248,24 @@ public class AdminController {
         return "redirect:/admin/products";
     }
 
+    @PostMapping("/admin/products/{id}/toggle-sponsored")
+    public String toggleSponsored(@PathVariable Long id, RedirectAttributes ra) {
+        productRepository.findById(id).ifPresent(p -> {
+            // Sponsorisé uniquement si le vendeur est PREMIUM
+            if (p.getVendor() == null || p.getVendor().getPlan() == com.bolas.ecommerce.model.VendorPlan.PREMIUM) {
+                p.setSponsored(!p.isSponsored());
+                productRepository.save(p);
+                ra.addFlashAttribute("flashOk", p.isSponsored()
+                        ? "Produit sponsorisé activé." : "Sponsorisation retirée.");
+            } else {
+                ra.addFlashAttribute("flashError", "Seuls les vendeurs PREMIUM peuvent avoir des produits sponsorisés.");
+            }
+        });
+        return "redirect:/admin/products";
+    }
+
     @PostMapping("/admin/products/{id}/delete")
-    public String deleteProduct(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        Product product = productRepository.findById(id).orElse(null);
+    public String deleteProduct(@PathVariable Long id, RedirectAttributes redirectAttributes) {        Product product = productRepository.findById(id).orElse(null);
         if (product == null) {
             redirectAttributes.addFlashAttribute("flashError", "Produit introuvable.");
             return "redirect:/admin/products";
@@ -526,9 +540,20 @@ public class AdminController {
         return "redirect:/admin/vendors";
     }
 
+    @PostMapping("/admin/vendors/{id}/banner")
+    public String setVendorBanner(@PathVariable Long id,
+                                  @RequestParam(required = false) String bannerUrl,
+                                  RedirectAttributes ra) {
+        vendorUserRepository.findById(id).ifPresent(v -> {
+            v.setBannerUrl(bannerUrl != null && !bannerUrl.isBlank() ? bannerUrl.trim() : null);
+            vendorUserRepository.save(v);
+        });
+        ra.addFlashAttribute("flashOk", "Bannière mise à jour.");
+        return "redirect:/admin/vendors";
+    }
+
     @PostMapping("/admin/vendors/{id}/delete")
-    public String deleteVendor(@PathVariable Long id, RedirectAttributes ra) {
-        VendorUser v = vendorUserRepository.findById(id).orElseThrow();
+    public String deleteVendor(@PathVariable Long id, RedirectAttributes ra) {        VendorUser v = vendorUserRepository.findById(id).orElseThrow();
         // Détacher les produits du vendeur avant suppression
         productRepository.findByVendor(v).forEach(p -> {
             p.setVendor(null);
@@ -578,11 +603,13 @@ public class AdminController {
     public String saveCountry(@RequestParam String code,
                               @RequestParam String name,
                               @RequestParam(required = false, defaultValue = "") String flag,
+                              @RequestParam(required = false, defaultValue = "0") int customsTaxPercent,
                               RedirectAttributes ra) {
         Country c = new Country();
         c.setCode(code.trim().toUpperCase());
         c.setName(inputSanitizerService.sanitizeText(name));
         c.setFlag(flag.trim());
+        c.setCustomsTaxPercent(Math.max(0, Math.min(100, customsTaxPercent)));
         c.setActive(true);
         countryRepository.save(c);
         ra.addFlashAttribute("flashOk", "Pays ajouté : " + c.getName());

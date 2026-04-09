@@ -100,6 +100,14 @@ public class CustomerOrder {
     @Column(nullable = false)
     private long deliveryFeeCfa;
 
+    /** Commission BOLA prélevée sur cette commande (en CFA) */
+    @Column(nullable = false)
+    private long commissionCfa = 0L;
+
+    /** Taux de commission appliqué (en %) */
+    @Column(nullable = false)
+    private int commissionPercent = 0;
+
     @Column(nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -232,13 +240,14 @@ public class CustomerOrder {
         this.totalAmountCfa = totalAmountCfa;
     }
 
-    public long getDeliveryFeeCfa() {
-        return deliveryFeeCfa;
-    }
+    public long getDeliveryFeeCfa() { return deliveryFeeCfa; }
+    public void setDeliveryFeeCfa(long deliveryFeeCfa) { this.deliveryFeeCfa = deliveryFeeCfa; }
 
-    public void setDeliveryFeeCfa(long deliveryFeeCfa) {
-        this.deliveryFeeCfa = deliveryFeeCfa;
-    }
+    public long getCommissionCfa() { return commissionCfa; }
+    public void setCommissionCfa(long commissionCfa) { this.commissionCfa = commissionCfa; }
+
+    public int getCommissionPercent() { return commissionPercent; }
+    public void setCommissionPercent(int commissionPercent) { this.commissionPercent = commissionPercent; }
 
     public Instant getCreatedAt() {
         return createdAt;

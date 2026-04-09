@@ -4,7 +4,11 @@ import com.bolas.ecommerce.model.Customer;
 import com.bolas.ecommerce.model.CustomerOrder;
 import com.bolas.ecommerce.model.DeliveryOption;
 import com.bolas.ecommerce.model.OrderLine;
+import com.bolas.ecommerce.model.VendorPlan;
+import com.bolas.ecommerce.repository.CountryRepository;
 import com.bolas.ecommerce.repository.CustomerOrderRepository;
+import com.bolas.ecommerce.service.CommissionService;
+import com.bolas.ecommerce.service.MetaWhatsAppService;
 import com.bolas.ecommerce.service.CartService;
 import com.bolas.ecommerce.service.CustomerService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,15 +31,24 @@ public class CartController {
     private final CartService cartService;
     private final CustomerOrderRepository orderRepository;
     private final CustomerService customerService;
+    private final CountryRepository countryRepository;
+    private final CommissionService commissionService;
+    private final MetaWhatsAppService metaWhatsApp;
     private final String whatsappNumber;
 
     public CartController(CartService cartService,
                           CustomerOrderRepository orderRepository,
                           CustomerService customerService,
+                          CountryRepository countryRepository,
+                          CommissionService commissionService,
+                          MetaWhatsAppService metaWhatsApp,
                           @Value("${whatsapp.number}") String whatsappNumber) {
         this.cartService = cartService;
         this.orderRepository = orderRepository;
         this.customerService = customerService;
+        this.countryRepository = countryRepository;
+        this.commissionService = commissionService;
+        this.metaWhatsApp = metaWhatsApp;
         this.whatsappNumber = whatsappNumber;
     }
 
@@ -44,9 +57,9 @@ public class CartController {
         model.addAttribute("pageTitle", "Panier — Bola's");
         model.addAttribute("cartLines", cartService.lines(session));
         model.addAttribute("cartTotalCfa", cartService.totalAmountCfa(session));
-        // Pré-remplir les infos si client connecté
         Customer customer = (Customer) session.getAttribute("BOLAS_CUSTOMER");
         model.addAttribute("connectedCustomer", customer);
+        model.addAttribute("countries", countryRepository.findByActiveTrueOrderByNameAsc());
         return "cart";
     }
 
@@ -135,8 +148,28 @@ public class CartController {
         order.setCustomerPhone(customerPhone.trim());
         order.setCustomerAddress(customerAddress.trim());
         order.setDeliveryOption("PICKUP".equals(deliveryOption) ? DeliveryOption.PICKUP : DeliveryOption.HOME);
-        order.setTotalAmountCfa(cartService.totalAmountCfa(session));
+
+        // Calcul taxe douanière selon le pays
+        long subtotal = cartService.totalAmountCfa(session);
+        long customsTax = 0L;
+        var countryOpt = countryRepository.findByCode(country.toUpperCase());
+        if (countryOpt.isPresent() && countryOpt.get().getCustomsTaxPercent() > 0) {
+            customsTax = subtotal * countryOpt.get().getCustomsTaxPercent() / 100;
+        }
+        order.setTotalAmountCfa(subtotal + customsTax);
         order.setDeliveryFeeCfa(0L);
+
+        // Calcul commission BOLA selon le plan du vendeur principal
+        VendorPlan vendorPlan = lines.stream()
+                .map(l -> l.product().getVendor())
+                .filter(v -> v != null)
+                .findFirst()
+                .map(v -> v.getPlan())
+                .orElse(null);
+        int commissionPct = commissionService.rateFor(vendorPlan);
+        long commissionAmt = commissionService.compute(subtotal, vendorPlan);
+        order.setCommissionPercent(commissionPct);
+        order.setCommissionCfa(commissionAmt);
         if (clientLatitude != null)  order.setClientLatitude(clientLatitude);
         if (clientLongitude != null) order.setClientLongitude(clientLongitude);
 
@@ -150,6 +183,21 @@ public class CartController {
         orderRepository.save(order);
         cartService.clear(session);
 
+        // Notifier l'admin automatiquement via Meta WhatsApp
+        StringBuilder adminMsg = new StringBuilder();
+        adminMsg.append("🛒 Nouvelle commande sur BOLA !\n\n");
+        adminMsg.append("📦 N° : ").append(order.getTrackingNumber()).append("\n");
+        adminMsg.append("👤 Client : ").append(customerName.trim()).append("\n");
+        adminMsg.append("📞 Tél : ").append(customerPhone.trim()).append("\n");
+        adminMsg.append("🌍 Pays : ").append(country.toUpperCase()).append("\n");
+        adminMsg.append("💰 Total : ").append(order.getTotalAmountCfa()).append(" CFA\n");
+        if (commissionAmt > 0) {
+            adminMsg.append("💵 Commission BOLA (").append(commissionPct).append("%) : ")
+                    .append(commissionAmt).append(" CFA\n");
+        }
+        adminMsg.append("\n→ Voir dans l'admin BOLA");
+        metaWhatsApp.sendText(whatsappNumber, adminMsg.toString());
+
         // Construire le message WhatsApp
         StringBuilder msg = new StringBuilder();
         msg.append("Bonjour Bola's \uD83D\uDC4B\nJe souhaite commander :\n\n");
@@ -158,7 +206,12 @@ public class CartController {
                .append(" x").append(line.quantity())
                .append(" = ").append(line.lineTotalCfa()).append(" CFA\n");
         }
+        msg.append("\nSous-total : ").append(subtotal).append(" CFA");
+        if (customsTax > 0) {
+            msg.append("\nTaxe douanière (").append(countryOpt.get().getCustomsTaxPercent()).append("%) : ").append(customsTax).append(" CFA");
+        }
         msg.append("\nTotal : ").append(order.getTotalAmountCfa()).append(" CFA");
+        msg.append("\nPays : ").append(country.toUpperCase());
         msg.append("\nOption : ").append("PICKUP".equals(deliveryOption) ? "Retrait en boutique" : "Livraison à domicile");
         msg.append("\n\n\uD83D\uDCE6 N° de suivi : ").append(order.getTrackingNumber());
 

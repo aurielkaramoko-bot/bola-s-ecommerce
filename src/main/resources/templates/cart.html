@@ -146,9 +146,21 @@
           <div class="col-md-6">
             <label class="form-label small">Pays de livraison</label>
             <select class="form-select" name="country" id="countrySelect">
-              <option value="TG">🇹🇬 Togo</option>
-              <option value="CI">🇨🇮 Côte d'Ivoire</option>
+              <option th:each="c : ${countries}"
+                      th:value="${c.code}"
+                      th:text="${(c.flag != null ? c.flag + ' ' : '') + c.name + (c.customsTaxPercent > 0 ? ' (+' + c.customsTaxPercent + '% taxe)' : '')}"
+                      th:attr="data-tax=${c.customsTaxPercent}">
+              </option>
             </select>
+          </div>
+          <!-- Affichage taxe douanière -->
+          <div class="col-12" id="taxBlock" style="display:none;">
+            <div class="alert alert-warning py-2 small mb-0">
+              <i class="bi bi-info-circle me-1"></i>
+              Taxe douanière : <strong id="taxLabel">0%</strong>
+              — Montant : <strong id="taxAmount">0 CFA</strong>
+              — Total avec taxe : <strong id="totalWithTax">0 CFA</strong>
+            </div>
           </div>
           <!-- Bouton GPS — visible seulement si livraison à domicile -->
           <div class="col-md-6" id="gpsBlock">
@@ -220,6 +232,35 @@ document.querySelectorAll('.qty-form').forEach(function(form) {
     if (e.key === 'Enter') { e.preventDefault(); submit(sanitize(this.value)); }
   });
 });
+</script>
+
+<!-- Taxe douanière dynamique -->
+<script th:inline="javascript">
+/*<![CDATA[*/
+var cartTotal = /*[[${cartTotalCfa}]]*/ 0;
+var countrySelect = document.getElementById('countrySelect');
+var taxBlock = document.getElementById('taxBlock');
+
+function updateTax() {
+  if (!countrySelect) return;
+  var opt = countrySelect.options[countrySelect.selectedIndex];
+  var taxPct = parseInt(opt.getAttribute('data-tax') || '0', 10);
+  if (taxPct > 0) {
+    var taxAmt = Math.round(cartTotal * taxPct / 100);
+    var total = cartTotal + taxAmt;
+    document.getElementById('taxLabel').textContent = taxPct + '%';
+    document.getElementById('taxAmount').textContent = taxAmt.toLocaleString('fr-FR') + ' CFA';
+    document.getElementById('totalWithTax').textContent = total.toLocaleString('fr-FR') + ' CFA';
+    taxBlock.style.display = '';
+  } else {
+    taxBlock.style.display = 'none';
+  }
+}
+if (countrySelect) {
+  countrySelect.addEventListener('change', updateTax);
+  updateTax();
+}
+/*]]>*/
 </script>
 
 <!-- GPS client -->

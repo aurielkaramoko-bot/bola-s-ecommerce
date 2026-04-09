@@ -93,6 +93,11 @@ public class VendorUser {
     @Column(name = "soft_suspend")
     private boolean softSuspend = true;
 
+    /** URL bannière publicitaire (PREMIUM uniquement) — affichée sur la homepage */
+    @Size(max = 2000)
+    @Column(name = "banner_url", length = 2000)
+    private String bannerUrl;
+
     // ─── Getters / Setters ────────────────────────────────────────────────────
 
     public Long getId() { return id; }
@@ -142,6 +147,9 @@ public class VendorUser {
 
     public boolean isSoftSuspend() { return softSuspend; }
     public void setSoftSuspend(boolean softSuspend) { this.softSuspend = softSuspend; }
+
+    public String getBannerUrl() { return bannerUrl; }
+    public void setBannerUrl(String bannerUrl) { this.bannerUrl = bannerUrl; }
 
     /** Nom d'affichage : priorité shopName, sinon username */
     public String getDisplayName() {

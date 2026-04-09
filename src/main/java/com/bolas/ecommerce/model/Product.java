@@ -64,6 +64,10 @@ public class Product {
     @Column(nullable = false)
     private boolean featured;
 
+    /** Produit sponsorisé (PREMIUM uniquement) — apparaît en tête de recherche avec badge */
+    @Column(nullable = false)
+    private boolean sponsored = false;
+
     /** URL de la vidéo du produit (YouTube ou TikTok). Optionnel. */
     @Size(max = 2000)
     @Column(name = "video_url", length = 2000)
@@ -165,13 +169,11 @@ public class Product {
         this.deliveryPriceCfa = deliveryPriceCfa;
     }
 
-    public boolean isFeatured() {
-        return featured;
-    }
+    public boolean isFeatured() { return featured; }
+    public void setFeatured(boolean featured) { this.featured = featured; }
 
-    public void setFeatured(boolean featured) {
-        this.featured = featured;
-    }
+    public boolean isSponsored() { return sponsored; }
+    public void setSponsored(boolean sponsored) { this.sponsored = sponsored; }
 
     public String getVideoUrl() {
         return videoUrl;

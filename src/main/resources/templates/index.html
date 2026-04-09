@@ -53,6 +53,25 @@
     </div>
   </section>
 
+  <!-- ===== BANNIÈRES PREMIUM ===== -->
+  <section th:if="${premiumBanners != null and !premiumBanners.isEmpty()}" class="py-3">
+    <div class="container">
+      <div class="row g-3">
+        <div class="col-12 col-md-6" th:each="v : ${premiumBanners}">
+          <a th:href="@{/boutiques/{id}(id=${v.id})}" class="d-block position-relative"
+             style="border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.1);">
+            <img th:src="${v.bannerUrl}" th:alt="${v.displayName}"
+                 style="width:100%;height:160px;object-fit:cover;display:block;"/>
+            <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.6));padding:12px 16px;">
+              <span style="color:#fff;font-weight:600;" th:text="${v.displayName}">Boutique</span>
+              <span style="background:#C49A6C;color:#fff;font-size:.65rem;padding:2px 8px;border-radius:999px;margin-left:8px;">⭐ Premium</span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== PRODUITS VEDETTES ===== -->
   <section class="py-5" th:if="${featuredProducts != null and !featuredProducts.isEmpty()}">
     <div class="container">

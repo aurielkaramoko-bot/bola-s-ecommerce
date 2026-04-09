@@ -5,6 +5,7 @@ import com.bolas.ecommerce.repository.*;
 import com.bolas.ecommerce.service.IdDocumentVerificationService;
 import com.bolas.ecommerce.service.InputSanitizerService;
 import com.bolas.ecommerce.service.ImageUploadService;
+import com.bolas.ecommerce.service.MetaWhatsAppService;
 import com.bolas.ecommerce.service.WhatsAppNotificationService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -39,6 +40,7 @@ public class VendorController {
     private final InputSanitizerService      sanitizer;
     private final IdDocumentVerificationService idVerificationService;
     private final CourierApplicationRepository courierApplicationRepository;
+    private final MetaWhatsAppService        metaWhatsApp;
 
     public VendorController(CustomerOrderRepository orderRepository,
                             VendorUserRepository vendorUserRepository,
@@ -51,7 +53,8 @@ public class VendorController {
                             WhatsAppNotificationService whatsAppService,
                             InputSanitizerService sanitizer,
                             IdDocumentVerificationService idVerificationService,
-                            CourierApplicationRepository courierApplicationRepository) {
+                            CourierApplicationRepository courierApplicationRepository,
+                            MetaWhatsAppService metaWhatsApp) {
         this.orderRepository               = orderRepository;
         this.vendorUserRepository          = vendorUserRepository;
         this.productRepository             = productRepository;
@@ -64,6 +67,7 @@ public class VendorController {
         this.sanitizer                     = sanitizer;
         this.idVerificationService         = idVerificationService;
         this.courierApplicationRepository  = courierApplicationRepository;
+        this.metaWhatsApp                  = metaWhatsApp;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -274,9 +278,20 @@ public class VendorController {
                 v.getShopName(), v.getUsername(), v.getPhone(),
                 catNames, v.getRequestedNiche());
 
+        // Envoi automatique via Meta Cloud API (si configuré)
+        String adminNotifMsg = "🆕 Nouvelle demande de boutique sur BOLA !\n\n"
+                + "🏪 Boutique : " + v.getShopName() + "\n"
+                + "👤 Identifiant : " + v.getUsername() + "\n"
+                + "📞 Téléphone : " + v.getPhone() + "\n"
+                + (catNames.isBlank() ? "" : "🏷️ Catégories : " + catNames + "\n")
+                + (v.getRequestedNiche() != null ? "💡 Niche : " + v.getRequestedNiche() + "\n" : "")
+                + "📋 Plan : " + v.getPlan().name() + "\n"
+                + "\n→ Validez depuis l'admin BOLA";
+        metaWhatsApp.sendText(whatsAppService.getAdminWhatsApp(), adminNotifMsg);
+
         ra.addFlashAttribute("flashOk",
                 "✅ Demande envoyée ! Notre équipe validera votre boutique sous 24h.");
-        return "redirect:" + waLink;    }
+        return "redirect:/vendor/register";    }
 
     // ─── Dashboard vendeur ────────────────────────────────────────────────────
 
@@ -719,14 +734,18 @@ public class VendorController {
         app.setPhotoUrl(photoUrl);
         app.setIdDocumentUrl(idDocUrl);
         app.setIdDocVerified(idVerified);
-        app.setVendor(vendor);
         courierApplicationRepository.save(app);
 
-        // Notifier l'admin automatiquement via WhatsApp
-        String waLink = whatsAppService.buildCourierProposalLink(
-                vendor.getDisplayName(), cleanName, cleanPhone, cleanZone);
+        // Envoi automatique via Meta Cloud API (si configuré)
+        String notifMsg = "🚴 Nouvelle proposition de livreur sur BOLA !\n\n"
+                + "🏪 Vendeur : " + vendor.getDisplayName() + "\n"
+                + "👤 Livreur : " + cleanName + "\n"
+                + "📞 Téléphone : " + cleanPhone + "\n"
+                + (cleanZone != null ? "📍 Zone : " + cleanZone + "\n" : "")
+                + "\n→ Validez depuis l'admin BOLA";
+        metaWhatsApp.sendText(whatsAppService.getAdminWhatsApp(), notifMsg);
 
         ra.addFlashAttribute("flashOk", "Demande envoyée ! L'admin validera ce livreur sous 24h.");
-        return "redirect:" + waLink;
+        return "redirect:/vendor/couriers";
     }
 }

@@ -28,7 +28,7 @@
             <input type="text" class="form-control" name="code" required maxlength="4"
                    placeholder="TG" style="text-transform:uppercase;"/>
           </div>
-          <div class="col-md-5">
+          <div class="col-md-3">
             <label class="form-label small fw-semibold">Nom *</label>
             <input type="text" class="form-control" name="name" required maxlength="100"
                    placeholder="Togo"/>
@@ -37,6 +37,11 @@
             <label class="form-label small fw-semibold">Drapeau</label>
             <input type="text" class="form-control" name="flag" maxlength="10"
                    placeholder="🇹🇬"/>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-semibold">Taxe douanière (%)</label>
+            <input type="number" class="form-control" name="customsTaxPercent"
+                   min="0" max="100" value="0" placeholder="0"/>
           </div>
           <div class="col-md-2 d-flex align-items-end">
             <button type="submit" class="btn btn-hero-solid w-100">
@@ -55,6 +60,7 @@
                 <th>Drapeau</th>
                 <th>Code</th>
                 <th>Nom</th>
+                <th>Taxe douanière</th>
                 <th>Statut</th>
                 <th>Actions</th>
               </tr>
@@ -64,6 +70,12 @@
                 <td th:text="${c.flag ?: '🌍'}">🌍</td>
                 <td><code th:text="${c.code}">TG</code></td>
                 <td th:text="${c.name}">Togo</td>
+                <td>
+                  <span th:if="${c.customsTaxPercent > 0}"
+                        class="badge bg-warning text-dark"
+                        th:text="${c.customsTaxPercent} + '%'">0%</span>
+                  <span th:if="${c.customsTaxPercent == 0}" class="text-muted small">Aucune</span>
+                </td>
                 <td>
                   <span th:if="${c.active}" class="badge bg-success">Actif</span>
                   <span th:if="${!c.active}" class="badge bg-secondary">Inactif</span>

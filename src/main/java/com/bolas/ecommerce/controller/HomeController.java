@@ -72,8 +72,10 @@ public class HomeController {
         model.addAttribute("featuredProducts", productRepository.findFeaturedForHomepage());
         model.addAttribute("categories", categoryRepository.findAll());
         model.addAttribute("popularProducts", productRepository.findPopularForHomepage());
-        // Compteur pays dynamique
         model.addAttribute("countryCount", countryRepository.countByActiveTrue());
+        // Bannières PREMIUM
+        model.addAttribute("premiumBanners",
+                vendorUserRepository.findActivePremiumWithBanner(com.bolas.ecommerce.model.VendorPlan.PREMIUM));
         return "index";
     }
 
