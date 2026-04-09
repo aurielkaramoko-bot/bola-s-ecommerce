@@ -46,9 +46,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Controller
 public class AdminController {
+
+    private static final Logger log = LoggerFactory.getLogger(AdminController.class);
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
@@ -364,17 +368,30 @@ public class AdminController {
     @GetMapping("/admin/orders")
     @Transactional(readOnly = true)
     public String orders(Model model) {
-        model.addAttribute("pageTitle", "Commandes — Admin Bola's");
-        // Séparer par statut pour l'affichage priorisé
-        model.addAttribute("pendingOrders",  customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.PENDING));
-        model.addAttribute("confirmedOrders",customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.CONFIRMED));
-        model.addAttribute("readyOrders",    customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.READY));
-        model.addAttribute("activeOrders",   customerOrderRepository.findByStatusOrderByCreatedAtDesc(OrderStatus.IN_DELIVERY));
-        model.addAttribute("closedOrders",   customerOrderRepository.findTop20ByStatusInOrderByCreatedAtDesc(
-                List.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED)));
-        model.addAttribute("newOrder", new NewOrderDto());
-        model.addAttribute("products", productRepository.findByAvailableTrue());
-        model.addAttribute("vendors", vendorUserRepository.findAll());
+        try {
+            model.addAttribute("pageTitle", "Commandes — Admin Bola's");
+            // Séparer par statut pour l'affichage priorisé
+            model.addAttribute("pendingOrders",  customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.PENDING));
+            model.addAttribute("confirmedOrders",customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.CONFIRMED));
+            model.addAttribute("readyOrders",    customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.READY));
+            model.addAttribute("activeOrders",   customerOrderRepository.findByStatusOrderByCreatedAtDesc(OrderStatus.IN_DELIVERY));
+            model.addAttribute("closedOrders",   customerOrderRepository.findTop20ByStatusInOrderByCreatedAtDesc(
+                    List.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED)));
+            model.addAttribute("newOrder", new NewOrderDto());
+            model.addAttribute("products", productRepository.findByAvailableTrue());
+            model.addAttribute("vendors", vendorUserRepository.findAll());
+        } catch (Exception e) {
+            log.error("❌ Erreur chargement commandes : ", e);
+            model.addAttribute("flashError", "Erreur lors du chargement des commandes : " + e.getMessage());
+            model.addAttribute("pendingOrders", List.of());
+            model.addAttribute("confirmedOrders", List.of());
+            model.addAttribute("readyOrders", List.of());
+            model.addAttribute("activeOrders", List.of());
+            model.addAttribute("closedOrders", List.of());
+            model.addAttribute("newOrder", new NewOrderDto());
+            model.addAttribute("products", List.of());
+            model.addAttribute("vendors", List.of());
+        }
         return "admin/orders";
     }
 
@@ -460,18 +477,36 @@ public class AdminController {
     @GetMapping("/admin/vendors")
     @Transactional(readOnly = true)
     public String vendors(Model model) {
-        model.addAttribute("pageTitle", "Vendeurs — Admin BOLA");
-        model.addAttribute("vendors", vendorUserRepository.findAll());
-        model.addAttribute("pendingVendors",
-                vendorUserRepository.findByVendorStatus(VendorStatus.PENDING));
-        model.addAttribute("activeVendors",
-                vendorUserRepository.findAll().stream()
-                        .filter(v -> v.getVendorStatus() != VendorStatus.PENDING)
-                        .toList());
-        model.addAttribute("pendingCouriers",
-                courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.PENDING));
-        model.addAttribute("allCouriers",
-                courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.APPROVED));
+        try {
+            model.addAttribute("pageTitle", "Vendeurs — Admin BOLA");
+            
+            List<VendorUser> allVendors = vendorUserRepository.findAll();
+            model.addAttribute("vendors", allVendors);
+            
+            List<VendorUser> pending = vendorUserRepository.findByVendorStatus(VendorStatus.PENDING);
+            model.addAttribute("pendingVendors", pending);
+            
+            List<VendorUser> active = allVendors.stream()
+                    .filter(v -> v.getVendorStatus() == VendorStatus.ACTIVE)
+                    .toList();
+            model.addAttribute("activeVendors", active);
+            
+            model.addAttribute("pendingCouriers",
+                    courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.PENDING));
+            model.addAttribute("allCouriers",
+                    courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.APPROVED));
+            
+            log.info("✅ Admin vendors chargés : {} total, {} pending, {} active", 
+                    allVendors.size(), pending.size(), active.size());
+        } catch (Exception e) {
+            log.error("❌ Erreur chargement vendors : ", e);
+            model.addAttribute("flashError", "Erreur lors du chargement des vendeurs : " + e.getMessage());
+            model.addAttribute("vendors", List.of());
+            model.addAttribute("pendingVendors", List.of());
+            model.addAttribute("activeVendors", List.of());
+            model.addAttribute("pendingCouriers", List.of());
+            model.addAttribute("allCouriers", List.of());
+        }
         return "admin/vendors";
     }
 

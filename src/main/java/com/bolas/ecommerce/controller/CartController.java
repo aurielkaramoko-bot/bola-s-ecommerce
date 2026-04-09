@@ -130,6 +130,19 @@ public class CartController {
                            HttpSession session,
                            RedirectAttributes ra) {
 
+        // Validation WhatsApp
+        if (whatsappNumber == null || whatsappNumber.isBlank()) {
+            log.error("❌ Configuration WhatsApp manquante!");
+            ra.addFlashAttribute("flashError", "Configuration WhatsApp manquante. Contactez l'administrateur.");
+            return "redirect:/cart";
+        }
+        String cleanedPhone = whatsappNumber.replaceAll("[^0-9]", "");
+        if (cleanedPhone.length() < 9) {
+            log.error("❌ Numéro WhatsApp invalide: {}", whatsappNumber);
+            ra.addFlashAttribute("flashError", "Numéro WhatsApp invalide. Contactez l'administrateur.");
+            return "redirect:/cart";
+        }
+
         // Forcer la connexion si pas de compte client
         if (session.getAttribute("BOLAS_CUSTOMER") == null) {
             ra.addFlashAttribute("flashError", "Veuillez vous connecter ou créer un compte pour commander.");
@@ -230,7 +243,7 @@ public class CartController {
         msg.append("\nOption : ").append("PICKUP".equals(deliveryOption) ? "Retrait en boutique" : "Livraison à domicile");
         msg.append("\n\n\uD83D\uDCE6 N° de suivi : ").append(order.getTrackingNumber());
 
-        String waUrl = "https://wa.me/" + whatsappNumber
+        String waUrl = "https://wa.me/" + cleanedPhone
                 + "?text=" + URLEncoder.encode(msg.toString(), StandardCharsets.UTF_8);
 
         return "redirect:" + waUrl;

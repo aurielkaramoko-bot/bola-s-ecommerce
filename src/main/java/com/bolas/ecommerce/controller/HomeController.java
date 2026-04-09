@@ -5,6 +5,7 @@ import com.bolas.ecommerce.repository.CountryRepository;
 import com.bolas.ecommerce.repository.ProductRepository;
 import com.bolas.ecommerce.repository.VendorUserRepository;
 import com.bolas.ecommerce.model.VendorStatus;
+import com.bolas.ecommerce.model.VendorUser;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -14,6 +15,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 @Controller
 public class HomeController {
@@ -85,8 +88,10 @@ public class HomeController {
     public String boutiques(Model model) {
         model.addAttribute("pageTitle", "Boutiques — BOLA");
         try {
-            model.addAttribute("vendors",
-                    vendorUserRepository.findByVendorStatus(VendorStatus.ACTIVE));
+            List<VendorUser> activeVendors = vendorUserRepository.findAll().stream()
+                    .filter(v -> v.getVendorStatus() == VendorStatus.ACTIVE && v.isActive())
+                    .toList();
+            model.addAttribute("vendors", activeVendors);
         } catch (Exception e) {
             model.addAttribute("vendors", java.util.List.of());
         }

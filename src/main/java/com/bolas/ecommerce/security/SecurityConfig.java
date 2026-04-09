@@ -1,5 +1,6 @@
 package com.bolas.ecommerce.security;
 
+import com.bolas.ecommerce.security.GoogleOAuth2SuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -10,13 +11,13 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import java.util.Arrays;
 
@@ -28,22 +29,26 @@ public class SecurityConfig {
     private final BolasAuthenticationFailureHandler failureHandler;
     private final RateLimitingFilter rateLimitingFilter;
     private final SensitiveCacheControlFilter sensitiveCacheControlFilter;
+    private final GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler;
     private final AdminUserDetailsService adminUserDetailsService;
+    private final BolaOAuth2UserService bolaOAuth2UserService;
     private final Environment environment;
-
-    // On a enlevé temporairement GoogleOAuth2SuccessHandler et BolaOAuth2UserService
 
     public SecurityConfig(BolasAuthenticationSuccessHandler successHandler,
                           BolasAuthenticationFailureHandler failureHandler,
                           RateLimitingFilter rateLimitingFilter,
                           SensitiveCacheControlFilter sensitiveCacheControlFilter,
+                          GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler,
                           AdminUserDetailsService adminUserDetailsService,
+                          BolaOAuth2UserService bolaOAuth2UserService,
                           Environment environment) {
         this.successHandler = successHandler;
         this.failureHandler = failureHandler;
         this.rateLimitingFilter = rateLimitingFilter;
         this.sensitiveCacheControlFilter = sensitiveCacheControlFilter;
+        this.googleOAuth2SuccessHandler = googleOAuth2SuccessHandler;
         this.adminUserDetailsService = adminUserDetailsService;
+        this.bolaOAuth2UserService = bolaOAuth2UserService;
         this.environment = environment;
     }
 
@@ -95,7 +100,7 @@ public class SecurityConfig {
                     headers.referrerPolicy(referrer -> referrer.policy(
                             ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN));
                     headers.addHeaderWriter(new org.springframework.security.web.header.writers.StaticHeadersWriter(
-                            "Permissions-Policy", "microphone=(), camera=(), payment=(), usb=()"));
+                            "Permissions-Policy", "microphone=(), camera=(), payment=(), usb=()")); // geolocation autorisée pour /livreur
                     headers.cacheControl(cache -> {});
                     if (isProdProfile()) {
                         headers.httpStrictTransportSecurity(hsts -> hsts
@@ -104,21 +109,58 @@ public class SecurityConfig {
                     }
                 });
 
+        // Render gère HTTPS au niveau proxy — on ne force pas HTTPS ici
+        // (server.forward-headers-strategy=framework suffit)
+
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                        "/", "/products", "/products/**", "/categories", "/categories/**",
-                        "/tracking", "/tracking/**", "/contact", "/cart", "/cart/**",
-                        "/api/public/**", "/api/livreur/**", "/livreur/**",
-                        "/css/**", "/js/**", "/images/**", "/uploads/**", "/webjars/**",
-                        "/admin/login", "/admin/login-process", "/admin/login-error",
-                        "/customer/login", "/customer/signup", "/customer/logout",
-                        "/vendor/login", "/vendor/login-process", "/vendor/register",
-                        "/boutiques", "/boutiques/**", "/error"
+                        new AntPathRequestMatcher("/"),
+                        new AntPathRequestMatcher("/products"),
+                        new AntPathRequestMatcher("/products/**"),
+                        new AntPathRequestMatcher("/categories"),
+                        new AntPathRequestMatcher("/categories/**"),
+                        new AntPathRequestMatcher("/tracking"),
+                        new AntPathRequestMatcher("/tracking/**"),
+                        new AntPathRequestMatcher("/contact"),
+                        new AntPathRequestMatcher("/cart"),
+                        new AntPathRequestMatcher("/cart/**"),
+                        new AntPathRequestMatcher("/api/public/**"),
+                        new AntPathRequestMatcher("/api/livreur/**"),
+                        new AntPathRequestMatcher("/livreur/**"),
+                        new AntPathRequestMatcher("/css/**"),
+                        new AntPathRequestMatcher("/js/**"),
+                        new AntPathRequestMatcher("/images/**"),
+                        new AntPathRequestMatcher("/uploads/**"),
+                        new AntPathRequestMatcher("/webjars/**"),
+                        new AntPathRequestMatcher("/admin/login"),
+                        new AntPathRequestMatcher("/admin/login-process"),
+                        new AntPathRequestMatcher("/admin/login-error"),
+                        new AntPathRequestMatcher("/customer/login"),
+                        new AntPathRequestMatcher("/customer/signup"),
+                        new AntPathRequestMatcher("/customer/logout"),
+                        new AntPathRequestMatcher("/customer/oauth2/success"),
+                        new AntPathRequestMatcher("/vendor/login"),
+                        new AntPathRequestMatcher("/vendor/login-process"),
+                        new AntPathRequestMatcher("/vendor/register"),
+                        new AntPathRequestMatcher("/vendor/logout"),
+                        new AntPathRequestMatcher("/boutiques"),
+                        new AntPathRequestMatcher("/boutiques/**"),
+                        new AntPathRequestMatcher("/error")
                 ).permitAll()
-                .requestMatchers("/h2-console/**").access((authentication, context) ->
+                .requestMatchers(new AntPathRequestMatcher("/h2-console/**")).access((authentication, context) ->
                         new org.springframework.security.authorization.AuthorizationDecision(!isProdProfile()))
-                .requestMatchers("/vendor", "/vendor/**", "/chat/**", "/report").permitAll()
-                .requestMatchers("/admin", "/admin/**").hasRole("ADMIN")
+                .requestMatchers(
+                        // Vendor routes : auth gérée manuellement via HttpSession dans VendorController
+                        new AntPathRequestMatcher("/vendor"),
+                        new AntPathRequestMatcher("/vendor/**"),
+                        // Chat et signalement : publics (chat nécessite session client, vérifié dans controller)
+                        new AntPathRequestMatcher("/chat/**"),
+                        new AntPathRequestMatcher("/report")
+                ).permitAll()
+                .requestMatchers(
+                        new AntPathRequestMatcher("/admin"),
+                        new AntPathRequestMatcher("/admin/**")
+                ).hasRole("ADMIN")
                 .anyRequest().permitAll()
         );
 
@@ -132,6 +174,7 @@ public class SecurityConfig {
                 .permitAll()
         );
 
+        // Injecter l'AuthenticationManager admin via le builder
         http.authenticationProvider(adminAuthProvider(passwordEncoder()));
 
         http.logout(logout -> logout
@@ -141,8 +184,15 @@ public class SecurityConfig {
                 .deleteCookies("JSESSIONID")
         );
 
-        // OAuth2 Google désactivé temporairement pour permettre le démarrage
-        // http.oauth2Login(...) 
+        // OAuth2 Google
+        http.oauth2Login(oauth2 -> oauth2
+                .loginPage("/customer/login")
+                .successHandler(googleOAuth2SuccessHandler)
+                .failureUrl("/customer/login?error")
+                .userInfoEndpoint(userInfo -> userInfo
+                        .oidcUserService(bolaOAuth2UserService)
+                )
+        );
 
         http.addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterAfter(sensitiveCacheControlFilter, UsernamePasswordAuthenticationFilter.class);
