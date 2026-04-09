@@ -9,6 +9,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -80,18 +81,25 @@ public class HomeController {
     }
 
     @GetMapping("/boutiques")
+    @Transactional(readOnly = true)
     public String boutiques(Model model) {
         model.addAttribute("pageTitle", "Boutiques — BOLA");
-        model.addAttribute("vendors",
-                vendorUserRepository.findByVendorStatus(VendorStatus.ACTIVE));
+        try {
+            model.addAttribute("vendors",
+                    vendorUserRepository.findByVendorStatus(VendorStatus.ACTIVE));
+        } catch (Exception e) {
+            model.addAttribute("vendors", java.util.List.of());
+        }
         return "boutiques";
     }
 
     @GetMapping("/boutiques/{id}")
+    @Transactional(readOnly = true)
     public String boutiqueDetail(@PathVariable Long id, Model model) {
         var vendor = vendorUserRepository.findById(id)
                 .filter(v -> v.getVendorStatus() == VendorStatus.ACTIVE)
-                .orElseThrow();
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Boutique introuvable"));
         model.addAttribute("pageTitle", vendor.getDisplayName() + " — BOLA");
         model.addAttribute("vendor", vendor);
         model.addAttribute("products", productRepository.findByVendorAndAvailableTrue(vendor));

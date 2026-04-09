@@ -6,10 +6,14 @@ import com.bolas.ecommerce.service.IdDocumentVerificationService;
 import com.bolas.ecommerce.service.InputSanitizerService;
 import com.bolas.ecommerce.service.ImageUploadService;
 import com.bolas.ecommerce.service.MetaWhatsAppService;
+import com.bolas.ecommerce.service.SessionCounterService;
 import com.bolas.ecommerce.service.WhatsAppNotificationService;
 import jakarta.servlet.http.HttpSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,6 +29,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/vendor")
 public class VendorController {
 
+    private static final Logger log = LoggerFactory.getLogger(VendorController.class);
     private static final String SESSION_KEY   = "BOLAS_VENDOR";
     private static final int    GRATUIT_LIMIT = 10;
 
@@ -41,6 +46,8 @@ public class VendorController {
     private final IdDocumentVerificationService idVerificationService;
     private final CourierApplicationRepository courierApplicationRepository;
     private final MetaWhatsAppService        metaWhatsApp;
+    private final LoyaltyCardRepository      loyaltyCardRepository;
+    private final SessionCounterService      sessionCounter;
 
     public VendorController(CustomerOrderRepository orderRepository,
                             VendorUserRepository vendorUserRepository,
@@ -54,7 +61,9 @@ public class VendorController {
                             InputSanitizerService sanitizer,
                             IdDocumentVerificationService idVerificationService,
                             CourierApplicationRepository courierApplicationRepository,
-                            MetaWhatsAppService metaWhatsApp) {
+                            MetaWhatsAppService metaWhatsApp,
+                            LoyaltyCardRepository loyaltyCardRepository,
+                            SessionCounterService sessionCounter) {
         this.orderRepository               = orderRepository;
         this.vendorUserRepository          = vendorUserRepository;
         this.productRepository             = productRepository;
@@ -68,6 +77,8 @@ public class VendorController {
         this.idVerificationService         = idVerificationService;
         this.courierApplicationRepository  = courierApplicationRepository;
         this.metaWhatsApp                  = metaWhatsApp;
+        this.loyaltyCardRepository         = loyaltyCardRepository;
+        this.sessionCounter                = sessionCounter;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -110,6 +121,7 @@ public class VendorController {
     public String loginProcess(@RequestParam String username,
                                @RequestParam String password,
                                HttpSession session,
+                               jakarta.servlet.http.HttpServletRequest request,
                                RedirectAttributes ra) {
         Optional<VendorUser> opt = vendorUserRepository.findByUsername(username.trim());
         if (opt.isEmpty() || !passwordEncoder.matches(password, opt.get().getPasswordHash())) {
@@ -127,12 +139,16 @@ public class VendorController {
             }
             return "redirect:/vendor/login";
         }
+        // Sécurité session fixation : régénère l'ID de session sans perdre les données
+        request.changeSessionId();
         session.setAttribute(SESSION_KEY, v);
+        sessionCounter.markVendorSession(session); // compteur de vendeurs connectés
         return "redirect:/vendor/dashboard";
     }
 
     @GetMapping("/logout")
     public String logout(HttpSession session) {
+        sessionCounter.unmarkVendorSession(session);
         session.removeAttribute(SESSION_KEY);
         return "redirect:/vendor/login";
     }
@@ -140,6 +156,7 @@ public class VendorController {
     // ─── Inscription publique ─────────────────────────────────────────────────
 
     @GetMapping("/register")
+    @Transactional(readOnly = true)
     public String registerPage(HttpSession session, Model model) {
         if (currentVendor(session) != null) return "redirect:/vendor/dashboard";
         model.addAttribute("pageTitle", "Ouvrir ma boutique — BOLA");
@@ -274,20 +291,20 @@ public class VendorController {
                     .collect(Collectors.joining(", "));
         }
 
-        String waLink = whatsAppService.buildVendorRegistrationLink(
-                v.getShopName(), v.getUsername(), v.getPhone(),
-                catNames, v.getRequestedNiche());
-
         // Envoi automatique via Meta Cloud API (si configuré)
-        String adminNotifMsg = "🆕 Nouvelle demande de boutique sur BOLA !\n\n"
-                + "🏪 Boutique : " + v.getShopName() + "\n"
-                + "👤 Identifiant : " + v.getUsername() + "\n"
-                + "📞 Téléphone : " + v.getPhone() + "\n"
-                + (catNames.isBlank() ? "" : "🏷️ Catégories : " + catNames + "\n")
-                + (v.getRequestedNiche() != null ? "💡 Niche : " + v.getRequestedNiche() + "\n" : "")
-                + "📋 Plan : " + v.getPlan().name() + "\n"
-                + "\n→ Validez depuis l'admin BOLA";
-        metaWhatsApp.sendText(whatsAppService.getAdminWhatsApp(), adminNotifMsg);
+        try {
+            String adminNotifMsg = "🆕 Nouvelle demande de boutique sur BOLA !\n\n"
+                    + "🏪 Boutique : " + v.getShopName() + "\n"
+                    + "👤 Identifiant : " + v.getUsername() + "\n"
+                    + "📞 Téléphone : " + v.getPhone() + "\n"
+                    + (catNames.isBlank() ? "" : "🏷️ Catégories : " + catNames + "\n")
+                    + (v.getRequestedNiche() != null ? "💡 Niche : " + v.getRequestedNiche() + "\n" : "")
+                    + "📋 Plan : " + v.getPlan().name() + "\n"
+                    + "\n→ Validez depuis l'admin BOLA";
+            metaWhatsApp.sendText(whatsAppService.getAdminWhatsApp(), adminNotifMsg);
+        } catch (Exception e) {
+            log.warn("Notification WhatsApp vendeur échouée (inscription sauvegardée quand même): {}", e.getMessage());
+        }
 
         ra.addFlashAttribute("flashOk",
                 "✅ Demande envoyée ! Notre équipe validera votre boutique sous 24h.");
@@ -296,6 +313,7 @@ public class VendorController {
     // ─── Dashboard vendeur ────────────────────────────────────────────────────
 
     @GetMapping("/dashboard")
+    @Transactional(readOnly = true)
     public String dashboard(HttpSession session, Model model) {
         String redirect = requireVendor(session);
         if (redirect != null) return redirect;
@@ -324,6 +342,7 @@ public class VendorController {
     // ─── Commandes vendeur ────────────────────────────────────────────────────
 
     @GetMapping("/orders")
+    @Transactional(readOnly = true)
     public String orders(HttpSession session, Model model) {
         String redirect = requireVendor(session);
         if (redirect != null) return redirect;
@@ -362,6 +381,7 @@ public class VendorController {
     // ─── Produits vendeur ─────────────────────────────────────────────────────
 
     @GetMapping("/products")
+    @Transactional(readOnly = true)
     public String myProducts(HttpSession session, Model model) {
         String redirect = requireVendor(session);
         if (redirect != null) return redirect;
@@ -381,6 +401,7 @@ public class VendorController {
     }
 
     @GetMapping("/products/add")
+    @Transactional(readOnly = true)
     public String addProductForm(HttpSession session, Model model) {
         String redirect = requireVendor(session);
         if (redirect != null) return redirect;
@@ -484,6 +505,7 @@ public class VendorController {
     }
 
     @GetMapping("/products/{id}/edit")
+    @Transactional(readOnly = true)
     public String editProductForm(@PathVariable Long id,
                                   HttpSession session,
                                   Model model,
@@ -586,6 +608,7 @@ public class VendorController {
     // ─── Messages vendeur ───────────────────────────────────────────────────────────
 
     @GetMapping("/messages")
+    @Transactional(readOnly = true)
     public String messagesInbox(HttpSession session, Model model) {
         String redirect = requireVendor(session);
         if (redirect != null) return redirect;
@@ -608,6 +631,7 @@ public class VendorController {
     }
 
     @GetMapping("/messages/{custId}")
+    @Transactional
     public String messageThread(@PathVariable String custId,
                                 HttpSession session,
                                 Model model) {
@@ -659,6 +683,7 @@ public class VendorController {
     // ─── Proposer un livreur ──────────────────────────────────────────────────
 
     @GetMapping("/couriers")
+    @Transactional(readOnly = true)
     public String courierApplicationsPage(HttpSession session, Model model) {
         String redirect = requireVendor(session);
         if (redirect != null) return redirect;
@@ -751,5 +776,106 @@ public class VendorController {
 
         ra.addFlashAttribute("flashOk", "Demande envoyée ! L'admin validera ce livreur sous 24h.");
         return "redirect:/vendor/couriers";
+    }
+
+    // ─── Cartes de fidélité ─────────────────────────────────────────
+
+    @GetMapping("/loyalty")
+    @Transactional(readOnly = true)
+    public String loyaltyPage(HttpSession session, Model model) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        VendorUser vendor = currentVendor(session);
+        model.addAttribute("pageTitle", "Cartes fidélité — BOLA Vendeur");
+        model.addAttribute("vendor", vendor);
+        model.addAttribute("cards", loyaltyCardRepository.findByVendorOrderByActiveDescCreatedAtDesc(vendor));
+        return "vendor/loyalty";
+    }
+
+    @PostMapping("/loyalty/create")
+    @Transactional
+    public String createLoyaltyCard(@RequestParam String customerName,
+                                    @RequestParam String customerPhone,
+                                    @RequestParam(defaultValue = "10") int discountPercent,
+                                    @RequestParam(required = false) String expiresAt,
+                                    @RequestParam(required = false) String notes,
+                                    HttpSession session,
+                                    RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        VendorUser vendor = currentVendor(session);
+
+        String cleanName  = sanitizer.sanitizeText(customerName);
+        String cleanPhone = sanitizer.sanitizeText(customerPhone);
+        String cleanNotes = sanitizer.sanitizeText(notes);
+
+        if (cleanName == null || cleanName.isBlank()) {
+            ra.addFlashAttribute("flashError", "Le nom du client est obligatoire.");
+            return "redirect:/vendor/loyalty";
+        }
+        if (cleanPhone == null || cleanPhone.isBlank()) {
+            ra.addFlashAttribute("flashError", "Le téléphone du client est obligatoire.");
+            return "redirect:/vendor/loyalty";
+        }
+        if (discountPercent < 1 || discountPercent > 100) {
+            ra.addFlashAttribute("flashError", "La réduction doit être entre 1 et 100%.");
+            return "redirect:/vendor/loyalty";
+        }
+
+        LoyaltyCard card = new LoyaltyCard();
+        card.setVendor(vendor);
+        card.setCustomerName(cleanName);
+        card.setCustomerPhone(cleanPhone);
+        card.setDiscountPercent(discountPercent);
+        if (cleanNotes != null && !cleanNotes.isBlank()) card.setNotes(cleanNotes);
+        if (expiresAt != null && !expiresAt.isBlank()) {
+            try { card.setExpiresAt(java.time.LocalDate.parse(expiresAt)); }
+            catch (Exception ignored) {}
+        }
+        // Générer un code unique : 3 lettres boutique + 6 chiffres aléatoires
+        String prefix = vendor.getDisplayName().replaceAll("[^A-Za-z]", "").toUpperCase();
+        prefix = prefix.length() >= 3 ? prefix.substring(0, 3) : "BOL";
+        String code = prefix + "-" + String.format("%06d", (int)(Math.random() * 1_000_000));
+        card.setCode(code);
+
+        loyaltyCardRepository.save(card);
+        ra.addFlashAttribute("flashOk",
+                "Carte créée pour " + cleanName + " ! Code : " + code);
+        return "redirect:/vendor/loyalty";
+    }
+
+    @PostMapping("/loyalty/{id}/toggle")
+    @Transactional
+    public String toggleLoyaltyCard(@PathVariable Long id,
+                                    HttpSession session,
+                                    RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        VendorUser vendor = currentVendor(session);
+        loyaltyCardRepository.findById(id).ifPresent(card -> {
+            if (card.getVendor().getId().equals(vendor.getId())) {
+                card.setActive(!card.isActive());
+                loyaltyCardRepository.save(card);
+            }
+        });
+        ra.addFlashAttribute("flashOk", "Statut de la carte mis à jour.");
+        return "redirect:/vendor/loyalty";
+    }
+
+    @PostMapping("/loyalty/{id}/delete")
+    @Transactional
+    public String deleteLoyaltyCard(@PathVariable Long id,
+                                    HttpSession session,
+                                    RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        VendorUser vendor = currentVendor(session);
+        loyaltyCardRepository.findById(id).ifPresent(card -> {
+            if (card.getVendor().getId().equals(vendor.getId())) {
+                loyaltyCardRepository.deleteById(id);
+            }
+        });
+        ra.addFlashAttribute("flashOk", "Carte supprimée.");
+        return "redirect:/vendor/loyalty";
     }
 }

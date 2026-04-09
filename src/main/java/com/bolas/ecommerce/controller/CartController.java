@@ -13,8 +13,11 @@ import com.bolas.ecommerce.service.CartService;
 import com.bolas.ecommerce.service.CustomerService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,6 +30,8 @@ import java.util.UUID;
 
 @Controller
 public class CartController {
+
+    private static final Logger log = LoggerFactory.getLogger(CartController.class);
 
     private final CartService cartService;
     private final CustomerOrderRepository orderRepository;
@@ -53,13 +58,18 @@ public class CartController {
     }
 
     @GetMapping("/cart")
+    @Transactional(readOnly = true)
     public String cart(Model model, HttpSession session) {
         model.addAttribute("pageTitle", "Panier — Bola's");
         model.addAttribute("cartLines", cartService.lines(session));
         model.addAttribute("cartTotalCfa", cartService.totalAmountCfa(session));
         Customer customer = (Customer) session.getAttribute("BOLAS_CUSTOMER");
         model.addAttribute("connectedCustomer", customer);
-        model.addAttribute("countries", countryRepository.findByActiveTrueOrderByNameAsc());
+        try {
+            model.addAttribute("countries", countryRepository.findByActiveTrueOrderByNameAsc());
+        } catch (Exception e) {
+            model.addAttribute("countries", java.util.List.of());
+        }
         return "cart";
     }
 
@@ -109,6 +119,7 @@ public class CartController {
     }
 
     @PostMapping("/cart/checkout")
+    @Transactional
     public String checkout(@RequestParam String customerName,
                            @RequestParam String customerPhone,
                            @RequestParam(required = false, defaultValue = "") String customerAddress,
@@ -184,19 +195,23 @@ public class CartController {
         cartService.clear(session);
 
         // Notifier l'admin automatiquement via Meta WhatsApp
-        StringBuilder adminMsg = new StringBuilder();
-        adminMsg.append("🛒 Nouvelle commande sur BOLA !\n\n");
-        adminMsg.append("📦 N° : ").append(order.getTrackingNumber()).append("\n");
-        adminMsg.append("👤 Client : ").append(customerName.trim()).append("\n");
-        adminMsg.append("📞 Tél : ").append(customerPhone.trim()).append("\n");
-        adminMsg.append("🌍 Pays : ").append(country.toUpperCase()).append("\n");
-        adminMsg.append("💰 Total : ").append(order.getTotalAmountCfa()).append(" CFA\n");
-        if (commissionAmt > 0) {
-            adminMsg.append("💵 Commission BOLA (").append(commissionPct).append("%) : ")
-                    .append(commissionAmt).append(" CFA\n");
+        try {
+            StringBuilder adminMsg = new StringBuilder();
+            adminMsg.append("\uD83D\uDED2 Nouvelle commande sur BOLA !\n\n");
+            adminMsg.append("\uD83D\uDCE6 N\u00b0 : ").append(order.getTrackingNumber()).append("\n");
+            adminMsg.append("\uD83D\uDC64 Client : ").append(customerName.trim()).append("\n");
+            adminMsg.append("\uD83D\uDCDE T\u00e9l : ").append(customerPhone.trim()).append("\n");
+            adminMsg.append("\uD83C\uDF0D Pays : ").append(country.toUpperCase()).append("\n");
+            adminMsg.append("\uD83D\uDCB0 Total : ").append(order.getTotalAmountCfa()).append(" CFA\n");
+            if (commissionAmt > 0) {
+                adminMsg.append("\uD83D\uDCB5 Commission BOLA (").append(commissionPct).append("%) : ")
+                        .append(commissionAmt).append(" CFA\n");
+            }
+            adminMsg.append("\n\u2192 Voir dans l'admin BOLA");
+            metaWhatsApp.sendText(whatsappNumber, adminMsg.toString());
+        } catch (Exception e) {
+            log.warn("Notification WhatsApp admin \u00e9chou\u00e9e (commande sauvegard\u00e9e quand m\u00eame): {}", e.getMessage());
         }
-        adminMsg.append("\n→ Voir dans l'admin BOLA");
-        metaWhatsApp.sendText(whatsappNumber, adminMsg.toString());
 
         // Construire le message WhatsApp
         StringBuilder msg = new StringBuilder();

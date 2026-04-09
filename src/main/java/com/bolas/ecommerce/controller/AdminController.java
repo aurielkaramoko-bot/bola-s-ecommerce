@@ -33,6 +33,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
@@ -118,6 +119,7 @@ public class AdminController {
     }
 
     @GetMapping("/admin/dashboard")
+    @Transactional(readOnly = true)
     public String dashboard(Model model) {
         model.addAttribute("pageTitle", "Tableau de bord — Bola's");
         model.addAttribute("productCount", productRepository.count());
@@ -140,6 +142,7 @@ public class AdminController {
     }
 
     @GetMapping("/admin/products")
+    @Transactional(readOnly = true)
     public String products(Model model) {
         model.addAttribute("pageTitle", "Produits — Admin Bola's");
         model.addAttribute("products", productRepository.findAll());
@@ -239,8 +242,8 @@ public class AdminController {
             return "admin/product-form";
         }
 
-        productRepository.save(form);
-        boolean isNew = form.getId() == null;
+        // Sauvegarde unique — isNew doit être évalué avant le save
+        boolean isNew = (form.getId() == null);
         Product saved = productRepository.save(form);
         if (isNew) {
             auditLogService.productCreated(saved.getId(), saved.getName());
@@ -359,6 +362,7 @@ public class AdminController {
     }
 
     @GetMapping("/admin/orders")
+    @Transactional(readOnly = true)
     public String orders(Model model) {
         model.addAttribute("pageTitle", "Commandes — Admin Bola's");
         // Séparer par statut pour l'affichage priorisé
@@ -454,6 +458,7 @@ public class AdminController {
     // --- Gestion des vendeurs ---
 
     @GetMapping("/admin/vendors")
+    @Transactional(readOnly = true)
     public String vendors(Model model) {
         model.addAttribute("pageTitle", "Vendeurs — Admin BOLA");
         model.addAttribute("vendors", vendorUserRepository.findAll());
@@ -595,6 +600,7 @@ public class AdminController {
     // ─── Gestion des pays ─────────────────────────────────────────────────────
 
     @GetMapping("/admin/countries")
+    @Transactional(readOnly = true)
     public String countries(Model model) {
         model.addAttribute("pageTitle", "Pays — Admin BOLA");
         model.addAttribute("countries", countryRepository.findAll());
@@ -652,6 +658,7 @@ public class AdminController {
 
     // --- ICI : LA MÉTHODE POUR LA PAGE DE LIVRAISON AVEC LA CLÉ API ---
     @GetMapping("/admin/delivery")
+    @Transactional(readOnly = true)
     public String deliveryForm(Model model) {
         model.addAttribute("pageTitle", "Livraison GPS — Admin Bola's");
         model.addAttribute("apiKey", googleMapsApiKey);
