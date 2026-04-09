@@ -28,6 +28,7 @@
             <th th:text="'Promo'">Promo</th>
             <th th:text="'Dispo'">Dispo</th>
             <th th:text="'Livraison'">Liv</th>
+            <th>Stock</th>
             <th></th>
           </tr>
           </thead>
@@ -52,6 +53,10 @@
               <span th:if="${p.deliveryAvailable}" class="badge" style="background:#8B5E3C;color:#fff;" th:text="'Oui'">Oui</span>
               <span th:if="${!p.deliveryAvailable}" class="badge bg-secondary" th:text="'Non'">Non</span>
             </td>
+            <td>
+              <span th:if="${p.limitedStock}" class="badge bg-danger">🔥 Limité</span>
+              <span th:if="${!p.limitedStock}" class="text-muted small">—</span>
+            </td>
             <td class="text-end">
               <a th:href="@{/admin/products/{id}/edit(id=${p.id})}" class="btn btn-sm btn-outline-secondary" th:text="'Modifier'">Modifier</a>
               <form th:action="@{/admin/products/{id}/delete(id=${p.id})}" method="post" class="d-inline" onsubmit="return confirm('Supprimer ce produit ?');">
@@ -61,7 +66,7 @@
             </td>
           </tr>
           <tr th:if="${products == null or products.isEmpty()}">
-            <td colspan="7" class="text-muted p-4" th:text="'Aucun produit.'">—</td>
+            <td colspan="8" class="text-muted p-4" th:text="'Aucun produit.'">—</td>
           </tr>
           </tbody>
         </table>

@@ -26,7 +26,7 @@
               <i class="bi bi-shop-window" style="font-size:2rem;color:#fff;"></i>
             </div>
             <!-- Badge plan -->
-            <span th:if="${v.plan.name() == 'PREMIUM'}"
+            <span th:if="${v.plan != null and v.plan.name() == 'PREMIUM'}"
                   style="position:absolute;bottom:0;right:0;background:#C49A6C;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.65rem;"
                   title="Vendeur Premium">⭐</span>
           </div>

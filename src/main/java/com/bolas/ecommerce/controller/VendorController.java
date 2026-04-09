@@ -424,6 +424,7 @@ public class VendorController {
                               @RequestParam(defaultValue = "true") boolean available,
                               @RequestParam(defaultValue = "true") boolean deliveryAvailable,
                               @RequestParam(defaultValue = "0") long deliveryPriceCfa,
+                              @RequestParam(defaultValue = "false") boolean limitedStock,
                               HttpSession session,
                               RedirectAttributes ra) {
 
@@ -464,6 +465,7 @@ public class VendorController {
         p.setDeliveryPriceCfa(deliveryPriceCfa);
         p.setFeatured(false);
         p.setVendor(vendor);
+        p.setLimitedStock(limitedStock);
 
         try {
             if (imageFile != null && !imageFile.isEmpty()) {
@@ -516,6 +518,7 @@ public class VendorController {
                                 @RequestParam(defaultValue = "true") boolean available,
                                 @RequestParam(defaultValue = "true") boolean deliveryAvailable,
                                 @RequestParam(defaultValue = "0") long deliveryPriceCfa,
+                                @RequestParam(defaultValue = "false") boolean limitedStock,
                                 HttpSession session,
                                 RedirectAttributes ra) {
 
@@ -543,6 +546,7 @@ public class VendorController {
         p.setAvailable(available);
         p.setDeliveryAvailable(deliveryAvailable);
         p.setDeliveryPriceCfa(deliveryPriceCfa);
+        p.setLimitedStock(limitedStock);
 
         try {
             if (imageFile != null && !imageFile.isEmpty()) {

@@ -51,7 +51,7 @@ public class IdDocumentVerificationService {
     private final HttpClient httpClient;
 
     public IdDocumentVerificationService(
-            @Value("${google.maps.api.key:}") String apiKey) {
+            @Value("${google.vision.api.key:}") String apiKey) {
         this.apiKey = apiKey;
         this.httpClient = HttpClient.newHttpClient();
     }

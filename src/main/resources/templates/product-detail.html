@@ -52,6 +52,11 @@
             class="badge bg-danger mb-2 px-3 py-2"
             style="font-size:.8rem;letter-spacing:.06em;">PROMO</span>
 
+      <!-- Badge Stock limité -->
+      <span th:if="${product.limitedStock}"
+            class="badge bg-danger mb-2 ms-1 px-3 py-2"
+            style="font-size:.8rem;letter-spacing:.06em;">🔥 Stock limité</span>
+
       <!-- Nom -->
       <h1 class="h2 mb-3" style="color:var(--bolas-text);" th:text="${product.name}">Nom</h1>
 
@@ -112,7 +117,8 @@
       <div class="d-flex flex-wrap gap-3">
         <form th:action="@{/products/{id}/whatsapp-order(id=${product.id})}" method="post" id="waOrderForm">
           <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-          <input type="hidden" name="deliveryOption" id="waDeliveryOption" value="HOME"/>
+          <input type="hidden" name="deliveryOption" id="waDeliveryOption"
+                 th:value="${product.deliveryAvailable} ? 'HOME' : 'PICKUP'"/>
           <button type="submit" class="btn btn-wa px-4">
             <i class="bi bi-whatsapp"></i>
             Commander via WhatsApp

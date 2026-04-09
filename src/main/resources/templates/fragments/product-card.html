@@ -12,6 +12,10 @@
             style="position:absolute;top:8px;left:8px;background:#8B5E3C;color:#fff;font-size:.65rem;padding:2px 7px;border-radius:999px;z-index:2;font-weight:600;">
         ⭐ Sponsorisé
       </span>
+      <span th:if="${p.limitedStock}"
+            style="position:absolute;top:8px;right:8px;background:#dc3545;color:#fff;font-size:.65rem;padding:2px 7px;border-radius:999px;z-index:2;font-weight:600;">
+        🔥 Stock limité
+      </span>
       <span class="badge-price">
         <span th:if="${p.onPromotion}" class="price-old"
               th:text="${#numbers.formatInteger(p.priceCfa,0,'COMMA')} + ' CFA'">0</span>

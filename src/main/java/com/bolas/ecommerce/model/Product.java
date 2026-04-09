@@ -68,6 +68,10 @@ public class Product {
     @Column(nullable = false)
     private boolean sponsored = false;
 
+    /** Stock limité — affiche un badge d'urgence sur la fiche produit */
+    @Column(nullable = false)
+    private boolean limitedStock = false;
+
     /** URL de la vidéo du produit (YouTube ou TikTok). Optionnel. */
     @Size(max = 2000)
     @Column(name = "video_url", length = 2000)
@@ -174,6 +178,9 @@ public class Product {
 
     public boolean isSponsored() { return sponsored; }
     public void setSponsored(boolean sponsored) { this.sponsored = sponsored; }
+
+    public boolean isLimitedStock() { return limitedStock; }
+    public void setLimitedStock(boolean limitedStock) { this.limitedStock = limitedStock; }
 
     public String getVideoUrl() {
         return videoUrl;

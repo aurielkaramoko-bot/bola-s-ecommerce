@@ -175,6 +175,7 @@ public class AdminController {
                               @RequestParam(value = "availableChecked", required = false) String availableChecked,
                               @RequestParam(value = "deliveryAvailableChecked", required = false) String deliveryChecked,
                               @RequestParam(value = "featuredChecked", required = false) String featuredChecked,
+                              @RequestParam(value = "limitedStockChecked", required = false) String limitedStockChecked,
                               @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
                               @RequestParam(value = "videoFile", required = false) MultipartFile videoFile,
                               @RequestParam(value = "removeVideo", required = false) String removeVideo,
@@ -182,6 +183,7 @@ public class AdminController {
         form.setAvailable("true".equals(availableChecked));
         form.setDeliveryAvailable("true".equals(deliveryChecked));
         form.setFeatured("true".equals(featuredChecked));
+        form.setLimitedStock("true".equals(limitedStockChecked));
         form.setName(inputSanitizerService.sanitizeText(form.getName()));
         form.setDescription(inputSanitizerService.sanitizeText(form.getDescription()));
         form.setImageUrl(inputSanitizerService.sanitizeText(form.getImageUrl()));

@@ -1,5 +1,6 @@
 package com.bolas.ecommerce.controller;
 
+import com.bolas.ecommerce.repository.ProductRepository;
 import com.bolas.ecommerce.service.CartService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,9 +11,11 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 public class GlobalModelAdvice {
 
     private final CartService cartService;
+    private final ProductRepository productRepository;
 
-    public GlobalModelAdvice(CartService cartService) {
+    public GlobalModelAdvice(CartService cartService, ProductRepository productRepository) {
         this.cartService = cartService;
+        this.productRepository = productRepository;
     }
 
     @ModelAttribute("whatsappNumber")
@@ -38,5 +41,14 @@ public class GlobalModelAdvice {
     @ModelAttribute("cartItemCount")
     public int cartItemCount(HttpSession session) {
         return cartService.totalItems(session);
+    }
+
+    @ModelAttribute("popularProducts")
+    public java.util.List<com.bolas.ecommerce.model.Product> popularProducts() {
+        try {
+            return productRepository.findPopularForHomepage();
+        } catch (Exception e) {
+            return java.util.Collections.emptyList();
+        }
     }
 }

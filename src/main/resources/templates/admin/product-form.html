@@ -110,6 +110,15 @@
             <label class="form-check-label" for="featured" th:text="|Mettre en vedette (page d'accueil)|">Vedette</label>
           </div>
 
+          <div class="mb-4 form-check">
+            <input type="checkbox" class="form-check-input" id="limitedStock" name="limitedStockChecked" value="true"
+                   th:checked="*{limitedStock}"/>
+            <label class="form-check-label" for="limitedStock">
+              <span class="badge bg-danger me-1">Stock limité</span>
+              Afficher le badge "Stock limité" sur ce produit
+            </label>
+          </div>
+
           <button type="submit" class="btn btn-hero-solid" th:text="'Enregistrer'">Enregistrer</button>
           <a th:href="@{/admin/products}" class="btn btn-outline-secondary ms-2" th:text="'Annuler'">Annuler</a>
         </form>
