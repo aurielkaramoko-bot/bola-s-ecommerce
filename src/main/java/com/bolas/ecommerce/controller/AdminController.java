@@ -369,20 +369,54 @@ public class AdminController {
     @Transactional(readOnly = true)
     public String orders(Model model) {
         try {
+            log.info("📋 Début chargement page commandes...");
             model.addAttribute("pageTitle", "Commandes — Admin Bola's");
+            
             // Séparer par statut pour l'affichage priorisé
-            model.addAttribute("pendingOrders",  customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.PENDING));
-            model.addAttribute("confirmedOrders",customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.CONFIRMED));
-            model.addAttribute("readyOrders",    customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.READY));
-            model.addAttribute("activeOrders",   customerOrderRepository.findByStatusOrderByCreatedAtDesc(OrderStatus.IN_DELIVERY));
-            model.addAttribute("closedOrders",   customerOrderRepository.findTop20ByStatusInOrderByCreatedAtDesc(
-                    List.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED)));
+            log.info("   → Recherche commandes PENDING...");
+            var pending = customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.PENDING);
+            model.addAttribute("pendingOrders", pending);
+            log.info("      ✓ {} commandes PENDING trouvées", pending.size());
+            
+            log.info("   → Recherche commandes CONFIRMED...");
+            var confirmed = customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.CONFIRMED);
+            model.addAttribute("confirmedOrders", confirmed);
+            log.info("      ✓ {} commandes CONFIRMED trouvées", confirmed.size());
+            
+            log.info("   → Recherche commandes READY...");
+            var ready = customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.READY);
+            model.addAttribute("readyOrders", ready);
+            log.info("      ✓ {} commandes READY trouvées", ready.size());
+            
+            log.info("   → Recherche commandes IN_DELIVERY...");
+            var delivery = customerOrderRepository.findByStatusOrderByCreatedAtDesc(OrderStatus.IN_DELIVERY);
+            model.addAttribute("activeOrders", delivery);
+            log.info("      ✓ {} commandes IN_DELIVERY trouvées", delivery.size());
+            
+            log.info("   → Recherche commandes fermées...");
+            var closed = customerOrderRepository.findTop20ByStatusInOrderByCreatedAtDesc(
+                    List.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED));
+            model.addAttribute("closedOrders", closed);
+            log.info("      ✓ {} commandes fermées trouvées", closed.size());
+            
+            log.info("   → Initialisation DTOs...");
             model.addAttribute("newOrder", new NewOrderDto());
-            model.addAttribute("products", productRepository.findByAvailableTrue());
-            model.addAttribute("vendors", vendorUserRepository.findAll());
+            
+            log.info("   → Recherche produits disponibles...");
+            var products = productRepository.findByAvailableTrue();
+            model.addAttribute("products", products);
+            log.info("      ✓ {} produits trouvés", products.size());
+            
+            log.info("   → Recherche tous les vendeurs...");
+            var vendors = vendorUserRepository.findAll();
+            model.addAttribute("vendors", vendors);
+            log.info("      ✓ {} vendeurs trouvés", vendors.size());
+            
+            log.info("✅ Page commandes chargée avec succès");
         } catch (Exception e) {
-            log.error("❌ Erreur chargement commandes : ", e);
-            model.addAttribute("flashError", "Erreur lors du chargement des commandes : " + e.getMessage());
+            log.error("❌ Erreur CRITIQUE chargement commandes", e);
+            e.printStackTrace();
+            model.addAttribute("flashError", "Erreur serveur : " + e.getClass().getSimpleName() + " - " + e.getMessage());
             model.addAttribute("pendingOrders", List.of());
             model.addAttribute("confirmedOrders", List.of());
             model.addAttribute("readyOrders", List.of());
@@ -478,29 +512,41 @@ public class AdminController {
     @Transactional(readOnly = true)
     public String vendors(Model model) {
         try {
+            log.info("👥 Début chargement page vendeurs...");
             model.addAttribute("pageTitle", "Vendeurs — Admin BOLA");
             
+            log.info("   → Recherche tous les vendeurs...");
             List<VendorUser> allVendors = vendorUserRepository.findAll();
             model.addAttribute("vendors", allVendors);
+            log.info("      ✓ {} vendeurs total trouvés", allVendors.size());
             
+            log.info("   → Recherche vendeurs PENDING...");
             List<VendorUser> pending = vendorUserRepository.findByVendorStatus(VendorStatus.PENDING);
             model.addAttribute("pendingVendors", pending);
+            log.info("      ✓ {} vendeurs PENDING trouvés", pending.size());
             
+            log.info("   → Recherche vendeurs ACTIVE...");
             List<VendorUser> active = allVendors.stream()
                     .filter(v -> v.getVendorStatus() == VendorStatus.ACTIVE)
                     .toList();
             model.addAttribute("activeVendors", active);
+            log.info("      ✓ {} vendeurs ACTIVE trouvés", active.size());
             
-            model.addAttribute("pendingCouriers",
-                    courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.PENDING));
-            model.addAttribute("allCouriers",
-                    courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.APPROVED));
+            log.info("   → Recherche demandes livreurs PENDING...");
+            var pendingCouriers = courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.PENDING);
+            model.addAttribute("pendingCouriers", pendingCouriers);
+            log.info("      ✓ {} demandes livreurs PENDING trouvées", pendingCouriers.size());
             
-            log.info("✅ Admin vendors chargés : {} total, {} pending, {} active", 
-                    allVendors.size(), pending.size(), active.size());
+            log.info("   → Recherche livreurs approuvés...");
+            var allCouriers = courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.APPROVED);
+            model.addAttribute("allCouriers", allCouriers);
+            log.info("      ✓ {} livreurs approuvés trouvés", allCouriers.size());
+            
+            log.info("✅ Page vendeurs chargée avec succès");
         } catch (Exception e) {
-            log.error("❌ Erreur chargement vendors : ", e);
-            model.addAttribute("flashError", "Erreur lors du chargement des vendeurs : " + e.getMessage());
+            log.error("❌ Erreur CRITIQUE chargement vendeurs", e);
+            e.printStackTrace();
+            model.addAttribute("flashError", "Erreur serveur : " + e.getClass().getSimpleName() + " - " + e.getMessage());
             model.addAttribute("vendors", List.of());
             model.addAttribute("pendingVendors", List.of());
             model.addAttribute("activeVendors", List.of());
