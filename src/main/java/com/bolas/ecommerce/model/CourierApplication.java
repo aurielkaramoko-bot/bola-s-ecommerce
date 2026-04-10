@@ -51,6 +51,14 @@ public class CourierApplication {
     @Column(nullable = false)
     private LocalDateTime submittedAt = LocalDateTime.now();
 
+    /** Raison de la suspension (visible par l'admin) */
+    @Column(name = "suspension_reason", length = 500)
+    private String suspensionReason;
+
+    /** Date de la dernière action (approbation, suspension, etc) */
+    @Column(name = "last_action_at")
+    private LocalDateTime lastActionAt;
+
     // ─── Getters / Setters ────────────────────────────────────────────────────
 
     public Long getId() { return id; }
@@ -80,4 +88,10 @@ public class CourierApplication {
     public void setStatus(CourierApplicationStatus status) { this.status = status; }
 
     public LocalDateTime getSubmittedAt() { return submittedAt; }
+
+    public String getSuspensionReason() { return suspensionReason; }
+    public void setSuspensionReason(String suspensionReason) { this.suspensionReason = suspensionReason; }
+
+    public LocalDateTime getLastActionAt() { return lastActionAt; }
+    public void setLastActionAt(LocalDateTime lastActionAt) { this.lastActionAt = lastActionAt; }
 }

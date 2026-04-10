@@ -25,4 +25,7 @@ public interface VendorUserRepository extends JpaRepository<VendorUser, Long> {
     /** Vendeurs PREMIUM actifs avec une bannière configurée */
     @Query("SELECT v FROM VendorUser v WHERE v.active = true AND v.plan = 'PREMIUM' AND v.bannerUrl IS NOT NULL")
     List<VendorUser> findActivePremiumWithBanner();
+
+    /** Vendeurs actifs avec un statut spécifique (ex: ACTIVE uniquement) */
+    List<VendorUser> findByVendorStatusAndActiveTrue(VendorStatus status);
 }

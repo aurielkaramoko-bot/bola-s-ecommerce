@@ -83,6 +83,11 @@ public class CustomerOrder {
     @Column(length = 40)
     private String courierPhone;
 
+    /** Nom du livreur assigné par l'admin */
+    @Size(max = 150)
+    @Column(name = "assigned_courier_name", length = 150)
+    private String assignedCourierName;
+
     /** Plaque d'immatriculation du véhicule de livraison. */
     @Size(max = 32)
     @Column(length = 32)

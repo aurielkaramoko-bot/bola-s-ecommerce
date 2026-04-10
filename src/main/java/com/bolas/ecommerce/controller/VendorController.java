@@ -359,6 +359,18 @@ public class VendorController {
         if (redirect != null) return redirect;
 
         VendorUser vendor = currentVendor(session);
+
+        // Suivi commande réservé aux packs PRO, PRO_LOCAL et PREMIUM
+        if (vendor.getPlan() == VendorPlan.GRATUIT) {
+            model.addAttribute("pageTitle", "Mes commandes — BOLA Vendeur");
+            model.addAttribute("vendor", vendor);
+            model.addAttribute("flashError",
+                    "Le suivi de commandes est disponible à partir du Pack Pro. Passez au niveau supérieur pour accéder à cette fonctionnalité.");
+            model.addAttribute("toProcess", List.of());
+            model.addAttribute("done", List.of());
+            return "vendor/orders";
+        }
+
         List<CustomerOrder> toProcess =
                 orderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.CONFIRMED);
         List<CustomerOrder> done =

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Activité des boutiques — Admin BOLA</title>
+</head>
+<body class="bolas-body">
+<nav th:replace="~{fragments/header :: navbar}"></nav>
+<div class="container-fluid">
+  <div class="row">
+    <div th:replace="~{fragments/admin-sidebar :: sidebar(active='vendors')}"></div>
+    <main class="col-12 col-md-9 col-lg-10 ms-sm-auto px-4 py-4">
+
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <a href="/admin/vendors" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+        <h1 class="h3 fw-semibold mb-0" style="color:#8B5E3C;">
+          <i class="bi bi-bar-chart-line me-2"></i>Activité des boutiques
+        </h1>
+      </div>
+
+      <div class="admin-card">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>Boutique</th>
+                <th>Plan</th>
+                <th>Statut</th>
+                <th>Produits</th>
+                <th>Lignes de commande</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="row, iter : ${shopStats}">
+                <td class="text-muted" th:text="${iter.index + 1}">1</td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <img th:if="${row.vendor.logoUrl != null}" th:src="${row.vendor.logoUrl}"
+                         style="width:36px;height:36px;object-fit:cover;border-radius:50%;border:2px solid var(--bolas-accent);"
+                         th:alt="${row.vendor.displayName}"/>
+                    <div th:if="${row.vendor.logoUrl == null}"
+                         style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#8B5E3C,#C49A6C);display:flex;align-items:center;justify-content:center;">
+                      <i class="bi bi-shop-window" style="color:#fff;font-size:.9rem;"></i>
+                    </div>
+                    <div>
+                      <div class="fw-semibold" th:text="${row.vendor.displayName}">—</div>
+                      <div class="text-muted" style="font-size:.75rem;" th:text="${row.vendor.email}">—</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="badge"
+                        th:classappend="${row.vendor.plan?.name() == 'PREMIUM'} ? 'text-bg-warning' :
+                                         (${row.vendor.plan?.name() == 'PRO' or row.vendor.plan?.name() == 'PRO_LOCAL'} ? 'bg-warning text-dark' : 'bg-secondary')"
+                        th:text="${row.vendor.plan?.name() == 'PREMIUM'} ? '⭐ Premium' :
+                                  (${row.vendor.plan?.name() == 'PRO' or row.vendor.plan?.name() == 'PRO_LOCAL'} ? '🏠 Visible homepage' : 'Gratuit')">—</span>
+                </td>
+                <td>
+                  <span class="badge bg-success">Actif</span>
+                </td>
+                <td>
+                  <span class="fw-semibold" th:text="${row.productCount}">0</span>
+                  <span class="text-muted"> produits</span>
+                </td>
+                <td>
+                  <span class="fw-semibold" th:text="${row.orderLineCount}">0</span>
+                  <span class="text-muted"> articles commandés</span>
+                </td>
+                <td>
+                  <a th:href="@{/boutiques/{id}(id=${row.vendor.id})}" target="_blank"
+                     class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-eye me-1"></i>Voir boutique
+                  </a>
+                </td>
+              </tr>
+              <tr th:if="${shopStats == null or shopStats.isEmpty()}">
+                <td colspan="7" class="text-muted text-center p-4">Aucune boutique active.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+</body>
+</html>

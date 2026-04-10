@@ -246,6 +246,20 @@ body.bolas-body {
   z-index: 2;
 }
 
+/* Badge stock limité — coin inférieur gauche (évite conflit avec badge-price en haut droite) */
+.badge-stock-limited {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: #dc3545;
+  color: #fff;
+  font-size: .65rem;
+  padding: 2px 7px;
+  border-radius: 999px;
+  z-index: 2;
+  font-weight: 600;
+}
+
 .price-old {
   text-decoration: line-through;
   color: rgba(111, 74, 48, 0.56);

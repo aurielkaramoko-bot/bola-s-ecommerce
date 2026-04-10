@@ -415,10 +415,10 @@ public class AdminController {
             model.addAttribute("products", products);
             log.info("      ✓ {} produits trouvés", products.size());
             
-            log.info("   → Recherche tous les vendeurs...");
-            var vendors = vendorUserRepository.findAll();
+            log.info("   → Recherche vendeurs ACTIFS uniquement...");
+            var vendors = vendorUserRepository.findByVendorStatusAndActiveTrue(VendorStatus.ACTIVE);
             model.addAttribute("vendors", vendors);
-            log.info("      ✓ {} vendeurs trouvés", vendors.size());
+            log.info("      ✓ {} vendeurs ACTIFS trouvés", vendors.size());
             
             log.info("✅ Page commandes chargée avec succès");
         } catch (Exception e) {
@@ -683,16 +683,20 @@ public class AdminController {
             log.info("      {} cartes de fidélité à supprimer", loyaltyCards.size());
             loyaltyCardRepository.deleteByVendor(v);
             
-            log.info("   → Détachement des produits du vendeur...");
-            // Détacher les produits du vendeur avant suppression
+            log.info("   → Suppression des produits du vendeur (OrderLines incluses)...");
             var products = productRepository.findByVendor(v);
-            log.info("      {} produits à détacher", products.size());
+            log.info("      {} produits à supprimer", products.size());
             products.forEach(p -> {
-                p.setVendor(null);
-                productRepository.save(p);
+                // Supprimer les OrderLines liées à ce produit
+                long olCount = orderLineRepository.countByProduct_Id(p.getId());
+                if (olCount > 0) {
+                    log.info("         → {} OrderLines supprimées pour produit {}", olCount, p.getId());
+                    orderLineRepository.deleteByProduct_Id(p.getId());
+                    orderLineRepository.flush();
+                }
             });
+            productRepository.deleteAll(products);
             productRepository.flush();
-            
             log.info("   → Suppression des catégories liées...");
             // Supprimer les catégories liées
             var categories = vendorCategoryRepository.findByVendor(v);
@@ -719,23 +723,134 @@ public class AdminController {
     // ─── Demandes de livreurs ─────────────────────────────────────────────────
 
     @PostMapping("/admin/couriers/{id}/approve")
+    @Transactional
     public String approveCourier(@PathVariable Long id, RedirectAttributes ra) {
-        courierApplicationRepository.findById(id).ifPresent(app -> {
-            app.setStatus(CourierApplicationStatus.APPROVED);
-            courierApplicationRepository.save(app);
-        });
-        ra.addFlashAttribute("flashOk", "Livreur approuvé.");
+        try {
+            courierApplicationRepository.findById(id).ifPresent(app -> {
+                app.setStatus(CourierApplicationStatus.APPROVED);
+                app.setLastActionAt(LocalDateTime.now());
+                courierApplicationRepository.save(app);
+                log.info("✅ Livreur {} approuvé", app.getCourierName());
+            });
+            ra.addFlashAttribute("flashOk", "Livreur approuvé.");
+        } catch (Exception e) {
+            log.error("❌ Erreur approbation livreur", e);
+            ra.addFlashAttribute("flashError", "Erreur: " + e.getMessage());
+        }
         return "redirect:/admin/vendors";
     }
 
     @PostMapping("/admin/couriers/{id}/reject")
+    @Transactional
     public String rejectCourier(@PathVariable Long id, RedirectAttributes ra) {
-        courierApplicationRepository.findById(id).ifPresent(app -> {
-            app.setStatus(CourierApplicationStatus.REJECTED);
-            courierApplicationRepository.save(app);
-        });
-        ra.addFlashAttribute("flashOk", "Demande rejetée.");
+        try {
+            courierApplicationRepository.findById(id).ifPresent(app -> {
+                app.setStatus(CourierApplicationStatus.REJECTED);
+                app.setLastActionAt(LocalDateTime.now());
+                courierApplicationRepository.save(app);
+                log.info("✅ Livreur {} rejeté", app.getCourierName());
+            });
+            ra.addFlashAttribute("flashOk", "Demande rejetée.");
+        } catch (Exception e) {
+            log.error("❌ Erreur rejet livreur", e);
+            ra.addFlashAttribute("flashError", "Erreur: " + e.getMessage());
+        }
         return "redirect:/admin/vendors";
+    }
+
+    @PostMapping("/admin/couriers/{id}/suspend")
+    @Transactional
+    public String suspendCourier(@PathVariable Long id, 
+                                 @RequestParam(defaultValue = "false") boolean total,
+                                 @RequestParam(required = false) String reason,
+                                 RedirectAttributes ra) {
+        try {
+            courierApplicationRepository.findById(id).ifPresent(app -> {
+                CourierApplicationStatus newStatus = total ? 
+                    CourierApplicationStatus.SUSPENDED_TOTAL : 
+                    CourierApplicationStatus.SUSPENDED_SOFT;
+                app.setStatus(newStatus);
+                app.setSuspensionReason(reason != null ? reason.trim() : null);
+                app.setLastActionAt(LocalDateTime.now());
+                courierApplicationRepository.save(app);
+                log.info("⚠️ Livreur {} suspendu ({})", app.getCourierName(), newStatus);
+            });
+            String suspType = total ? "totale" : "douce";
+            ra.addFlashAttribute("flashOk", "Livreur suspendu (" + suspType + ").");
+        } catch (Exception e) {
+            log.error("❌ Erreur suspension livreur", e);
+            ra.addFlashAttribute("flashError", "Erreur: " + e.getMessage());
+        }
+        return "redirect:/admin/vendors";
+    }
+
+    @PostMapping("/admin/couriers/{id}/delete")
+    @Transactional
+    public String deleteCourier(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            courierApplicationRepository.findById(id).ifPresent(app -> {
+                String courierName = app.getCourierName();
+                app.setStatus(CourierApplicationStatus.DELETED);
+                app.setLastActionAt(LocalDateTime.now());
+                courierApplicationRepository.delete(app);
+                log.info("🗑️ Livreur {} supprimé", courierName);
+                ra.addFlashAttribute("flashOk", "Livreur \"" + courierName + "\" supprimé.");
+            });
+        } catch (Exception e) {
+            log.error("❌ Erreur suppression livreur", e);
+            ra.addFlashAttribute("flashError", "Erreur suppression: " + e.getMessage());
+        }
+        return "redirect:/admin/vendors";
+    }
+
+    @PostMapping("/admin/couriers/{id}/assign")
+    @Transactional
+    public String assignCourier(@PathVariable Long id,
+                                @RequestParam Long orderId,
+                                RedirectAttributes ra) {
+        try {
+            courierApplicationRepository.findById(id).ifPresent(courier -> {
+                customerOrderRepository.findById(orderId).ifPresent(order -> {
+                    order.setAssignedCourierName(courier.getCourierName());
+                    order.setAssignedCourierPhone(courier.getCourierPhone());
+                    customerOrderRepository.save(order);
+                    log.info("✅ Livreur {} assigné à commande {}", courier.getCourierName(), orderId);
+                    ra.addFlashAttribute("flashOk", "Livreur assigné à la commande.");
+                });
+            });
+        } catch (Exception e) {
+            log.error("❌ Erreur assignation livreur", e);
+            ra.addFlashAttribute("flashError", "Erreur: " + e.getMessage());
+        }
+        return "redirect:/admin/orders";
+    }
+
+    // ─── Activité des boutiques ───────────────────────────────────────────────
+
+    @GetMapping("/admin/shop-activity")
+    @Transactional(readOnly = true)
+    public String shopActivity(Model model) {
+        model.addAttribute("pageTitle", "Activité des boutiques — Admin BOLA");
+        List<VendorUser> vendors = vendorUserRepository.findByVendorStatusAndActiveTrue(VendorStatus.ACTIVE);
+
+        // Construire les stats par boutique
+        List<java.util.Map<String, Object>> stats = new java.util.ArrayList<>();
+        for (VendorUser v : vendors) {
+            java.util.Map<String, Object> row = new java.util.LinkedHashMap<>();
+            row.put("vendor", v);
+            long prodCount = productRepository.countByVendor(v);
+            row.put("productCount", prodCount);
+            // Compter les commandes contenant des produits de ce vendeur
+            long orderCount = productRepository.findByVendor(v).stream()
+                    .mapToLong(p -> orderLineRepository.countByProduct_Id(p.getId()))
+                    .sum();
+            row.put("orderLineCount", orderCount);
+            stats.add(row);
+        }
+        // Trier par nb de commandes décroissant
+        stats.sort((a, b) -> Long.compare((Long) b.get("orderLineCount"), (Long) a.get("orderLineCount")));
+        model.addAttribute("shopStats", stats);
+        return "admin/shop-activity";
     }
 
     // ─── Gestion des pays ─────────────────────────────────────────────────────
