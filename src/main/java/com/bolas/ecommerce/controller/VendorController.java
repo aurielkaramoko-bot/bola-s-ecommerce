@@ -776,19 +776,26 @@ public class VendorController {
         app.setIdDocVerified(idVerified);
         app.setVendor(vendor);
         courierApplicationRepository.save(app);
+        log.info("📱 Proposition livreur sauvegardée: {}", cleanName);
 
         // Envoi automatique via Meta Cloud API (si configuré)
+        log.info("   → Envoi notification WhatsApp admin...");
         try {
-            String notifMsg = "🚴 Nouvelle proposition de livreur sur BOLA !\n\n"
-                    + "🏪 Vendeur : " + vendor.getDisplayName() + "\n"
-                    + "👤 Livreur : " + cleanName + "\n"
-                    + "📞 Téléphone : " + cleanPhone + "\n"
-                    + (cleanZone != null ? "📍 Zone : " + cleanZone + "\n" : "")
-                    + "\n→ Validez depuis l'admin BOLA";
-            metaWhatsApp.sendText(whatsAppService.getAdminWhatsApp(), notifMsg);
-            log.info("✅ Notification WhatsApp livreur envoyée pour {}", cleanName);
+            String adminWhatsApp = whatsAppService.getAdminWhatsApp();
+            if (adminWhatsApp == null || adminWhatsApp.isBlank()) {
+                log.warn("⚠️ Admin WhatsApp non configuré - notification non envoyée");
+            } else {
+                String notifMsg = "🚴 Nouvelle proposition de livreur sur BOLA !\n\n"
+                        + "🏪 Vendeur : " + vendor.getDisplayName() + "\n"
+                        + "👤 Livreur : " + cleanName + "\n"
+                        + "📞 Téléphone : " + cleanPhone + "\n"
+                        + (cleanZone != null ? "📍 Zone : " + cleanZone + "\n" : "")
+                        + "\n→ Validez depuis l'admin BOLA";
+                metaWhatsApp.sendText(adminWhatsApp, notifMsg);
+                log.info("✅ Notification WhatsApp livreur envoyée à {} pour {}", adminWhatsApp, cleanName);
+            }
         } catch (Exception e) {
-            log.warn("⚠️ Notification WhatsApp livreur échouée (proposition sauvegardée quand même): {}", e.getMessage());
+            log.error("❌ Erreur notification WhatsApp livreur (proposition sauvegardée quand même): {}", e.getMessage(), e);
         }
 
         ra.addFlashAttribute("flashOk", "Demande envoyée ! L'admin validera ce livreur sous 24h.");

@@ -13,6 +13,9 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     List<ChatMessage> findByVendorAndCustomerIdentifierOrderBySentAtAsc(
             VendorUser vendor, String customerIdentifier);
 
+    /** Tous les messages d'un vendeur */
+    List<ChatMessage> findByVendor(VendorUser vendor);
+
     /** Derniers messages par conversation (inbox vendeur) */
     @Query("SELECT DISTINCT m.customerIdentifier FROM ChatMessage m WHERE m.vendor = :vendor")
     List<String> findDistinctCustomersByVendor(VendorUser vendor);
@@ -23,4 +26,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     /** Dernier message d'une conversation */
     ChatMessage findFirstByVendorAndCustomerIdentifierOrderBySentAtDesc(
             VendorUser vendor, String customerIdentifier);
+
+    /** Suppression de tous les messages d'un vendeur */
+    void deleteByVendor(VendorUser vendor);
 }

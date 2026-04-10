@@ -130,33 +130,47 @@ public class CartController {
                            HttpSession session,
                            RedirectAttributes ra) {
 
-        // Validation WhatsApp
-        if (whatsappNumber == null || whatsappNumber.isBlank()) {
-            log.error("❌ Configuration WhatsApp manquante!");
-            ra.addFlashAttribute("flashError", "Configuration WhatsApp manquante. Contactez l'administrateur.");
+        String cleanedPhone = null;
+        
+        try {
+            log.info("🛒 Début checkout pour client {}", customerName);
+            
+            // Forcer la connexion si pas de compte client
+            if (session.getAttribute("BOLAS_CUSTOMER") == null) {
+                log.warn("⚠️ Tentative checkout sans connexion");
+                ra.addFlashAttribute("flashError", "Veuillez vous connecter ou créer un compte pour commander.");
+                return "redirect:/customer/login";
+            }
+            
+            // Validation WhatsApp
+            if (whatsappNumber == null || whatsappNumber.isBlank()) {
+                log.error("❌ Configuration WhatsApp manquante!");
+                ra.addFlashAttribute("flashError", "Configuration WhatsApp manquante. Contactez l'administrateur.");
+                return "redirect:/cart";
+            }
+            cleanedPhone = whatsappNumber.replaceAll("[^0-9]", "");
+            if (cleanedPhone.length() < 9) {
+                log.error("❌ Numéro WhatsApp invalide: {}", whatsappNumber);
+                ra.addFlashAttribute("flashError", "Numéro WhatsApp invalide. Contactez l'administrateur.");
+                return "redirect:/cart";
+            }
+        } catch (Exception e) {
+            log.error("❌ Erreur validation checkout", e);
+            ra.addFlashAttribute("flashError", "Erreur lors de la validation: " + e.getMessage());
             return "redirect:/cart";
-        }
-        String cleanedPhone = whatsappNumber.replaceAll("[^0-9]", "");
-        if (cleanedPhone.length() < 9) {
-            log.error("❌ Numéro WhatsApp invalide: {}", whatsappNumber);
-            ra.addFlashAttribute("flashError", "Numéro WhatsApp invalide. Contactez l'administrateur.");
-            return "redirect:/cart";
-        }
-
-        // Forcer la connexion si pas de compte client
-        if (session.getAttribute("BOLAS_CUSTOMER") == null) {
-            ra.addFlashAttribute("flashError", "Veuillez vous connecter ou créer un compte pour commander.");
-            return "redirect:/customer/login";
         }
 
         var lines = cartService.lines(session);
         if (lines.isEmpty()) {
+            log.warn("⚠️ Panier vide pour {}", customerName);
             ra.addFlashAttribute("flashError", "Votre panier est vide.");
             return "redirect:/cart";
         }
+        log.info("   → Panier: {} articles", lines.size());
 
         // Créer la commande
         CustomerOrder order = new CustomerOrder();
+        log.info("   → Création commande...");
 
         // Tracking number personnalisé si client connecté, sinon UUID classique
         Customer customer = (Customer) session.getAttribute("BOLAS_CUSTOMER");
@@ -205,9 +219,12 @@ public class CartController {
             order.addLine(ol);
         }
         orderRepository.save(order);
+        log.info("   → Commande sauvegardée: {}", order.getTrackingNumber());
         cartService.clear(session);
+        log.info("   → Panier vidé");
 
         // Notifier l'admin automatiquement via Meta WhatsApp
+        log.info("   → Envoi notification admin...");
         try {
             StringBuilder adminMsg = new StringBuilder();
             adminMsg.append("\uD83D\uDED2 Nouvelle commande sur BOLA !\n\n");

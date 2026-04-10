@@ -12,6 +12,9 @@ public interface LoyaltyCardRepository extends JpaRepository<LoyaltyCard, Long> 
     /** Toutes les cartes d'un vendeur, les actives en premier */
     List<LoyaltyCard> findByVendorOrderByActiveDescCreatedAtDesc(VendorUser vendor);
 
+    /** Toutes les cartes d'un vendeur */
+    List<LoyaltyCard> findByVendor(VendorUser vendor);
+
     /** Recherche par code (pour validation lors d'une commande) */
     Optional<LoyaltyCard> findByCode(String code);
 
@@ -20,4 +23,7 @@ public interface LoyaltyCardRepository extends JpaRepository<LoyaltyCard, Long> 
 
     /** Compte des cartes actives d'un vendeur */
     long countByVendorAndActiveTrue(VendorUser vendor);
+
+    /** Suppression de toutes les cartes d'un vendeur */
+    void deleteByVendor(VendorUser vendor);
 }

@@ -13,7 +13,9 @@ import com.bolas.ecommerce.model.VendorStatus;
 import com.bolas.ecommerce.model.CourierApplicationStatus;
 import com.bolas.ecommerce.model.Country;
 import com.bolas.ecommerce.repository.CategoryRepository;
+import com.bolas.ecommerce.repository.ChatMessageRepository;
 import com.bolas.ecommerce.repository.CustomerOrderRepository;
+import com.bolas.ecommerce.repository.LoyaltyCardRepository;
 import com.bolas.ecommerce.repository.OrderLineRepository;
 import com.bolas.ecommerce.repository.ProductRepository;
 import com.bolas.ecommerce.repository.VendorUserRepository;
@@ -56,7 +58,9 @@ public class AdminController {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final ChatMessageRepository chatMessageRepository;
     private final CustomerOrderRepository customerOrderRepository;
+    private final LoyaltyCardRepository loyaltyCardRepository;
     private final OrderLineRepository orderLineRepository;
     private final ImageUploadService imageUploadService;
     private final CategoryCoverImageUrlService categoryCoverImageUrlService;
@@ -82,7 +86,9 @@ public class AdminController {
 
     public AdminController(ProductRepository productRepository,
                            CategoryRepository categoryRepository,
+                           ChatMessageRepository chatMessageRepository,
                            CustomerOrderRepository customerOrderRepository,
+                           LoyaltyCardRepository loyaltyCardRepository,
                            OrderLineRepository orderLineRepository,
                            ImageUploadService imageUploadService,
                            CategoryCoverImageUrlService categoryCoverImageUrlService,
@@ -97,7 +103,9 @@ public class AdminController {
                            VendorCategoryRepository vendorCategoryRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
+        this.chatMessageRepository = chatMessageRepository;
         this.customerOrderRepository = customerOrderRepository;
+        this.loyaltyCardRepository = loyaltyCardRepository;
         this.orderLineRepository = orderLineRepository;
         this.imageUploadService = imageUploadService;
         this.categoryCoverImageUrlService = categoryCoverImageUrlService;
@@ -658,20 +666,37 @@ public class AdminController {
     }
 
     @PostMapping("/admin/vendors/{id}/delete")
+    @Transactional
     public String deleteVendor(@PathVariable Long id, RedirectAttributes ra) {
         try {
+            log.info("🗑️ Début suppression vendeur {}", id);
             VendorUser v = vendorUserRepository.findById(id).orElseThrow();
             String vendorName = v.getDisplayName();
             
+            log.info("   → Suppression des messages de chat liés...");
+            var chatMessages = chatMessageRepository.findByVendor(v);
+            log.info("      {} messages de chat à supprimer", chatMessages.size());
+            chatMessageRepository.deleteByVendor(v);
+            
+            log.info("   → Suppression des cartes de fidélité liées...");
+            var loyaltyCards = loyaltyCardRepository.findByVendor(v);
+            log.info("      {} cartes de fidélité à supprimer", loyaltyCards.size());
+            loyaltyCardRepository.deleteByVendor(v);
+            
             log.info("   → Détachement des produits du vendeur...");
             // Détacher les produits du vendeur avant suppression
-            productRepository.findByVendor(v).forEach(p -> {
+            var products = productRepository.findByVendor(v);
+            log.info("      {} produits à détacher", products.size());
+            products.forEach(p -> {
                 p.setVendor(null);
                 productRepository.save(p);
             });
+            productRepository.flush();
             
             log.info("   → Suppression des catégories liées...");
             // Supprimer les catégories liées
+            var categories = vendorCategoryRepository.findByVendor(v);
+            log.info("      {} catégories à supprimer", categories.size());
             vendorCategoryRepository.deleteByVendor(v);
             
             log.info("   → Suppression des demandes livreurs liées...");
@@ -680,8 +705,9 @@ public class AdminController {
             
             log.info("   → Suppression du vendeur...");
             vendorUserRepository.deleteById(id);
+            vendorUserRepository.flush();
             
-            ra.addFlashAttribute("flashOk", "Vendeur \"" + vendorName + "\" supprimé.");
+            ra.addFlashAttribute("flashOk", "Vendeur \"" + vendorName + "\" supprimé avec succès.");
             log.info("✅ Vendeur {} supprimé avec succès", vendorName);
         } catch (Exception e) {
             log.error("❌ Erreur suppression vendeur {}", id, e);
