@@ -376,10 +376,17 @@ public class VendorController {
         List<CustomerOrder> done =
                 orderRepository.findByStatusOrderByCreatedAtDesc(OrderStatus.READY);
 
+        // Livreurs approuvés proposés par ce vendeur (pour assignation)
+        var approvedCouriers = courierApplicationRepository.findByVendorOrderBySubmittedAtDesc(vendor)
+                .stream()
+                .filter(a -> a.getStatus() == CourierApplicationStatus.APPROVED)
+                .toList();
+
         model.addAttribute("pageTitle", "Mes commandes — BOLA Vendeur");
         model.addAttribute("vendor",    vendor);
         model.addAttribute("toProcess", toProcess);
         model.addAttribute("done",      done);
+        model.addAttribute("approvedCouriers", approvedCouriers);
         return "vendor/orders";
     }
 
@@ -398,6 +405,33 @@ public class VendorController {
         order.setStatus(OrderStatus.READY);
         orderRepository.save(order);
         ra.addFlashAttribute("flashOk", "Commande marquée comme prête !");
+        return "redirect:/vendor/orders";
+    }
+
+    @PostMapping("/orders/{id}/assign-courier")
+    @org.springframework.transaction.annotation.Transactional
+    public String assignCourierToOrder(@PathVariable Long id,
+                                       @RequestParam Long courierId,
+                                       HttpSession session,
+                                       RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+        if (vendor.getPlan() == VendorPlan.GRATUIT) {
+            ra.addFlashAttribute("flashError", "Fonctionnalité réservée aux packs payants.");
+            return "redirect:/vendor/orders";
+        }
+
+        courierApplicationRepository.findById(courierId).ifPresent(courier -> {
+            orderRepository.findById(id).ifPresent(order -> {
+                order.setAssignedCourierName(courier.getCourierName());
+                order.setAssignedCourierPhone(courier.getCourierPhone());
+                orderRepository.save(order);
+                log.info("✅ Livreur {} assigné à commande {} par vendeur {}", courier.getCourierName(), id, vendor.getDisplayName());
+            });
+        });
+        ra.addFlashAttribute("flashOk", "Livreur assigné à la commande.");
         return "redirect:/vendor/orders";
     }
 

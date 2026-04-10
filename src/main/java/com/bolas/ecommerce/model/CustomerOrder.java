@@ -88,6 +88,11 @@ public class CustomerOrder {
     @Column(name = "assigned_courier_name", length = 150)
     private String assignedCourierName;
 
+    /** Téléphone du livreur assigné */
+    @Size(max = 40)
+    @Column(name = "assigned_courier_phone", length = 40)
+    private String assignedCourierPhone;
+
     /** Plaque d'immatriculation du véhicule de livraison. */
     @Size(max = 32)
     @Column(length = 32)
@@ -236,6 +241,12 @@ public class CustomerOrder {
     public void setCourierPhotoUrl(String courierPhotoUrl) {
         this.courierPhotoUrl = courierPhotoUrl;
     }
+
+    public String getAssignedCourierName() { return assignedCourierName; }
+    public void setAssignedCourierName(String assignedCourierName) { this.assignedCourierName = assignedCourierName; }
+
+    public String getAssignedCourierPhone() { return assignedCourierPhone; }
+    public void setAssignedCourierPhone(String assignedCourierPhone) { this.assignedCourierPhone = assignedCourierPhone; }
 
     public Long getTotalAmountCfa() {
         return totalAmountCfa;
