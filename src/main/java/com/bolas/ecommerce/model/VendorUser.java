@@ -99,6 +99,10 @@ public class VendorUser {
     @Column(name = "banner_url", length = 2000)
     private String bannerUrl;
 
+    /** Date d'expiration de l'abonnement (null = pas d'abonnement actif) */
+    @Column(name = "subscription_expires_at")
+    private java.time.LocalDate subscriptionExpiresAt;
+
     // ─── Getters / Setters ────────────────────────────────────────────────────
 
     public Long getId() { return id; }
@@ -151,6 +155,9 @@ public class VendorUser {
 
     public String getBannerUrl() { return bannerUrl; }
     public void setBannerUrl(String bannerUrl) { this.bannerUrl = bannerUrl; }
+
+    public java.time.LocalDate getSubscriptionExpiresAt() { return subscriptionExpiresAt; }
+    public void setSubscriptionExpiresAt(java.time.LocalDate subscriptionExpiresAt) { this.subscriptionExpiresAt = subscriptionExpiresAt; }
 
     /** Nom d'affichage : priorité shopName, sinon username */
     public String getDisplayName() {

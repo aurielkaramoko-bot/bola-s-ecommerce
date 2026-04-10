@@ -676,6 +676,26 @@ public class AdminController {
         return "redirect:/admin/vendors";
     }
 
+    @PostMapping("/admin/vendors/{id}/plan")
+    public String setVendorPlan(@PathVariable Long id,
+                                @RequestParam String plan,
+                                @RequestParam(required = false) String expiresAt,
+                                RedirectAttributes ra) {
+        vendorUserRepository.findById(id).ifPresent(v -> {
+            try {
+                v.setPlan(com.bolas.ecommerce.model.VendorPlan.valueOf(plan));
+            } catch (IllegalArgumentException ignored) {}
+            if (expiresAt != null && !expiresAt.isBlank()) {
+                v.setSubscriptionExpiresAt(java.time.LocalDate.parse(expiresAt));
+            } else {
+                v.setSubscriptionExpiresAt(null);
+            }
+            vendorUserRepository.save(v);
+        });
+        ra.addFlashAttribute("flashOk", "Plan mis à jour.");
+        return "redirect:/admin/vendors";
+    }
+
     @PostMapping("/admin/vendors/{id}/banner")
     public String setVendorBanner(@PathVariable Long id,
                                   @RequestParam(required = false) String bannerUrl,

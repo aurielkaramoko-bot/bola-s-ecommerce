@@ -132,32 +132,10 @@
         </a>
       </div>
 
-      <!-- Séparateur paiement -->
-      <div class="payment-methods-divider">
-        <span>Paiement en ligne</span>
-      </div>
-
-      <!-- Boutons paiement Mobile Money (inactifs) -->
-      <div class="payment-methods-group">
-        <span class="btn-payment-coming" title="Bientôt disponible">
-          <i class="bi bi-phone"></i> Flooz
-          <span class="badge-coming">Bientôt</span>
-        </span>
-        <span class="btn-payment-coming" title="Bientôt disponible">
-          <i class="bi bi-phone"></i> T-Money
-          <span class="badge-coming">Bientôt</span>
-        </span>
-        <span class="btn-payment-coming" title="Bientôt disponible">
-          <i class="bi bi-phone"></i> Wave
-          <span class="badge-coming">Bientôt</span>
-        </span>
-        <span class="btn-payment-coming" title="Bientôt disponible">
-          <i class="bi bi-credit-card"></i> CinetPay
-          <span class="badge-coming">Bientôt</span>
-        </span>
-      </div>
       <p class="small text-muted mt-1">
-        <i class="bi bi-info-circle me-1"></i>Le paiement à la livraison est disponible dès maintenant.
+        <i class="bi bi-info-circle me-1"></i>
+        <span th:if="${product.deliveryAvailable}">Paiement à la livraison ou en boutique disponible.</span>
+        <span th:if="${!product.deliveryAvailable}">Paiement en boutique lors du retrait.</span>
       </p>
 
       <!-- Bouton Chat + Signaler -->

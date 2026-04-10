@@ -224,7 +224,17 @@ public class DatabaseMigrationConfig {
                     }
                 }
 
-                // Migration 14 : table reports
+                // Migration 14 : colonne subscription_expires_at sur vendor_users
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE vendor_users ADD COLUMN IF NOT EXISTS subscription_expires_at DATE"
+                    );
+                    log.info("Migration: colonne subscription_expires_at ajoutée sur vendor_users");
+                } catch (SQLException e) {
+                    log.warn("Migration vendor_users.subscription_expires_at: {}", e.getMessage());
+                }
+
+                // Migration 15 : table reports
                 try {
                     conn.createStatement().execute("""
                         CREATE TABLE IF NOT EXISTS reports (
