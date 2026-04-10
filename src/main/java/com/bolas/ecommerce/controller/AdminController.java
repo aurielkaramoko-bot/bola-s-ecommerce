@@ -1064,19 +1064,24 @@ public class AdminController {
         // Commandes ce mois
         java.time.YearMonth thisMonth = java.time.YearMonth.now();
         java.time.Instant startOfMonth = thisMonth.atDay(1).atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
+        java.time.Instant endOfMonth = thisMonth.atEndOfMonth().atTime(23,59,59).toInstant(java.time.ZoneOffset.UTC);
         long ordersThisMonth = customerOrderRepository.findAllByOrderByCreatedAtDesc().stream()
-                .filter(o -> o.getCreatedAt().isAfter(startOfMonth)).count();
+                .filter(o -> !o.getCreatedAt().isBefore(startOfMonth) && !o.getCreatedAt().isAfter(endOfMonth))
+                .count();
         model.addAttribute("ordersThisMonth", ordersThisMonth);
 
-        // Commandes par mois (12 derniers mois)
+        // Commandes par mois (12 derniers mois) — toutes commandes confondues
         java.util.List<String> monthLabels = new java.util.ArrayList<>();
         java.util.List<Long> monthCounts = new java.util.ArrayList<>();
+        var allOrders = customerOrderRepository.findAllByOrderByCreatedAtDesc();
+        java.time.ZoneId zone = java.time.ZoneId.of("Africa/Abidjan"); // UTC+0 Togo/CI
         for (int i = 11; i >= 0; i--) {
-            java.time.YearMonth ym = java.time.YearMonth.now().minusMonths(i);
-            java.time.Instant start = ym.atDay(1).atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
-            java.time.Instant end = ym.atEndOfMonth().atTime(23, 59, 59).toInstant(java.time.ZoneOffset.UTC);
-            long count = customerOrderRepository.findAllByOrderByCreatedAtDesc().stream()
-                    .filter(o -> o.getCreatedAt().isAfter(start) && o.getCreatedAt().isBefore(end)).count();
+            java.time.YearMonth ym = java.time.YearMonth.now(zone).minusMonths(i);
+            java.time.Instant start = ym.atDay(1).atStartOfDay(zone).toInstant();
+            java.time.Instant end = ym.atEndOfMonth().atTime(23, 59, 59).atZone(zone).toInstant();
+            long count = allOrders.stream()
+                    .filter(o -> !o.getCreatedAt().isBefore(start) && !o.getCreatedAt().isAfter(end))
+                    .count();
             monthLabels.add(ym.getMonth().getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.FRENCH)
                     + " " + ym.getYear());
             monthCounts.add(count);

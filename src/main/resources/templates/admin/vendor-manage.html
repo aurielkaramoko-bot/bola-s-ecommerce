@@ -223,6 +223,11 @@ document.querySelectorAll('input[name="plan"]').forEach(function(radio) {
     this.closest('label').style.borderColor = '#8B5E3C';
     this.closest('label').style.background = '#f5ede6';
   });
+  // Marquer visuellement le plan déjà sélectionné
+  if (radio.checked) {
+    radio.closest('label').style.borderColor = '#8B5E3C';
+    radio.closest('label').style.background = '#f5ede6';
+  }
 });
 
 // Ajouter des mois à la date de fin
