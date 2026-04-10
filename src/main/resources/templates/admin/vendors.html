@@ -286,9 +286,9 @@
                       <form th:action="@{/admin/couriers/{id}/assign(id=${app.id})}" method="post" class="m-0 d-flex gap-1 align-items-center">
                         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
                         <select name="orderId" class="form-select form-select-sm" style="width:160px;">
-                          <option value="">— Commande prête —</option>
+                          <option value="">— Commande —</option>
                           <option th:each="o : ${readyOrders}" th:value="${o.id}"
-                                  th:text="${o.trackingNumber} + ' — ' + ${o.customerName}">—</option>
+                                  th:text="${o.trackingNumber} + ' · ' + ${o.customerName} + ' [' + ${o.status.name()} + ']'">—</option>
                         </select>
                         <button type="submit" class="btn btn-sm btn-outline-primary" title="Assigner à une commande">
                           <i class="bi bi-truck me-1"></i>Assigner

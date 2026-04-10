@@ -372,9 +372,11 @@ public class VendorController {
         }
 
         List<CustomerOrder> toProcess =
-                orderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.CONFIRMED);
+                orderRepository.findByVendorProductsAndStatusIn(vendor,
+                        List.of(OrderStatus.CONFIRMED));
         List<CustomerOrder> done =
-                orderRepository.findByStatusOrderByCreatedAtDesc(OrderStatus.READY);
+                orderRepository.findByVendorProductsAndStatusIn(vendor,
+                        List.of(OrderStatus.READY));
 
         // Livreurs approuvés proposés par ce vendeur (pour assignation)
         var approvedCouriers = courierApplicationRepository.findByVendorOrderBySubmittedAtDesc(vendor)

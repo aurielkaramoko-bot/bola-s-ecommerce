@@ -420,6 +420,11 @@ public class AdminController {
             var vendors = vendorUserRepository.findByVendorStatusAndActiveTrue(VendorStatus.ACTIVE);
             model.addAttribute("vendors", vendors);
             log.info("      ✓ {} vendeurs ACTIFS trouvés", vendors.size());
+
+            log.info("   → Recherche livreurs approuvés...");
+            var approvedCouriers = courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.APPROVED);
+            model.addAttribute("approvedCouriers", approvedCouriers);
+            log.info("      ✓ {} livreurs approuvés trouvés", approvedCouriers.size());
             
             log.info("✅ Page commandes chargée avec succès");
         } catch (Exception e) {
@@ -434,6 +439,7 @@ public class AdminController {
             model.addAttribute("newOrder", new NewOrderDto());
             model.addAttribute("products", List.of());
             model.addAttribute("vendors", List.of());
+            model.addAttribute("approvedCouriers", List.of());
         }
         return "admin/orders";
     }
@@ -557,10 +563,11 @@ public class AdminController {
             model.addAttribute("allCouriers", allCouriers);
             log.info("      ✓ {} livreurs approuvés trouvés", allCouriers.size());
 
-            log.info("   → Recherche commandes READY pour assignation...");
-            var readyOrders = customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.READY);
-            model.addAttribute("readyOrders", readyOrders);
-            log.info("      ✓ {} commandes READY trouvées", readyOrders.size());
+            log.info("   → Recherche commandes actives pour assignation livreur...");
+            var assignableOrders = customerOrderRepository.findTop20ByStatusInOrderByCreatedAtDesc(
+                    List.of(OrderStatus.CONFIRMED, OrderStatus.READY, OrderStatus.IN_DELIVERY));
+            model.addAttribute("readyOrders", assignableOrders);
+            log.info("      ✓ {} commandes assignables trouvées", assignableOrders.size());
             
             log.info("✅ Page vendeurs chargée avec succès");
         } catch (Exception e) {
@@ -818,8 +825,12 @@ public class AdminController {
     @PostMapping("/admin/couriers/{id}/assign")
     @Transactional
     public String assignCourier(@PathVariable Long id,
-                                @RequestParam Long orderId,
+                                @RequestParam(required = false) Long orderId,
                                 RedirectAttributes ra) {
+        if (orderId == null || orderId <= 0) {
+            ra.addFlashAttribute("flashError", "Veuillez sélectionner une commande dans la liste.");
+            return "redirect:/admin/vendors";
+        }
         try {
             courierApplicationRepository.findById(id).ifPresent(courier -> {
                 customerOrderRepository.findById(orderId).ifPresent(order -> {
@@ -827,14 +838,14 @@ public class AdminController {
                     order.setAssignedCourierPhone(courier.getCourierPhone());
                     customerOrderRepository.save(order);
                     log.info("✅ Livreur {} assigné à commande {}", courier.getCourierName(), orderId);
-                    ra.addFlashAttribute("flashOk", "Livreur assigné à la commande.");
+                    ra.addFlashAttribute("flashOk", "Livreur \"" + courier.getCourierName() + "\" assigné à la commande.");
                 });
             });
         } catch (Exception e) {
             log.error("❌ Erreur assignation livreur", e);
             ra.addFlashAttribute("flashError", "Erreur: " + e.getMessage());
         }
-        return "redirect:/admin/orders";
+        return "redirect:/admin/vendors";
     }
 
     // ─── Activité des boutiques ───────────────────────────────────────────────
@@ -1011,5 +1022,41 @@ public class AdminController {
         ra.addFlashAttribute("flashOk", "Lien livreur généré !");
         ra.addFlashAttribute("courierLink", link);
         return "redirect:/admin/delivery";
+    }
+
+    /**
+     * Dispatch : assigne un livreur (optionnel), génère le token GPS,
+     * passe la commande en IN_DELIVERY et retourne le lien livreur.
+     */
+    @PostMapping("/admin/orders/{id}/dispatch")
+    @Transactional
+    public String dispatchOrder(@PathVariable Long id,
+                                @RequestParam(required = false) Long courierId,
+                                HttpServletRequest request,
+                                RedirectAttributes ra) {
+        CustomerOrder order = customerOrderRepository.findById(id).orElseThrow();
+
+        // Assigner le livreur si sélectionné
+        if (courierId != null && courierId > 0) {
+            courierApplicationRepository.findById(courierId).ifPresent(courier -> {
+                order.setAssignedCourierName(courier.getCourierName());
+                order.setAssignedCourierPhone(courier.getCourierPhone());
+            });
+        }
+
+        // Générer token GPS unique
+        String token = UUID.randomUUID().toString();
+        order.setCourierToken(token);
+        order.setStatus(OrderStatus.IN_DELIVERY);
+        customerOrderRepository.save(order);
+        auditLogService.orderStatusChanged(id, order.getTrackingNumber(), "IN_DELIVERY");
+
+        String base = baseUrl(request);
+        String link = base + "/livreur/" + token;
+        String courierName = order.getAssignedCourierName() != null ? order.getAssignedCourierName() : "Admin";
+        ra.addFlashAttribute("flashOk",
+                "Commande " + order.getTrackingNumber() + " en livraison — livreur : " + courierName);
+        ra.addFlashAttribute("courierLink", link);
+        return "redirect:/admin/orders";
     }
 }

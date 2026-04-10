@@ -52,12 +52,23 @@
           <i class="bi bi-person me-1"></i>
           <span th:text="${o.customerName}">—</span>
         </div>
-        <div class="small text-muted mb-2">
+        <div class="small text-muted mb-1">
           <i class="bi bi-telephone me-1"></i>
           <span th:text="${o.customerPhone}">—</span>
         </div>
-        <div class="fw-bold small mb-3" style="color:var(--bolas-accent);"
+        <div class="small text-muted mb-1" th:if="${o.customerAddress != null}">
+          <i class="bi bi-geo-alt me-1"></i>
+          <span th:text="${o.customerAddress}">—</span>
+        </div>
+        <div class="small text-muted mb-1">
+          <span th:text="${o.deliveryOption.name() == 'HOME' ? '🚚 Livraison domicile' : '🏪 Retrait boutique'}">—</span>
+        </div>
+        <div class="fw-bold small mb-1" style="color:var(--bolas-accent);"
              th:text="${#numbers.formatInteger(o.totalAmountCfa,1,'COMMA')} + ' FCFA'">—</div>
+        <div th:if="${o.deliveryFeeCfa > 0}" class="small text-muted mb-3">
+          <i class="bi bi-truck me-1"></i>Livraison :
+          <span th:text="${#numbers.formatInteger(o.deliveryFeeCfa,1,'COMMA')} + ' FCFA'">—</span>
+        </div>
 
         <!-- Lignes commande -->
         <ul class="list-unstyled small mb-3" th:if="${!o.lines.isEmpty()}">
@@ -115,15 +126,32 @@
           <span class="fw-bold small" th:text="'#' + ${o.trackingNumber}">—</span>
           <span class="badge bg-success">Prête</span>
         </div>
-        <div class="small text-muted" th:text="${o.customerName}">—</div>
+        <div class="small" th:text="${o.customerName}">—</div>
+        <div class="small text-muted" th:text="${o.customerPhone}">—</div>
+        <div class="small text-muted" th:if="${o.customerAddress != null}" th:text="${o.customerAddress}">—</div>
+        <div class="small text-muted mb-1">
+          <span th:text="${o.deliveryOption.name() == 'HOME' ? '🚚 Livraison domicile' : '🏪 Retrait boutique'}">—</span>
+        </div>
+        <!-- Produits -->
+        <ul class="list-unstyled small mb-1" th:if="${!o.lines.isEmpty()}">
+          <li th:each="l : ${o.lines}" class="text-muted">
+            <span th:text="${l.quantity} + '× ' + ${l.product?.name}">—</span>
+          </li>
+        </ul>
         <div class="fw-bold small mt-1" style="color:var(--bolas-accent);"
              th:text="${#numbers.formatInteger(o.totalAmountCfa,1,'COMMA')} + ' FCFA'">—</div>
+        <div th:if="${o.deliveryFeeCfa > 0}" class="small text-muted">
+          <i class="bi bi-truck me-1"></i><span th:text="${#numbers.formatInteger(o.deliveryFeeCfa,1,'COMMA')} + ' FCFA livraison'">—</span>
+        </div>
         <div th:if="${o.assignedCourierName != null}" class="small text-success mt-1">
           <i class="bi bi-bicycle me-1"></i><span th:text="${o.assignedCourierName}">—</span>
-          <span th:if="${o.assignedCourierPhone != null}" class="text-muted">
+          <span th:if="${o.assignedCourierPhone != null}">
             — <a th:href="${'https://wa.me/' + o.assignedCourierPhone}" target="_blank"
                  class="text-decoration-none"><i class="bi bi-whatsapp text-success"></i></a>
           </span>
+        </div>
+        <div th:if="${o.assignedCourierName == null}" class="small text-muted mt-1">
+          <i class="bi bi-info-circle me-1"></i>Livraison assurée par BOLA
         </div>
       </div>
     </div>

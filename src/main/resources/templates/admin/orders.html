@@ -35,6 +35,21 @@
         </div>
       </div>
 
+      <!-- Lien GPS livreur généré -->
+      <div th:if="${courierLink}" class="alert alert-primary d-flex align-items-center gap-3 mb-3">
+        <i class="bi bi-truck fs-4"></i>
+        <div class="flex-grow-1">
+          <div class="fw-semibold mb-1">Lien GPS livreur — à envoyer au livreur :</div>
+          <div class="d-flex gap-2 align-items-center flex-wrap">
+            <code class="small" th:text="${courierLink}" style="word-break:break-all;">—</code>
+            <a th:href="${'https://wa.me/?text=' + courierLink}" target="_blank"
+               class="btn btn-sm btn-success text-nowrap">
+              <i class="bi bi-whatsapp me-1"></i>Envoyer via WhatsApp
+            </a>
+          </div>
+        </div>
+      </div>
+
       <!-- ===== 1. EN ATTENTE DE VALIDATION ===== -->
       <div class="admin-card p-3 mb-4">
         <h2 class="h6 fw-bold mb-3" style="color:#8B5E3C;">
@@ -162,21 +177,32 @@
               <div th:if="${o.assignedCourierName != null}" class="small text-success mb-2">
                 <i class="bi bi-bicycle me-1"></i><span th:text="${o.assignedCourierName}">—</span>
               </div>
-              <div class="d-flex gap-2">
-                <form th:action="@{/admin/orders/{id}/notify-client(id=${o.id})}" method="post" class="flex-grow-1">
-                  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                  <button type="submit" class="btn btn-sm btn-success w-100">
-                    <i class="bi bi-whatsapp me-1"></i>Notifier client
+
+              <!-- Notifier client WhatsApp -->
+              <form th:action="@{/admin/orders/{id}/notify-client(id=${o.id})}" method="post" class="mb-2">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <button type="submit" class="btn btn-sm btn-success w-100">
+                  <i class="bi bi-whatsapp me-1"></i>Notifier client
+                </button>
+              </form>
+
+              <!-- Dispatch : choisir livreur + passer en livraison + générer lien GPS -->
+              <form th:action="@{/admin/orders/{id}/dispatch(id=${o.id})}" method="post" class="row g-1">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <div class="col-12">
+                  <select name="courierId" class="form-select form-select-sm">
+                    <option value="">— Moi-même (admin) —</option>
+                    <option th:each="c : ${approvedCouriers}" th:value="${c.id}"
+                            th:text="${c.courierName} + (${c.zone != null} ? ' · ' + ${c.zone} : '')"
+                            th:selected="${o.assignedCourierName != null and o.assignedCourierName == c.courierName}">—</option>
+                  </select>
+                </div>
+                <div class="col-12 mt-1">
+                  <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                    <i class="bi bi-truck me-1"></i>Envoyer en livraison + lien GPS
                   </button>
-                </form>
-                <form th:action="@{/admin/orders/{id}/status(id=${o.id})}" method="post">
-                  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                  <input type="hidden" name="status" value="IN_DELIVERY"/>
-                  <button type="submit" class="btn btn-sm btn-outline-primary" title="Passer en livraison">
-                    <i class="bi bi-truck"></i>
-                  </button>
-                </form>
-              </div>
+                </div>
+              </form>
             </div>
           </div>
         </div>
@@ -215,12 +241,27 @@
         <div th:if="${closedOrders.isEmpty()}" class="text-muted small">Aucune commande clôturée.</div>
         <div class="table-responsive" th:if="${!closedOrders.isEmpty()}">
           <table class="table table-sm align-middle mb-0 small">
-            <thead class="table-light"><tr><th>N° suivi</th><th>Client</th><th>Montant</th><th>Statut</th><th></th></tr></thead>
+            <thead class="table-light"><tr><th>N° suivi</th><th>Client</th><th>Produits</th><th>Montant</th><th>Statut</th><th></th></tr></thead>
             <tbody>
               <tr th:each="o : ${closedOrders}">
                 <td th:text="${o.trackingNumber}">—</td>
-                <td th:text="${o.customerName}">—</td>
-                <td th:text="${o.totalAmountCfa} + ' CFA'">—</td>
+                <td>
+                  <div th:text="${o.customerName}">—</div>
+                  <div class="text-muted" style="font-size:.75rem;" th:text="${o.customerPhone}">—</div>
+                </td>
+                <td>
+                  <ul class="list-unstyled mb-0" th:if="${!o.lines.isEmpty()}">
+                    <li th:each="l : ${o.lines}" class="text-muted" style="font-size:.75rem;">
+                      <span th:text="${l.quantity} + '× ' + ${l.product?.name ?: '(produit supprimé)'}">—</span>
+                    </li>
+                  </ul>
+                  <span th:if="${o.lines.isEmpty()}" class="text-muted">—</span>
+                </td>
+                <td>
+                  <div th:text="${#numbers.formatInteger(o.totalAmountCfa,0,'COMMA')} + ' CFA'">—</div>
+                  <div th:if="${o.deliveryFeeCfa > 0}" class="text-muted" style="font-size:.75rem;"
+                       th:text="'🚚 +' + ${#numbers.formatInteger(o.deliveryFeeCfa,0,'COMMA')} + ' CFA'">—</div>
+                </td>
                 <td>
                   <span th:if="${o.status.name() == 'DELIVERED'}" class="badge bg-success">Livrée</span>
                   <span th:if="${o.status.name() == 'CANCELLED'}" class="badge bg-danger">Annulée</span>
