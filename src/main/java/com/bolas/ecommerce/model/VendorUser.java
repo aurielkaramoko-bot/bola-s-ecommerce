@@ -90,8 +90,8 @@ public class VendorUser {
      *  true  → douce : vendeur bloqué mais produits restent visibles
      *  false → totale : produits masqués automatiquement
      */
-    @Column(name = "soft_suspend")
-    private boolean softSuspend = true;
+    @Column(name = "soft_suspend", nullable = true)
+    private Boolean softSuspend = true;
 
     /** URL bannière publicitaire (PREMIUM uniquement) — affichée sur la homepage */
     @Size(max = 2000)
@@ -145,7 +145,7 @@ public class VendorUser {
     public String getSuspensionReason() { return suspensionReason; }
     public void setSuspensionReason(String suspensionReason) { this.suspensionReason = suspensionReason; }
 
-    public boolean isSoftSuspend() { return softSuspend; }
+    public boolean isSoftSuspend() { return softSuspend != null ? softSuspend : true; }
     public void setSoftSuspend(boolean softSuspend) { this.softSuspend = softSuspend; }
 
     public String getBannerUrl() { return bannerUrl; }
