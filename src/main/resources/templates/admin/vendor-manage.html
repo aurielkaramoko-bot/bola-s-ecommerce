@@ -72,50 +72,46 @@
             <div class="row g-2">
               <!-- Gratuit -->
               <div class="col-6 col-md-3">
-                <label class="d-block p-3 rounded-3 text-center"
-                       style="cursor:pointer;border:2px solid #dee2e6;"
-                       th:classappend="${vendor.plan?.name() == 'GRATUIT'} ? 'border-secondary bg-light' : ''">
-                  <input type="radio" name="plan" value="GRATUIT" class="d-none"
+                <label id="plan-gratuit" class="plan-option d-block p-3 rounded-3 text-center"
+                       style="cursor:pointer;border:2px solid #dee2e6;transition:all 0.2s ease;">
+                  <input type="radio" name="plan" value="GRATUIT" style="display:none;"
                          th:checked="${vendor.plan?.name() == 'GRATUIT'}"/>
                   <i class="bi bi-box-seam d-block fs-4 mb-1"></i>
                   <div class="fw-semibold small">Gratuit</div>
-                  <div class="text-muted" style="font-size:.7rem;">0 FCFA</div>
+                  <div class="text-muted" style="font-size:.7rem;" th:text="${gratuitPrice} + ' FCFA'"></div>
                 </label>
               </div>
               <!-- Pro Local -->
               <div class="col-6 col-md-3">
-                <label class="d-block p-3 rounded-3 text-center"
-                       style="cursor:pointer;border:2px solid #dee2e6;"
-                       th:classappend="${vendor.plan?.name() == 'PRO_LOCAL'} ? 'border-warning bg-warning bg-opacity-10' : ''">
-                  <input type="radio" name="plan" value="PRO_LOCAL" class="d-none"
+                <label id="plan-pro-local" class="plan-option d-block p-3 rounded-3 text-center"
+                       style="cursor:pointer;border:2px solid #dee2e6;transition:all 0.2s ease;">
+                  <input type="radio" name="plan" value="PRO_LOCAL" style="display:none;"
                          th:checked="${vendor.plan?.name() == 'PRO_LOCAL'}"/>
                   <i class="bi bi-shop d-block fs-4 mb-1" style="color:var(--bolas-accent);"></i>
                   <div class="fw-semibold small">Pro Local</div>
-                  <div class="text-muted" style="font-size:.7rem;">3 000 FCFA/mois</div>
+                  <div class="text-muted" style="font-size:.7rem;" th:text="${proLocalPrice} + ' FCFA/mois'"></div>
                 </label>
               </div>
               <!-- Pro -->
               <div class="col-6 col-md-3">
-                <label class="d-block p-3 rounded-3 text-center"
-                       style="cursor:pointer;border:2px solid #dee2e6;"
-                       th:classappend="${vendor.plan?.name() == 'PRO'} ? 'border-warning bg-warning bg-opacity-10' : ''">
-                  <input type="radio" name="plan" value="PRO" class="d-none"
+                <label id="plan-pro" class="plan-option d-block p-3 rounded-3 text-center"
+                       style="cursor:pointer;border:2px solid #dee2e6;transition:all 0.2s ease;">
+                  <input type="radio" name="plan" value="PRO" style="display:none;"
                          th:checked="${vendor.plan?.name() == 'PRO'}"/>
                   <i class="bi bi-rocket d-block fs-4 mb-1" style="color:var(--bolas-accent);"></i>
                   <div class="fw-semibold small">Pro</div>
-                  <div class="text-muted" style="font-size:.7rem;">3 000 FCFA/mois</div>
+                  <div class="text-muted" style="font-size:.7rem;" th:text="${proPrice} + ' FCFA/mois'"></div>
                 </label>
               </div>
               <!-- Premium -->
               <div class="col-6 col-md-3">
-                <label class="d-block p-3 rounded-3 text-center"
-                       style="cursor:pointer;border:2px solid #dee2e6;"
-                       th:classappend="${vendor.plan?.name() == 'PREMIUM'} ? 'border-warning bg-warning bg-opacity-25' : ''">
-                  <input type="radio" name="plan" value="PREMIUM" class="d-none"
+                <label id="plan-premium" class="plan-option d-block p-3 rounded-3 text-center"
+                       style="cursor:pointer;border:2px solid #dee2e6;transition:all 0.2s ease;">
+                  <input type="radio" name="plan" value="PREMIUM" style="display:none;"
                          th:checked="${vendor.plan?.name() == 'PREMIUM'}"/>
                   <i class="bi bi-stars d-block fs-4 mb-1" style="color:#C49A6C;"></i>
                   <div class="fw-semibold small">Premium</div>
-                  <div class="text-muted" style="font-size:.7rem;">10 000 FCFA/mois</div>
+                  <div class="text-muted" style="font-size:.7rem;" th:text="${premiumPrice} + ' FCFA/mois'"></div>
                 </label>
               </div>
             </div>
@@ -213,26 +209,63 @@
 </div>
 <th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
 <script>
-// Sélection visuelle des plans
-document.querySelectorAll('input[name="plan"]').forEach(function(radio) {
-  radio.addEventListener('change', function() {
-    document.querySelectorAll('input[name="plan"]').forEach(function(r) {
-      r.closest('label').style.borderColor = '#dee2e6';
-      r.closest('label').style.background = '';
+(function() {
+  function initPlanSelection() {
+    console.log('Initializing plan selection...');
+    
+    const planOptions = document.querySelectorAll('.plan-option');
+    const radios = document.querySelectorAll('input[name="plan"]');
+    
+    function updateStyles() {
+      radios.forEach(radio => {
+        const label = radio.closest('.plan-option');
+        if (!label) return;
+        
+        if (radio.checked) {
+          label.style.borderColor = '#8B5E3C';
+          label.style.backgroundColor = '#f5ede6';
+        } else {
+          label.style.borderColor = '#dee2e6';
+          label.style.backgroundColor = '';
+        }
+      });
+    }
+    
+    // Au chargement, appliquer les styles au plan sélectionné
+    updateStyles();
+    
+    // Cliquer sur un plan
+    planOptions.forEach(label => {
+      label.addEventListener('click', function(e) {
+        e.preventDefault();
+        const radio = this.querySelector('input[name="plan"]');
+        if (radio) {
+          radio.checked = true;
+          radio.dispatchEvent(new Event('change', { bubbles: true }));
+          updateStyles();
+          console.log('Plan sélectionné:', radio.value);
+        }
+      });
     });
-    this.closest('label').style.borderColor = '#8B5E3C';
-    this.closest('label').style.background = '#f5ede6';
-  });
-  // Marquer visuellement le plan déjà sélectionné
-  if (radio.checked) {
-    radio.closest('label').style.borderColor = '#8B5E3C';
-    radio.closest('label').style.background = '#f5ede6';
+    
+    // Écouter les changements
+    radios.forEach(radio => {
+      radio.addEventListener('change', updateStyles);
+    });
   }
-});
+  
+  // Attendre que le DOM soit prêt
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPlanSelection);
+  } else {
+    initPlanSelection();
+  }
+})();
 
 // Ajouter des mois à la date de fin
 function addMonths(n) {
   var input = document.querySelector('input[name="expiresAt"]');
+  if (!input) return;
   var base = input.value ? new Date(input.value) : new Date();
   base.setMonth(base.getMonth() + n);
   input.value = base.toISOString().split('T')[0];

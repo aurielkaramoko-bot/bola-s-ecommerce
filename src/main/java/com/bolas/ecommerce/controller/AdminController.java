@@ -32,6 +32,7 @@ import com.bolas.ecommerce.service.CategoryCoverImageUrlService.ResolutionKind;
 import com.bolas.ecommerce.service.ImageUploadService;
 import com.bolas.ecommerce.service.InputSanitizerService;
 import com.bolas.ecommerce.service.OrderFlowService;
+import com.bolas.ecommerce.service.PackPricingService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.propertyeditors.CustomNumberEditor;
@@ -78,6 +79,7 @@ public class AdminController {
     private final VendorCategoryRepository vendorCategoryRepository;
     private final ReportRepository reportRepository;
     private final SessionCounterService sessionCounter;
+    private final PackPricingService packPricingService;
 
     // --- ICI : RÉCUPÉRATION DE TA CLÉ API DEPUIS TON PC ---
     @Value("${google.maps.api.key}")
@@ -107,7 +109,8 @@ public class AdminController {
                            CountryRepository countryRepository,
                            VendorCategoryRepository vendorCategoryRepository,
                            ReportRepository reportRepository,
-                           SessionCounterService sessionCounter) {
+                           SessionCounterService sessionCounter,
+                           PackPricingService packPricingService) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.chatMessageRepository = chatMessageRepository;
@@ -127,6 +130,7 @@ public class AdminController {
         this.vendorCategoryRepository = vendorCategoryRepository;
         this.reportRepository = reportRepository;
         this.sessionCounter = sessionCounter;
+        this.packPricingService = packPricingService;
     }
 
     @InitBinder
@@ -696,6 +700,14 @@ public class AdminController {
         VendorUser v = vendorUserRepository.findById(id).orElseThrow();
         model.addAttribute("pageTitle", "Gérer " + v.getDisplayName() + " — Admin BOLA");
         model.addAttribute("vendor", v);
+        
+        // Ajouter les prix des packs
+        model.addAttribute("packPrices", packPricingService.getAllPrices());
+        model.addAttribute("gratuitPrice", packPricingService.getGratuitPrice());
+        model.addAttribute("proLocalPrice", packPricingService.getProLocalPrice());
+        model.addAttribute("proPrice", packPricingService.getProPrice());
+        model.addAttribute("premiumPrice", packPricingService.getPremiumPrice());
+        
         return "admin/vendor-manage";
     }
 
@@ -1109,6 +1121,11 @@ public class AdminController {
         }
         model.addAttribute("planLabels", planLabels);
         model.addAttribute("planCounts", planCounts);
+
+        model.addAttribute("totalOrders", customerOrderRepository.count());
+        model.addAttribute("activeVendorCount",
+                vendorUserRepository.findByVendorStatusAndActiveTrue(VendorStatus.ACTIVE).size());
+        model.addAttribute("customerCount", 0); // sera enrichi quand CustomerRepository sera injecté
 
         return "admin/analytics";
     }

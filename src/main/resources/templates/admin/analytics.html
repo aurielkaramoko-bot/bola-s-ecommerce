@@ -22,9 +22,8 @@
             <div class="h2 fw-bold mb-0" style="color:var(--bolas-accent);"
                  th:text="${activeVisitors}">0</div>
             <div class="small text-muted mt-1">
-              <span class="status-dot dot-active d-inline-block me-1"
-                    style="width:8px;height:8px;border-radius:50%;background:#25D366;animation:pulse 1.5s infinite;"></span>
-              En ligne
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#25D366;margin-right:4px;"></span>
+              En ligne (5 dernières minutes)
             </div>
           </div>
         </div>
@@ -41,6 +40,22 @@
             <div class="h2 fw-bold mb-0" style="color:var(--bolas-accent);"
                  th:text="${ordersThisMonth}">0</div>
           </div>
+        </div>
+      </div>
+
+      <!-- Total toutes commandes -->
+      <div class="admin-card p-3 mb-4 d-flex gap-4 flex-wrap">
+        <div class="text-center px-3">
+          <div class="small text-muted">Total commandes</div>
+          <div class="fw-bold" style="color:var(--bolas-accent);" th:text="${totalOrders}">0</div>
+        </div>
+        <div class="text-center px-3">
+          <div class="small text-muted">Vendeurs actifs</div>
+          <div class="fw-bold" style="color:var(--bolas-accent);" th:text="${activeVendorCount}">0</div>
+        </div>
+        <div class="text-center px-3">
+          <div class="small text-muted">Clients inscrits</div>
+          <div class="fw-bold" style="color:var(--bolas-accent);" th:text="${customerCount}">0</div>
         </div>
       </div>
 
