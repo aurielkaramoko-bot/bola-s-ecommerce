@@ -115,13 +115,15 @@
 
       <!-- Boutons d'action -->
       <div class="d-flex flex-wrap gap-3">
-        <form th:action="@{/products/{id}/whatsapp-order(id=${product.id})}" method="post" id="waOrderForm">
+        <!-- Ajouter au panier -->
+        <form th:action="@{/cart/add}" method="post" id="addToCartForm">
           <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-          <input type="hidden" name="deliveryOption" id="waDeliveryOption"
+          <input type="hidden" name="productId" th:value="${product.id}"/>
+          <input type="hidden" name="qty" value="1"/>
+          <input type="hidden" name="deliveryOption" id="cartDeliveryOption"
                  th:value="${product.deliveryAvailable} ? 'HOME' : 'PICKUP'"/>
-          <button type="submit" class="btn btn-wa px-4">
-            <i class="bi bi-whatsapp"></i>
-            Commander via WhatsApp
+          <button type="submit" class="btn btn-hero-solid px-4">
+            <i class="bi bi-cart-plus me-2"></i>Ajouter au panier
           </button>
         </form>
         <a th:href="|tel:+${shopPhone}|" class="btn btn-call-brown px-4">
@@ -304,10 +306,10 @@
 
 <script th:inline="javascript" th:if="${product != null}">
   /*<![CDATA[*/
-  // Synchronise l'option de livraison choisie avec le formulaire WhatsApp
+  // Synchronise l'option de livraison choisie avec le formulaire panier
   document.querySelectorAll('input[name="deliveryOption"]').forEach(function(el) {
     el.addEventListener('change', function() {
-      document.getElementById('waDeliveryOption').value = this.value;
+      document.getElementById('cartDeliveryOption').value = this.value;
     });
   });
   /*]]>*/

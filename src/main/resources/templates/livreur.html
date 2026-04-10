@@ -34,11 +34,12 @@
   <!-- Commande inactive -->
   <div th:if="${!active}" class="alert alert-warning text-center">
     <i class="bi bi-exclamation-triangle me-2"></i>
-    Cette livraison n'est pas active ou a déjà été livrée.
+    Cette livraison n'est pas encore active ou a déjà été livrée.
+    Vous pouvez quand même démarrer le GPS ci-dessous.
   </div>
 
-  <!-- Commande active -->
-  <div th:if="${active}">
+  <!-- Commande active ou en attente -->
+  <div th:if="${token != null and !token.isEmpty()}">
     <div class="card border-0 shadow-sm mb-4" style="border-radius:12px;">
       <div class="card-body">
         <p class="small text-muted mb-1">Commande</p>
