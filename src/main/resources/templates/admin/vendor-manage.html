@@ -66,54 +66,23 @@
         </h2>
         <form th:action="@{/admin/vendors/{id}/plan(id=${vendor.id})}" method="post" class="row g-3">
           <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-          <!-- Plan transmis via champ hidden mis à jour par JS -->
-          <input type="hidden" id="selectedPlanValue" name="plan"
-                 th:value="${vendor.plan?.name() ?: 'GRATUIT'}"/>
 
           <div class="col-12">
             <label class="form-label fw-semibold small">Plan d'abonnement</label>
-            <div class="row g-2">
-              <!-- Gratuit -->
-              <div class="col-6 col-md-3">
-                <div id="plan-gratuit" class="plan-option d-block p-3 rounded-3 text-center"
-                     data-plan="GRATUIT"
-                     style="cursor:pointer;border:2px solid #dee2e6;transition:all 0.2s ease;">
-                  <i class="bi bi-box-seam d-block fs-4 mb-1"></i>
-                  <div class="fw-semibold small">Gratuit</div>
-                  <div class="text-muted" style="font-size:.7rem;" th:text="${gratuitPrice} + ' FCFA'"></div>
-                </div>
-              </div>
-              <!-- Pro Local -->
-              <div class="col-6 col-md-3">
-                <div id="plan-pro-local" class="plan-option d-block p-3 rounded-3 text-center"
-                     data-plan="PRO_LOCAL"
-                     style="cursor:pointer;border:2px solid #dee2e6;transition:all 0.2s ease;">
-                  <i class="bi bi-shop d-block fs-4 mb-1" style="color:var(--bolas-accent);"></i>
-                  <div class="fw-semibold small">Pro Local</div>
-                  <div class="text-muted" style="font-size:.7rem;" th:text="${proLocalPrice} + ' FCFA/mois'"></div>
-                </div>
-              </div>
-              <!-- Pro -->
-              <div class="col-6 col-md-3">
-                <div id="plan-pro" class="plan-option d-block p-3 rounded-3 text-center"
-                     data-plan="PRO"
-                     style="cursor:pointer;border:2px solid #dee2e6;transition:all 0.2s ease;">
-                  <i class="bi bi-rocket d-block fs-4 mb-1" style="color:var(--bolas-accent);"></i>
-                  <div class="fw-semibold small">Pro</div>
-                  <div class="text-muted" style="font-size:.7rem;" th:text="${proPrice} + ' FCFA/mois'"></div>
-                </div>
-              </div>
-              <!-- Premium -->
-              <div class="col-6 col-md-3">
-                <div id="plan-premium" class="plan-option d-block p-3 rounded-3 text-center"
-                     data-plan="PREMIUM"
-                     style="cursor:pointer;border:2px solid #dee2e6;transition:all 0.2s ease;">
-                  <i class="bi bi-stars d-block fs-4 mb-1" style="color:#C49A6C;"></i>
-                  <div class="fw-semibold small">Premium</div>
-                  <div class="text-muted" style="font-size:.7rem;" th:text="${premiumPrice} + ' FCFA/mois'"></div>
-                </div>
-              </div>
-            </div>
+            <select name="plan" class="form-select">
+              <option value="GRATUIT"
+                      th:selected="${vendor.plan?.name() == 'GRATUIT'}">
+                Gratuit — [[${gratuitPrice}]] FCFA
+              </option>
+              <option value="PRO_LOCAL"
+                      th:selected="${vendor.plan?.name() == 'PRO_LOCAL'}">
+                Pro Local — [[${proLocalPrice}]] FCFA/mois
+              </option>
+              <option value="PREMIUM"
+                      th:selected="${vendor.plan?.name() == 'PREMIUM'}">
+                Premium — [[${premiumPrice}]] FCFA/mois
+              </option>
+            </select>
           </div>
 
           <!-- Calendrier abonnement -->
@@ -208,33 +177,6 @@
 </div>
 <th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
 <script>
-(function() {
-  var hidden = document.getElementById('selectedPlanValue');
-  var options = document.querySelectorAll('.plan-option');
-
-  function selectPlan(planValue) {
-    hidden.value = planValue;
-    options.forEach(function(opt) {
-      if (opt.dataset.plan === planValue) {
-        opt.style.borderColor = '#8B5E3C';
-        opt.style.backgroundColor = '#f5ede6';
-      } else {
-        opt.style.borderColor = '#dee2e6';
-        opt.style.backgroundColor = '';
-      }
-    });
-  }
-
-  // Initialiser avec le plan actuel
-  selectPlan(hidden.value);
-
-  options.forEach(function(opt) {
-    opt.addEventListener('click', function() {
-      selectPlan(this.dataset.plan);
-    });
-  });
-})();
-
 function addMonths(n) {
   var input = document.querySelector('input[name="expiresAt"]');
   if (!input) return;

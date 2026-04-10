@@ -741,12 +741,10 @@ public class AdminController {
     @PostMapping("/admin/packs/prices")
     public String updatePackPrices(@RequestParam(required = false, defaultValue = "0") int gratuit,
                                    @RequestParam(required = false, defaultValue = "0") int proLocal,
-                                   @RequestParam(required = false, defaultValue = "0") int pro,
                                    @RequestParam(required = false, defaultValue = "0") int premium,
                                    RedirectAttributes ra) {
         packPricingService.updatePrice("GRATUIT", gratuit);
         packPricingService.updatePrice("PRO_LOCAL", proLocal);
-        packPricingService.updatePrice("PRO", pro);
         packPricingService.updatePrice("PREMIUM", premium);
         ra.addFlashAttribute("flashOk", "Prix des packs mis à jour.");
         return "redirect:/admin/vendors";

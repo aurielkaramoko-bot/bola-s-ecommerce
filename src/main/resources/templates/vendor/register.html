@@ -19,102 +19,7 @@
     </p>
   </div>
 
-  <!-- ===== Choix du plan ===== -->
-  <div class="row g-3 mb-5" id="plan-cards">
-
-    <!-- Pack Débutant -->
-    <div class="col-md-3">
-      <label class="plan-card h-100 d-block position-relative" style="cursor:pointer;">
-        <input type="radio" name="selectedPlanRadio" value="GRATUIT" class="d-none plan-radio" checked/>
-        <div class="admin-card p-4 h-100 plan-card-inner" data-plan="GRATUIT">
-          <span class="badge bg-success position-absolute top-0 end-0 m-3">Gratuit</span>
-          <i class="bi bi-box-seam" style="font-size:1.6rem;color:var(--bolas-accent);"></i>
-          <h3 class="h6 fw-bold mt-2 mb-1">Pack Débutant</h3>
-          <p class="text-muted small mb-2">Pour commencer sans risque</p>
-          <ul class="list-unstyled small text-muted mb-0">
-            <li><i class="bi bi-check text-success me-1"></i>Jusqu'à 10 produits</li>
-            <li><i class="bi bi-check text-success me-1"></i>Page boutique personnelle</li>
-            <li><i class="bi bi-check text-success me-1"></i>Visible dans la recherche</li>
-            <li><i class="bi bi-check text-success me-1"></i>Visible dans votre catégorie</li>
-            <li><i class="bi bi-dash text-muted me-1"></i>Pas de mise en avant homepage</li>
-            <li><i class="bi bi-dash text-muted me-1"></i>Pas de suivi commande</li>
-          </ul>
-          <div class="mt-3 fw-bold" style="color:var(--bolas-accent);"
-               th:text="${gratuitPrice} + ' FCFA'">0 FCFA</div>
-        </div>
-      </label>
-    </div>
-
-    <!-- Pro Local -->
-    <div class="col-md-3">
-      <label class="plan-card h-100 d-block position-relative" style="cursor:pointer;">
-        <input type="radio" name="selectedPlanRadio" value="PRO_LOCAL" class="d-none plan-radio"/>
-        <div class="admin-card p-4 h-100 plan-card-inner" data-plan="PRO_LOCAL" style="border:2px solid var(--bolas-accent);">
-          <span class="badge position-absolute top-0 end-0 m-3" style="background:var(--bolas-accent);">Pro Local</span>
-          <i class="bi bi-shop" style="font-size:1.6rem;color:var(--bolas-accent);"></i>
-          <h3 class="h6 fw-bold mt-2 mb-1">Pack Pro Local</h3>
-          <p class="text-muted small mb-2">Pour les boutiques locales</p>
-          <ul class="list-unstyled small text-muted mb-0">
-            <li><i class="bi bi-check text-success me-1"></i>Produits illimités</li>
-            <li><i class="bi bi-check text-success me-1"></i>Page boutique personnelle</li>
-            <li><i class="bi bi-check text-success me-1"></i>Visible dans la recherche</li>
-            <li><i class="bi bi-check text-success me-1"></i>Visible homepage</li>
-            <li><i class="bi bi-check text-success me-1"></i>Statistiques de vente</li>
-            <li><i class="bi bi-check text-success me-1"></i>Suivi & gestion commandes</li>
-          </ul>
-          <div class="mt-3 fw-bold" style="color:var(--bolas-accent);"
-               th:text="${proLocalPrice} + ' FCFA / mois'">3 000 FCFA / mois</div>
-        </div>
-      </label>
-    </div>
-
-    <!-- Pro -->
-    <div class="col-md-3">
-      <label class="plan-card h-100 d-block position-relative" style="cursor:pointer;">
-        <input type="radio" name="selectedPlanRadio" value="PRO" class="d-none plan-radio"/>
-        <div class="admin-card p-4 h-100 plan-card-inner" data-plan="PRO" style="border:2px solid var(--bolas-accent);">
-          <span class="badge position-absolute top-0 end-0 m-3" style="background:var(--bolas-accent);">Pro</span>
-          <i class="bi bi-rocket" style="font-size:1.6rem;color:var(--bolas-accent);"></i>
-          <h3 class="h6 fw-bold mt-2 mb-1">Pack Pro</h3>
-          <p class="text-muted small mb-2">Produits illimités + mise en avant</p>
-          <ul class="list-unstyled small text-muted mb-0">
-            <li><i class="bi bi-check text-success me-1"></i>Produits illimités</li>
-            <li><i class="bi bi-check text-success me-1"></i>Page boutique personnelle</li>
-            <li><i class="bi bi-check text-success me-1"></i>Visible dans la recherche</li>
-            <li><i class="bi bi-check text-success me-1"></i>Visible homepage</li>
-            <li><i class="bi bi-check text-success me-1"></i>Suivi & gestion commandes</li>
-          </ul>
-          <div class="mt-3 fw-bold" style="color:var(--bolas-accent);"
-               th:text="${proPrice} + ' FCFA / mois'">3 000 FCFA / mois</div>
-        </div>
-      </label>
-    </div>
-
-    <!-- Premium -->
-    <div class="col-md-3">
-      <label class="plan-card h-100 d-block position-relative" style="cursor:pointer;">
-        <input type="radio" name="selectedPlanRadio" value="PREMIUM" class="d-none plan-radio"/>
-        <div class="admin-card p-4 h-100 plan-card-inner" data-plan="PREMIUM" style="border:2px solid #c49a6c;">
-          <span class="badge position-absolute top-0 end-0 m-3" style="background:linear-gradient(135deg,#8B5E3C,#C49A6C);">Premium</span>
-          <i class="bi bi-stars" style="font-size:1.6rem;color:#C49A6C;"></i>
-          <h3 class="h6 fw-bold mt-2 mb-1">Pack Premium</h3>
-          <p class="text-muted small mb-2">Pour les pros ambitieux</p>
-          <ul class="list-unstyled small text-muted mb-0">
-            <li><i class="bi bi-check text-success me-1"></i>Produits illimités</li>
-            <li><i class="bi bi-check text-success me-1"></i>Page boutique personnelle</li>
-            <li><i class="bi bi-check text-success me-1"></i>Visible dans la recherche</li>
-            <li><i class="bi bi-check text-success me-1"></i>Visible homepage prioritaire</li>
-            <li><i class="bi bi-check text-success me-1"></i>Suivi & gestion commandes</li>
-            <li><i class="bi bi-check text-success me-1"></i>Badge vendeur vérifié ⭐</li>
-            <li><i class="bi bi-check text-success me-1"></i>Support prioritaire</li>
-          </ul>
-          <div class="mt-3 fw-bold" style="color:#8B5E3C;"
-               th:text="${premiumPrice} + ' FCFA / mois'">10 000 FCFA / mois</div>
-        </div>
-      </label>
-    </div>
-
-  </div>
+  <!-- ===== Choix du plan — intégré dans le formulaire ci-dessous ===== -->
 
   <!-- Alertes -->
   <div th:if="${flashError}" class="alert alert-danger" th:text="${flashError}"></div>
@@ -136,10 +41,78 @@
 
     <form th:action="@{/vendor/register}" method="post" enctype="multipart/form-data" id="vendor-register-form">
       <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-      <!-- Plan sélectionné via les cartes radio ci-dessus -->
-      <input type="hidden" id="selectedPlan" name="selectedPlan" value="GRATUIT"/>
 
       <div class="row g-3">
+
+        <!-- Choix du pack -->
+        <div class="col-12">
+          <label class="form-label fw-semibold small">
+            <i class="bi bi-box-seam me-1"></i>Choisissez votre pack <span class="text-danger">*</span>
+          </label>
+          <div class="row g-3" id="plan-cards">
+
+            <!-- Pack Débutant -->
+            <div class="col-md-4">
+              <label class="h-100 d-block position-relative" style="cursor:pointer;">
+                <input type="radio" name="selectedPlan" value="GRATUIT" class="d-none plan-radio" checked/>
+                <div class="admin-card p-3 h-100 plan-card-inner" data-plan="GRATUIT"
+                     style="border:2px solid var(--bolas-accent);outline:3px solid var(--bolas-accent);">
+                  <span class="badge bg-success position-absolute top-0 end-0 m-2">Gratuit</span>
+                  <i class="bi bi-box-seam" style="font-size:1.4rem;color:var(--bolas-accent);"></i>
+                  <h3 class="h6 fw-bold mt-2 mb-1">Pack Débutant</h3>
+                  <ul class="list-unstyled small text-muted mb-0">
+                    <li><i class="bi bi-check text-success me-1"></i>Jusqu'à 10 produits</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Page boutique</li>
+                    <li><i class="bi bi-dash text-muted me-1"></i>Pas de mise en avant</li>
+                  </ul>
+                  <div class="mt-2 fw-bold" style="color:var(--bolas-accent);"
+                       th:text="${gratuitPrice} + ' FCFA'">0 FCFA</div>
+                </div>
+              </label>
+            </div>
+
+            <!-- Pro Local -->
+            <div class="col-md-4">
+              <label class="h-100 d-block position-relative" style="cursor:pointer;">
+                <input type="radio" name="selectedPlan" value="PRO_LOCAL" class="d-none plan-radio"/>
+                <div class="admin-card p-3 h-100 plan-card-inner" data-plan="PRO_LOCAL"
+                     style="border:2px solid #dee2e6;">
+                  <span class="badge position-absolute top-0 end-0 m-2" style="background:var(--bolas-accent);">Pro Local</span>
+                  <i class="bi bi-shop" style="font-size:1.4rem;color:var(--bolas-accent);"></i>
+                  <h3 class="h6 fw-bold mt-2 mb-1">Pack Pro Local</h3>
+                  <ul class="list-unstyled small text-muted mb-0">
+                    <li><i class="bi bi-check text-success me-1"></i>Produits illimités</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Visible homepage</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Suivi commandes</li>
+                  </ul>
+                  <div class="mt-2 fw-bold" style="color:var(--bolas-accent);"
+                       th:text="${proLocalPrice} + ' FCFA/mois'">3 000 FCFA/mois</div>
+                </div>
+              </label>
+            </div>
+
+            <!-- Premium -->
+            <div class="col-md-4">
+              <label class="h-100 d-block position-relative" style="cursor:pointer;">
+                <input type="radio" name="selectedPlan" value="PREMIUM" class="d-none plan-radio"/>
+                <div class="admin-card p-3 h-100 plan-card-inner" data-plan="PREMIUM"
+                     style="border:2px solid #dee2e6;">
+                  <span class="badge position-absolute top-0 end-0 m-2" style="background:linear-gradient(135deg,#8B5E3C,#C49A6C);">Premium</span>
+                  <i class="bi bi-stars" style="font-size:1.4rem;color:#C49A6C;"></i>
+                  <h3 class="h6 fw-bold mt-2 mb-1">Pack Premium</h3>
+                  <ul class="list-unstyled small text-muted mb-0">
+                    <li><i class="bi bi-check text-success me-1"></i>Produits illimités</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Badge vérifié ⭐</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Support prioritaire</li>
+                  </ul>
+                  <div class="mt-2 fw-bold" style="color:#8B5E3C;"
+                       th:text="${premiumPrice} + ' FCFA/mois'">10 000 FCFA/mois</div>
+                </div>
+              </label>
+            </div>
+
+          </div>
+        </div>
 
         <!-- Nom de la boutique -->
         <div class="col-12">
@@ -295,23 +268,17 @@
 <th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
 <script th:src="@{/js/password-utils.js}"></script>
 <script>
-// ── Sélection du plan via les cartes ──────────────────────────────────────────
+// Sélection visuelle des cartes pack
 document.querySelectorAll('.plan-radio').forEach(function(radio) {
   radio.addEventListener('change', function() {
-    document.getElementById('selectedPlan').value = this.value;
     document.querySelectorAll('.plan-card-inner').forEach(function(card) {
       card.style.outline = 'none';
+      card.style.borderColor = '#dee2e6';
     });
-    this.closest('.plan-card').querySelector('.plan-card-inner').style.outline = '3px solid var(--bolas-accent)';
+    this.closest('label').querySelector('.plan-card-inner').style.outline = '3px solid var(--bolas-accent)';
+    this.closest('label').querySelector('.plan-card-inner').style.borderColor = 'var(--bolas-accent)';
   });
 });
-// Marquer le plan par défaut visuellement
-(function() {
-  var checked = document.querySelector('.plan-radio:checked');
-  if (checked) {
-    checked.closest('.plan-card').querySelector('.plan-card-inner').style.outline = '3px solid var(--bolas-accent)';
-  }
-})();
 
 // ── Preview des images uploadées ──────────────────────────────────────────────
 function setupPreview(inputId, previewDivId, previewImgId) {
