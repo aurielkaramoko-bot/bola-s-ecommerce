@@ -561,22 +561,39 @@ public class AdminController {
                              @RequestParam String password,
                              @RequestParam String phone,
                              @RequestParam(required = false) String shopName,
-                             @RequestParam(required = false) String email,
+                             @RequestParam String email,
                              RedirectAttributes ra) {
+        
+        // Validations
+        if (username == null || username.isBlank()) {
+            ra.addFlashAttribute("flashError", "L'identifiant est obligatoire.");
+            return "redirect:/admin/vendors";
+        }
+        if (email == null || email.isBlank()) {
+            ra.addFlashAttribute("flashError", "L'email est obligatoire.");
+            return "redirect:/admin/vendors";
+        }
         if (vendorUserRepository.findByUsername(username).isPresent()) {
             ra.addFlashAttribute("flashError", "Ce nom d'utilisateur existe déjà.");
             return "redirect:/admin/vendors";
         }
+        if (vendorUserRepository.findByEmail(email).isPresent()) {
+            ra.addFlashAttribute("flashError", "Cet email est déjà utilisé par un autre vendeur.");
+            return "redirect:/admin/vendors";
+        }
+        
         VendorUser v = new VendorUser();
         v.setUsername(username.trim());
         v.setPasswordHash(passwordEncoder.encode(password));
         v.setPhone(phone.trim());
         if (shopName != null && !shopName.isBlank()) v.setShopName(shopName.trim());
-        if (email != null && !email.isBlank()) v.setEmail(email.trim());
+        v.setEmail(email.trim());
         v.setActive(true);  // Créé par admin = actif directement
         v.setVendorStatus(com.bolas.ecommerce.model.VendorStatus.ACTIVE);
         vendorUserRepository.save(v);
-        ra.addFlashAttribute("flashOk", "Vendeur créé et activé.");
+        
+        log.info("✅ Vendeur créé par admin: {} ({})", v.getUsername(), v.getEmail());
+        ra.addFlashAttribute("flashOk", "Vendeur créé et activé: " + v.getDisplayName());
         return "redirect:/admin/vendors";
     }
 
@@ -641,18 +658,35 @@ public class AdminController {
     }
 
     @PostMapping("/admin/vendors/{id}/delete")
-    public String deleteVendor(@PathVariable Long id, RedirectAttributes ra) {        VendorUser v = vendorUserRepository.findById(id).orElseThrow();
-        // Détacher les produits du vendeur avant suppression
-        productRepository.findByVendor(v).forEach(p -> {
-            p.setVendor(null);
-            productRepository.save(p);
-        });
-        // Supprimer les catégories liées
-        vendorCategoryRepository.deleteByVendor(v);
-        // Supprimer les demandes livreurs liées
-        courierApplicationRepository.deleteByVendor(v);
-        vendorUserRepository.deleteById(id);
-        ra.addFlashAttribute("flashOk", "Vendeur supprimé.");
+    public String deleteVendor(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            VendorUser v = vendorUserRepository.findById(id).orElseThrow();
+            String vendorName = v.getDisplayName();
+            
+            log.info("   → Détachement des produits du vendeur...");
+            // Détacher les produits du vendeur avant suppression
+            productRepository.findByVendor(v).forEach(p -> {
+                p.setVendor(null);
+                productRepository.save(p);
+            });
+            
+            log.info("   → Suppression des catégories liées...");
+            // Supprimer les catégories liées
+            vendorCategoryRepository.deleteByVendor(v);
+            
+            log.info("   → Suppression des demandes livreurs liées...");
+            // Supprimer les demandes livreurs liées
+            courierApplicationRepository.deleteByVendor(v);
+            
+            log.info("   → Suppression du vendeur...");
+            vendorUserRepository.deleteById(id);
+            
+            ra.addFlashAttribute("flashOk", "Vendeur \"" + vendorName + "\" supprimé.");
+            log.info("✅ Vendeur {} supprimé avec succès", vendorName);
+        } catch (Exception e) {
+            log.error("❌ Erreur suppression vendeur {}", id, e);
+            ra.addFlashAttribute("flashError", "Erreur suppression : " + e.getMessage());
+        }
         return "redirect:/admin/vendors";
     }
 

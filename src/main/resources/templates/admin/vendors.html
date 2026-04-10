@@ -41,6 +41,7 @@
                   <th>Téléphone</th>
                   <th>Email</th>
                   <th>Description</th>
+                  <th>Niche proposée</th>
                   <th>Photo / CNI</th>
                   <th>Actions</th>
                 </tr>
@@ -62,6 +63,12 @@
                   <td class="text-muted" style="max-width:200px;">
                     <span th:text="${v.shopDescription ?: '—'}"
                           style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;display:block;">—</span>
+                  </td>
+                  <td>
+                    <span th:if="${v.requestedNiche != null}" 
+                          class="badge bg-info" 
+                          th:text="${v.requestedNiche}">—</span>
+                    <span th:if="${v.requestedNiche == null}" class="text-muted small">—</span>
                   </td>
                   <!-- Photos -->
                   <td style="min-width:160px;">
@@ -278,8 +285,9 @@
                    placeholder="ex. 22890123456"/>
           </div>
           <div class="col-12">
-            <label class="form-label small fw-semibold">Email</label>
-            <input type="email" class="form-control" name="email" maxlength="200"/>
+            <label class="form-label small fw-semibold">Email *</label>
+            <input type="email" class="form-control" name="email" required maxlength="200"
+                   placeholder="ex. contact@boutique.com"/>
           </div>
           <div class="col-12">
             <button type="submit" class="btn btn-hero-solid">

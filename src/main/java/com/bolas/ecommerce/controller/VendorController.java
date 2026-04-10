@@ -168,7 +168,7 @@ public class VendorController {
     public String registerSubmit(@RequestParam String shopName,
                                  @RequestParam String username,
                                  @RequestParam String phone,
-                                 @RequestParam(required = false) String email,
+                                 @RequestParam String email,
                                  @RequestParam String password,
                                  @RequestParam(required = false) String shopDescription,
                                  @RequestParam(required = false) List<Long> categoryIds,
@@ -182,7 +182,7 @@ public class VendorController {
         String cleanShopName    = sanitizer.sanitizeText(shopName);
         String cleanUsername    = sanitizer.sanitizeText(username);
         String cleanPhone       = sanitizer.sanitizeText(phone);
-        String cleanEmail       = (email != null && !email.isBlank()) ? sanitizer.sanitizeText(email) : null;
+        String cleanEmail       = sanitizer.sanitizeText(email);
         String cleanDesc        = sanitizer.sanitizeText(shopDescription);
         String cleanNiche       = sanitizer.sanitizeText(requestedNiche);
 
@@ -197,6 +197,14 @@ public class VendorController {
         }
         if (!cleanUsername.matches("[a-zA-Z0-9._-]+")) {
             ra.addFlashAttribute("flashError", "L'identifiant ne peut contenir que des lettres, chiffres, tirets et points.");
+            return "redirect:/vendor/register";
+        }
+        if (cleanEmail == null || cleanEmail.isBlank()) {
+            ra.addFlashAttribute("flashError", "L'email est obligatoire.");
+            return "redirect:/vendor/register";
+        }
+        if (!cleanEmail.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+            ra.addFlashAttribute("flashError", "L'email n'est pas valide.");
             return "redirect:/vendor/register";
         }
         if (password == null || password.length() < 8) {
@@ -217,7 +225,7 @@ public class VendorController {
             ra.addFlashAttribute("flashError", "Ce nom d'utilisateur est déjà pris.");
             return "redirect:/vendor/register";
         }
-        if (cleanEmail != null && vendorUserRepository.findByEmail(cleanEmail).isPresent()) {
+        if (vendorUserRepository.findByEmail(cleanEmail).isPresent()) {
             ra.addFlashAttribute("flashError", "Cet email est déjà utilisé.");
             return "redirect:/vendor/register";
         }
@@ -296,14 +304,17 @@ public class VendorController {
             String adminNotifMsg = "🆕 Nouvelle demande de boutique sur BOLA !\n\n"
                     + "🏪 Boutique : " + v.getShopName() + "\n"
                     + "👤 Identifiant : " + v.getUsername() + "\n"
+                    + "� Email : " + v.getEmail() + "\n"
                     + "📞 Téléphone : " + v.getPhone() + "\n"
                     + (catNames.isBlank() ? "" : "🏷️ Catégories : " + catNames + "\n")
-                    + (v.getRequestedNiche() != null ? "💡 Niche : " + v.getRequestedNiche() + "\n" : "")
+                    + (v.getRequestedNiche() != null ? "💡 Niche demandée : " + v.getRequestedNiche() + "\n" : "")
                     + "📋 Plan : " + v.getPlan().name() + "\n"
                     + "\n→ Validez depuis l'admin BOLA";
             metaWhatsApp.sendText(whatsAppService.getAdminWhatsApp(), adminNotifMsg);
+            log.info("✅ Notification WhatsApp inscription vendeur envoyée pour {} ({})", v.getShopName(), v.getUsername());
         } catch (Exception e) {
-            log.warn("Notification WhatsApp vendeur échouée (inscription sauvegardée quand même): {}", e.getMessage());
+            log.warn("⚠️ Notification WhatsApp inscription vendeur échouée (inscription sauvegardée quand même) pour {}: {}", 
+                    v.getUsername(), e.getMessage());
         }
 
         ra.addFlashAttribute("flashOk",
@@ -763,16 +774,22 @@ public class VendorController {
         app.setPhotoUrl(photoUrl);
         app.setIdDocumentUrl(idDocUrl);
         app.setIdDocVerified(idVerified);
+        app.setVendor(vendor);
         courierApplicationRepository.save(app);
 
         // Envoi automatique via Meta Cloud API (si configuré)
-        String notifMsg = "🚴 Nouvelle proposition de livreur sur BOLA !\n\n"
-                + "🏪 Vendeur : " + vendor.getDisplayName() + "\n"
-                + "👤 Livreur : " + cleanName + "\n"
-                + "📞 Téléphone : " + cleanPhone + "\n"
-                + (cleanZone != null ? "📍 Zone : " + cleanZone + "\n" : "")
-                + "\n→ Validez depuis l'admin BOLA";
-        metaWhatsApp.sendText(whatsAppService.getAdminWhatsApp(), notifMsg);
+        try {
+            String notifMsg = "🚴 Nouvelle proposition de livreur sur BOLA !\n\n"
+                    + "🏪 Vendeur : " + vendor.getDisplayName() + "\n"
+                    + "👤 Livreur : " + cleanName + "\n"
+                    + "📞 Téléphone : " + cleanPhone + "\n"
+                    + (cleanZone != null ? "📍 Zone : " + cleanZone + "\n" : "")
+                    + "\n→ Validez depuis l'admin BOLA";
+            metaWhatsApp.sendText(whatsAppService.getAdminWhatsApp(), notifMsg);
+            log.info("✅ Notification WhatsApp livreur envoyée pour {}", cleanName);
+        } catch (Exception e) {
+            log.warn("⚠️ Notification WhatsApp livreur échouée (proposition sauvegardée quand même): {}", e.getMessage());
+        }
 
         ra.addFlashAttribute("flashOk", "Demande envoyée ! L'admin validera ce livreur sous 24h.");
         return "redirect:/vendor/couriers";

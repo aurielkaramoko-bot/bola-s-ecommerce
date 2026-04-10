@@ -34,8 +34,9 @@ public class VendorUser {
     private String shopDescription;
 
     /** Email de contact du vendeur */
+    @NotBlank
     @Size(max = 200)
-    @Column(length = 200)
+    @Column(nullable = false, unique = true, length = 200)
     private String email;
 
     /** URL du logo / photo de boutique */
