@@ -6,7 +6,6 @@ import com.bolas.ecommerce.model.VendorUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -39,4 +38,18 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
     List<CustomerOrder> findByVendorProductsAndStatusIn(
             @Param("vendor") VendorUser vendor,
             @Param("statuses") Collection<OrderStatus> statuses);
+
+    /** Compte le total d'articles commandés par un client (téléphone) chez un vendeur */
+    @Query("""
+        SELECT COALESCE(SUM(l.quantity), 0)
+        FROM OrderLine l
+        JOIN l.product p
+        JOIN l.customerOrder o
+        WHERE p.vendor = :vendor
+        AND o.customerPhone = :phone
+        AND o.status IN ('CONFIRMED','READY','IN_DELIVERY','DELIVERED')
+        """)
+    long countItemsByCustomerPhoneAndVendor(
+            @Param("phone") String phone,
+            @Param("vendor") VendorUser vendor);
 }

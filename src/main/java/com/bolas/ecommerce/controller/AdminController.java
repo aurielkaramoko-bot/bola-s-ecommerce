@@ -23,6 +23,7 @@ import com.bolas.ecommerce.repository.CourierApplicationRepository;
 import com.bolas.ecommerce.repository.CountryRepository;
 import com.bolas.ecommerce.repository.VendorCategoryRepository;
 import com.bolas.ecommerce.repository.ReportRepository;
+import com.bolas.ecommerce.service.SessionCounterService;
 import com.bolas.ecommerce.service.WhatsAppNotificationService;
 import com.bolas.ecommerce.service.AuditLogService;
 import com.bolas.ecommerce.service.CategoryCoverImageUrlService;
@@ -76,6 +77,7 @@ public class AdminController {
     private final CountryRepository countryRepository;
     private final VendorCategoryRepository vendorCategoryRepository;
     private final ReportRepository reportRepository;
+    private final SessionCounterService sessionCounter;
 
     // --- ICI : RÉCUPÉRATION DE TA CLÉ API DEPUIS TON PC ---
     @Value("${google.maps.api.key}")
@@ -104,7 +106,8 @@ public class AdminController {
                            WhatsAppNotificationService whatsAppNotificationService,
                            CountryRepository countryRepository,
                            VendorCategoryRepository vendorCategoryRepository,
-                           ReportRepository reportRepository) {
+                           ReportRepository reportRepository,
+                           SessionCounterService sessionCounter) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.chatMessageRepository = chatMessageRepository;
@@ -123,6 +126,7 @@ public class AdminController {
         this.countryRepository = countryRepository;
         this.vendorCategoryRepository = vendorCategoryRepository;
         this.reportRepository = reportRepository;
+        this.sessionCounter = sessionCounter;
     }
 
     @InitBinder
@@ -686,6 +690,15 @@ public class AdminController {
         return "redirect:/admin/vendors";
     }
 
+    @GetMapping("/admin/vendors/{id}/manage")
+    @Transactional(readOnly = true)
+    public String manageVendor(@PathVariable Long id, Model model) {
+        VendorUser v = vendorUserRepository.findById(id).orElseThrow();
+        model.addAttribute("pageTitle", "Gérer " + v.getDisplayName() + " — Admin BOLA");
+        model.addAttribute("vendor", v);
+        return "admin/vendor-manage";
+    }
+
     @PostMapping("/admin/vendors/{id}/plan")
     public String setVendorPlan(@PathVariable Long id,
                                 @RequestParam String plan,
@@ -702,7 +715,7 @@ public class AdminController {
             vendorUserRepository.save(v);
         });
         ra.addFlashAttribute("flashOk", "Plan mis à jour.");
-        return "redirect:/admin/vendors";
+        return "redirect:/admin/vendors/" + id + "/manage";
     }
 
     @PostMapping("/admin/vendors/{id}/banner")
@@ -1037,6 +1050,62 @@ public class AdminController {
         redirectAttributes.addFlashAttribute("flashOk",
                 "Informations livreur enregistrées. Le client les verra sur la page de suivi (carte ~30 s).");
         return "redirect:/admin/delivery";
+    }
+
+    // ─── Analytics ───────────────────────────────────────────────────────────
+
+    @GetMapping("/admin/analytics")
+    @Transactional(readOnly = true)
+    public String analytics(Model model) {
+        model.addAttribute("pageTitle", "Analytics — Admin BOLA");
+        model.addAttribute("activeVisitors", sessionCounter.getActiveVisitors());
+        model.addAttribute("connectedVendors", sessionCounter.getConnectedVendors());
+
+        // Commandes ce mois
+        java.time.YearMonth thisMonth = java.time.YearMonth.now();
+        java.time.Instant startOfMonth = thisMonth.atDay(1).atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
+        long ordersThisMonth = customerOrderRepository.findAllByOrderByCreatedAtDesc().stream()
+                .filter(o -> o.getCreatedAt().isAfter(startOfMonth)).count();
+        model.addAttribute("ordersThisMonth", ordersThisMonth);
+
+        // Commandes par mois (12 derniers mois)
+        java.util.List<String> monthLabels = new java.util.ArrayList<>();
+        java.util.List<Long> monthCounts = new java.util.ArrayList<>();
+        for (int i = 11; i >= 0; i--) {
+            java.time.YearMonth ym = java.time.YearMonth.now().minusMonths(i);
+            java.time.Instant start = ym.atDay(1).atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
+            java.time.Instant end = ym.atEndOfMonth().atTime(23, 59, 59).toInstant(java.time.ZoneOffset.UTC);
+            long count = customerOrderRepository.findAllByOrderByCreatedAtDesc().stream()
+                    .filter(o -> o.getCreatedAt().isAfter(start) && o.getCreatedAt().isBefore(end)).count();
+            monthLabels.add(ym.getMonth().getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.FRENCH)
+                    + " " + ym.getYear());
+            monthCounts.add(count);
+        }
+        model.addAttribute("monthLabels", monthLabels);
+        model.addAttribute("monthCounts", monthCounts);
+
+        // Répartition par statut
+        java.util.List<String> statusLabels = new java.util.ArrayList<>();
+        java.util.List<Long> statusCounts = new java.util.ArrayList<>();
+        for (com.bolas.ecommerce.model.OrderStatus s : com.bolas.ecommerce.model.OrderStatus.values()) {
+            long c = customerOrderRepository.findByStatusOrderByCreatedAtAsc(s).size();
+            if (c > 0) { statusLabels.add(s.name()); statusCounts.add(c); }
+        }
+        model.addAttribute("statusLabels", statusLabels);
+        model.addAttribute("statusCounts", statusCounts);
+
+        // Répartition par plan vendeur
+        java.util.List<String> planLabels = new java.util.ArrayList<>();
+        java.util.List<Long> planCounts = new java.util.ArrayList<>();
+        for (com.bolas.ecommerce.model.VendorPlan p : com.bolas.ecommerce.model.VendorPlan.values()) {
+            long c = vendorUserRepository.findAll().stream()
+                    .filter(v -> v.getPlan() == p).count();
+            if (c > 0) { planLabels.add(p.name()); planCounts.add(c); }
+        }
+        model.addAttribute("planLabels", planLabels);
+        model.addAttribute("planCounts", planCounts);
+
+        return "admin/analytics";
     }
 
     // ─── Signalements ────────────────────────────────────────────────────────

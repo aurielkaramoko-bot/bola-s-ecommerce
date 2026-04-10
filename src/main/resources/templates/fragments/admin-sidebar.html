@@ -31,6 +31,9 @@
     <a class="nav-link" th:href="@{/admin/reports}" th:classappend="${active == 'reports' ? 'active' : ''}">
       <i class="bi bi-flag me-2"></i><span>Signalements</span>
     </a>
+    <a class="nav-link" th:href="@{/admin/analytics}" th:classappend="${active == 'analytics' ? 'active' : ''}">
+      <i class="bi bi-graph-up me-2"></i><span>Analytics</span>
+    </a>
     <hr style="border-color: #eee8e4;"/>
     <form th:action="@{/admin/logout}" method="post" class="px-2">
       <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>

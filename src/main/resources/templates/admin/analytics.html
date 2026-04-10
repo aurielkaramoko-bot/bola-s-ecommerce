@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Analytics — Admin BOLA</title>
+</head>
+<body class="bolas-body">
+<nav th:replace="~{fragments/header :: navbar}"></nav>
+<div class="container-fluid">
+  <div class="row">
+    <div th:replace="~{fragments/admin-sidebar :: sidebar(active='analytics')}"></div>
+    <main class="col-12 col-md-9 col-lg-10 ms-sm-auto px-4 py-4">
+
+      <h1 class="h3 fw-semibold mb-4" style="color:#8B5E3C;">
+        <i class="bi bi-graph-up me-2"></i>Analytics — Flux du site
+      </h1>
+
+      <!-- Visiteurs en temps réel -->
+      <div class="row g-3 mb-4">
+        <div class="col-sm-4">
+          <div class="admin-card p-4 text-center">
+            <div class="small text-muted mb-1">Visiteurs actifs maintenant</div>
+            <div class="h2 fw-bold mb-0" style="color:var(--bolas-accent);"
+                 th:text="${activeVisitors}">0</div>
+            <div class="small text-muted mt-1">
+              <span class="status-dot dot-active d-inline-block me-1"
+                    style="width:8px;height:8px;border-radius:50%;background:#25D366;animation:pulse 1.5s infinite;"></span>
+              En ligne
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-4">
+          <div class="admin-card p-4 text-center">
+            <div class="small text-muted mb-1">Vendeurs connectés</div>
+            <div class="h2 fw-bold mb-0" style="color:var(--bolas-accent);"
+                 th:text="${connectedVendors}">0</div>
+          </div>
+        </div>
+        <div class="col-sm-4">
+          <div class="admin-card p-4 text-center">
+            <div class="small text-muted mb-1">Commandes ce mois</div>
+            <div class="h2 fw-bold mb-0" style="color:var(--bolas-accent);"
+                 th:text="${ordersThisMonth}">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Courbe commandes par mois (12 derniers mois) -->
+      <div class="admin-card p-4 mb-4">
+        <h2 class="h6 fw-semibold mb-3" style="color:#8B5E3C;">
+          <i class="bi bi-bar-chart me-1"></i>Commandes par mois (12 derniers mois)
+        </h2>
+        <canvas id="ordersChart" style="max-height:300px;"></canvas>
+      </div>
+
+      <!-- Répartition par statut -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <div class="admin-card p-4">
+            <h2 class="h6 fw-semibold mb-3" style="color:#8B5E3C;">
+              <i class="bi bi-pie-chart me-1"></i>Répartition des commandes
+            </h2>
+            <canvas id="statusChart" style="max-height:220px;"></canvas>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="admin-card p-4">
+            <h2 class="h6 fw-semibold mb-3" style="color:#8B5E3C;">
+              <i class="bi bi-shop me-1"></i>Vendeurs par plan
+            </h2>
+            <canvas id="planChart" style="max-height:220px;"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+/*<![CDATA[*/
+var monthLabels  = /*[[${monthLabels}]]*/ [];
+var monthCounts  = /*[[${monthCounts}]]*/ [];
+var statusLabels = /*[[${statusLabels}]]*/ [];
+var statusCounts = /*[[${statusCounts}]]*/ [];
+var planLabels   = /*[[${planLabels}]]*/ [];
+var planCounts   = /*[[${planCounts}]]*/ [];
+
+// Courbe commandes par mois
+new Chart(document.getElementById('ordersChart'), {
+  type: 'line',
+  data: {
+    labels: monthLabels,
+    datasets: [{
+      label: 'Commandes',
+      data: monthCounts,
+      borderColor: '#8B5E3C',
+      backgroundColor: 'rgba(139,94,60,.12)',
+      tension: 0.4,
+      fill: true,
+      pointBackgroundColor: '#8B5E3C'
+    }]
+  },
+  options: { responsive: true, plugins: { legend: { display: false } } }
+});
+
+// Répartition statuts
+new Chart(document.getElementById('statusChart'), {
+  type: 'doughnut',
+  data: {
+    labels: statusLabels,
+    datasets: [{
+      data: statusCounts,
+      backgroundColor: ['#ffc107','#8B5E3C','#198754','#0d6efd','#dc3545','#6c757d']
+    }]
+  },
+  options: { responsive: true }
+});
+
+// Répartition plans
+new Chart(document.getElementById('planChart'), {
+  type: 'doughnut',
+  data: {
+    labels: planLabels,
+    datasets: [{
+      data: planCounts,
+      backgroundColor: ['#6c757d','#C49A6C','#8B5E3C','#ffc107']
+    }]
+  },
+  options: { responsive: true }
+});
+
+// Auto-refresh toutes les 30 secondes pour les visiteurs en temps réel
+setTimeout(function() { location.reload(); }, 30000);
+/*]]>*/
+</script>
+</body>
+</html>

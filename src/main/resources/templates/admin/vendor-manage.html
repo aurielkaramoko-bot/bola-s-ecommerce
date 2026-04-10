@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Gérer vendeur — Admin BOLA</title>
+</head>
+<body class="bolas-body">
+<nav th:replace="~{fragments/header :: navbar}"></nav>
+<div class="container-fluid">
+  <div class="row">
+    <div th:replace="~{fragments/admin-sidebar :: sidebar(active='vendors')}"></div>
+    <main class="col-12 col-md-9 col-lg-10 ms-sm-auto px-4 py-4" style="max-width:700px;">
+
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <a href="/admin/vendors" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+          <h1 class="h4 fw-bold mb-0" style="color:#8B5E3C;"
+              th:text="${vendor.displayName}">Vendeur</h1>
+          <p class="text-muted small mb-0" th:text="${vendor.email}">—</p>
+        </div>
+      </div>
+
+      <div th:if="${flashOk}" class="alert alert-success" th:text="${flashOk}"></div>
+      <div th:if="${flashError}" class="alert alert-danger" th:text="${flashError}"></div>
+
+      <!-- Statut actuel -->
+      <div class="admin-card p-4 mb-4">
+        <h2 class="h6 fw-bold mb-3" style="color:#8B5E3C;">
+          <i class="bi bi-info-circle me-1"></i>Statut actuel
+        </h2>
+        <div class="row g-3">
+          <div class="col-sm-4 text-center">
+            <div class="small text-muted mb-1">Plan</div>
+            <span class="badge fs-6"
+                  th:classappend="${vendor.plan?.name() == 'PREMIUM'} ? 'text-bg-warning' :
+                                   (${vendor.plan?.name() == 'PRO' or vendor.plan?.name() == 'PRO_LOCAL'} ? 'bg-warning text-dark' : 'bg-secondary')"
+                  th:text="${vendor.plan?.name() == 'PREMIUM'} ? '⭐ Premium' :
+                            (${vendor.plan?.name() == 'PRO_LOCAL'} ? '🏠 Pro Local' :
+                            (${vendor.plan?.name() == 'PRO'} ? '🏠 Pro' : 'Gratuit'))">—</span>
+          </div>
+          <div class="col-sm-4 text-center">
+            <div class="small text-muted mb-1">Statut</div>
+            <span th:if="${vendor.vendorStatus?.name() == 'ACTIVE'}" class="badge bg-success fs-6">Actif</span>
+            <span th:if="${vendor.vendorStatus?.name() == 'SUSPENDED'}" class="badge bg-danger fs-6">Suspendu</span>
+            <span th:if="${vendor.vendorStatus?.name() == 'PENDING'}" class="badge bg-warning text-dark fs-6">En attente</span>
+          </div>
+          <div class="col-sm-4 text-center">
+            <div class="small text-muted mb-1">Abonnement</div>
+            <div th:if="${vendor.subscriptionExpiresAt != null}">
+              <span th:classappend="${vendor.daysUntilExpiry < 0} ? 'text-danger fw-bold' :
+                                     (${vendor.daysUntilExpiry <= 5} ? 'text-warning fw-bold' : 'text-success fw-bold')"
+                    th:text="${vendor.daysUntilExpiry < 0} ? 'Expiré' :
+                              (${vendor.daysUntilExpiry == 0} ? 'Expire aujourd\'hui !' :
+                              ${vendor.daysUntilExpiry} + ' jours restants')">—</span>
+            </div>
+            <span th:if="${vendor.subscriptionExpiresAt == null}" class="text-muted small">Aucun</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Changer le plan -->
+      <div class="admin-card p-4 mb-4">
+        <h2 class="h6 fw-bold mb-3" style="color:#8B5E3C;">
+          <i class="bi bi-arrow-repeat me-1"></i>Changer le plan
+        </h2>
+        <form th:action="@{/admin/vendors/{id}/plan(id=${vendor.id})}" method="post" class="row g-3">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+          <div class="col-12">
+            <label class="form-label fw-semibold small">Plan d'abonnement</label>
+            <div class="row g-2">
+              <!-- Gratuit -->
+              <div class="col-6 col-md-3">
+                <label class="d-block p-3 rounded-3 text-center"
+                       style="cursor:pointer;border:2px solid #dee2e6;"
+                       th:classappend="${vendor.plan?.name() == 'GRATUIT'} ? 'border-secondary bg-light' : ''">
+                  <input type="radio" name="plan" value="GRATUIT" class="d-none"
+                         th:checked="${vendor.plan?.name() == 'GRATUIT'}"/>
+                  <i class="bi bi-box-seam d-block fs-4 mb-1"></i>
+                  <div class="fw-semibold small">Gratuit</div>
+                  <div class="text-muted" style="font-size:.7rem;">0 FCFA</div>
+                </label>
+              </div>
+              <!-- Pro Local -->
+              <div class="col-6 col-md-3">
+                <label class="d-block p-3 rounded-3 text-center"
+                       style="cursor:pointer;border:2px solid #dee2e6;"
+                       th:classappend="${vendor.plan?.name() == 'PRO_LOCAL'} ? 'border-warning bg-warning bg-opacity-10' : ''">
+                  <input type="radio" name="plan" value="PRO_LOCAL" class="d-none"
+                         th:checked="${vendor.plan?.name() == 'PRO_LOCAL'}"/>
+                  <i class="bi bi-shop d-block fs-4 mb-1" style="color:var(--bolas-accent);"></i>
+                  <div class="fw-semibold small">Pro Local</div>
+                  <div class="text-muted" style="font-size:.7rem;">3 000 FCFA/mois</div>
+                </label>
+              </div>
+              <!-- Pro -->
+              <div class="col-6 col-md-3">
+                <label class="d-block p-3 rounded-3 text-center"
+                       style="cursor:pointer;border:2px solid #dee2e6;"
+                       th:classappend="${vendor.plan?.name() == 'PRO'} ? 'border-warning bg-warning bg-opacity-10' : ''">
+                  <input type="radio" name="plan" value="PRO" class="d-none"
+                         th:checked="${vendor.plan?.name() == 'PRO'}"/>
+                  <i class="bi bi-rocket d-block fs-4 mb-1" style="color:var(--bolas-accent);"></i>
+                  <div class="fw-semibold small">Pro</div>
+                  <div class="text-muted" style="font-size:.7rem;">3 000 FCFA/mois</div>
+                </label>
+              </div>
+              <!-- Premium -->
+              <div class="col-6 col-md-3">
+                <label class="d-block p-3 rounded-3 text-center"
+                       style="cursor:pointer;border:2px solid #dee2e6;"
+                       th:classappend="${vendor.plan?.name() == 'PREMIUM'} ? 'border-warning bg-warning bg-opacity-25' : ''">
+                  <input type="radio" name="plan" value="PREMIUM" class="d-none"
+                         th:checked="${vendor.plan?.name() == 'PREMIUM'}"/>
+                  <i class="bi bi-stars d-block fs-4 mb-1" style="color:#C49A6C;"></i>
+                  <div class="fw-semibold small">Premium</div>
+                  <div class="text-muted" style="font-size:.7rem;">10 000 FCFA/mois</div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Calendrier abonnement -->
+          <div class="col-md-6">
+            <label class="form-label fw-semibold small">
+              <i class="bi bi-calendar-check me-1"></i>Date de début
+            </label>
+            <input type="date" name="startsAt" class="form-control"
+                   th:value="${vendor.subscriptionStartsAt}"/>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold small">
+              <i class="bi bi-calendar-x me-1"></i>Date de fin (expiration)
+            </label>
+            <input type="date" name="expiresAt" class="form-control"
+                   th:value="${vendor.subscriptionExpiresAt}"/>
+          </div>
+
+          <!-- Raccourcis durée -->
+          <div class="col-12">
+            <div class="d-flex gap-2 flex-wrap">
+              <span class="small text-muted me-1">Ajouter :</span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addMonths(1)">+1 mois</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addMonths(3)">+3 mois</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addMonths(6)">+6 mois</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addMonths(12)">+1 an</button>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <button type="submit" class="btn btn-hero-solid">
+              <i class="bi bi-check-circle me-1"></i>Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Privilèges du plan -->
+      <div class="admin-card p-4 mb-4">
+        <h2 class="h6 fw-bold mb-3" style="color:#8B5E3C;">
+          <i class="bi bi-shield-check me-1"></i>Privilèges du plan actuel
+        </h2>
+        <ul class="list-unstyled small mb-0">
+          <li class="mb-1"><i class="bi bi-check-circle text-success me-2"></i>Page boutique personnelle</li>
+          <li class="mb-1"><i class="bi bi-check-circle text-success me-2"></i>Visible dans la recherche</li>
+          <li class="mb-1"
+              th:classappend="${vendor.plan?.name() == 'GRATUIT'} ? 'text-muted' : ''">
+            <i th:class="${vendor.plan?.name() == 'GRATUIT'} ? 'bi bi-x-circle text-muted me-2' : 'bi bi-check-circle text-success me-2'"></i>
+            Produits illimités
+            <span th:if="${vendor.plan?.name() == 'GRATUIT'}" class="text-muted">(max 10)</span>
+          </li>
+          <li class="mb-1"
+              th:classappend="${vendor.plan?.name() == 'GRATUIT'} ? 'text-muted' : ''">
+            <i th:class="${vendor.plan?.name() == 'GRATUIT'} ? 'bi bi-x-circle text-muted me-2' : 'bi bi-check-circle text-success me-2'"></i>
+            Visible homepage
+          </li>
+          <li class="mb-1"
+              th:classappend="${vendor.plan?.name() == 'GRATUIT'} ? 'text-muted' : ''">
+            <i th:class="${vendor.plan?.name() == 'GRATUIT'} ? 'bi bi-x-circle text-muted me-2' : 'bi bi-check-circle text-success me-2'"></i>
+            Suivi & gestion commandes
+          </li>
+          <li class="mb-1"
+              th:classappend="${vendor.plan?.name() != 'PREMIUM'} ? 'text-muted' : ''">
+            <i th:class="${vendor.plan?.name() == 'PREMIUM'} ? 'bi bi-check-circle text-success me-2' : 'bi bi-x-circle text-muted me-2'"></i>
+            Badge vérifié ⭐ + bannière homepage
+          </li>
+        </ul>
+      </div>
+
+      <!-- Notifier le vendeur -->
+      <div class="admin-card p-4">
+        <h2 class="h6 fw-bold mb-3" style="color:#8B5E3C;">
+          <i class="bi bi-whatsapp me-1"></i>Notifier le vendeur
+        </h2>
+        <div class="d-flex gap-2 flex-wrap">
+          <a th:href="${'https://wa.me/' + vendor.phone + '?text=' +
+              T(java.net.URLEncoder).encode('Bonjour ' + vendor.displayName + ' ! Votre plan BOLA a été mis à jour. Connectez-vous pour voir vos nouveaux avantages.', 'UTF-8')}"
+             target="_blank" class="btn btn-success btn-sm">
+            <i class="bi bi-whatsapp me-1"></i>Notifier mise à jour plan
+          </a>
+          <a th:if="${vendor.subscriptionExpiresAt != null}"
+             th:href="${'https://wa.me/' + vendor.phone + '?text=' +
+              T(java.net.URLEncoder).encode('Bonjour ' + vendor.displayName + ' ! Votre abonnement BOLA expire le ' + vendor.subscriptionExpiresAt + '. Merci de renouveler pour continuer à bénéficier de vos avantages.', 'UTF-8')}"
+             target="_blank" class="btn btn-warning btn-sm">
+            <i class="bi bi-whatsapp me-1"></i>Rappel expiration
+          </a>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+<script>
+// Sélection visuelle des plans
+document.querySelectorAll('input[name="plan"]').forEach(function(radio) {
+  radio.addEventListener('change', function() {
+    document.querySelectorAll('input[name="plan"]').forEach(function(r) {
+      r.closest('label').style.borderColor = '#dee2e6';
+      r.closest('label').style.background = '';
+    });
+    this.closest('label').style.borderColor = '#8B5E3C';
+    this.closest('label').style.background = '#f5ede6';
+  });
+});
+
+// Ajouter des mois à la date de fin
+function addMonths(n) {
+  var input = document.querySelector('input[name="expiresAt"]');
+  var base = input.value ? new Date(input.value) : new Date();
+  base.setMonth(base.getMonth() + n);
+  input.value = base.toISOString().split('T')[0];
+}
+</script>
+</body>
+</html>
