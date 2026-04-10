@@ -45,6 +45,38 @@
         <p class="fw-bold mb-1" th:text="${tracking}">BOL-XXXX</p>
         <p class="small text-muted mb-1">Client</p>
         <p class="fw-semibold mb-0" th:text="${customerName}">Nom</p>
+        <p class="small text-muted mb-0 mt-1" th:if="${customerPhone != null}">
+          <i class="bi bi-telephone me-1"></i>
+          <a th:href="${'tel:' + customerPhone}" th:text="${customerPhone}" class="text-decoration-none">—</a>
+          &nbsp;
+          <a th:href="${'https://wa.me/' + customerPhone}" target="_blank" class="text-success text-decoration-none">
+            <i class="bi bi-whatsapp"></i>
+          </a>
+        </p>
+      </div>
+    </div>
+
+    <!-- Localisation du client -->
+    <div class="card border-0 shadow-sm mb-4" style="border-radius:12px;border-left:4px solid #8B5E3C!important;">
+      <div class="card-body">
+        <p class="fw-semibold mb-2" style="color:#8B5E3C;"><i class="bi bi-geo-alt-fill me-1"></i>Destination client</p>
+        <p class="small mb-1" th:if="${customerAddress != null}">
+          <i class="bi bi-house me-1 text-muted"></i><span th:text="${customerAddress}">—</span>
+        </p>
+        <!-- GPS coords si disponibles -->
+        <div th:if="${clientLatitude != null and clientLongitude != null}">
+          <p class="small text-muted mb-2">
+            <i class="bi bi-crosshair me-1"></i>
+            <span th:text="'Lat: ' + ${#numbers.formatDecimal(clientLatitude,1,5)} + '  Lng: ' + ${#numbers.formatDecimal(clientLongitude,1,5)}">—</span>
+          </p>
+          <a th:href="${'https://www.google.com/maps/dir/?api=1&destination=' + clientLatitude + ',' + clientLongitude}"
+             target="_blank" class="btn btn-bolas btn-sm w-100">
+            <i class="bi bi-map me-1"></i>Ouvrir dans Google Maps
+          </a>
+        </div>
+        <p th:if="${clientLatitude == null}" class="small text-muted mb-0">
+          <i class="bi bi-info-circle me-1"></i>Coordonnées GPS non disponibles — utiliser l'adresse ci-dessus.
+        </p>
       </div>
     </div>
 

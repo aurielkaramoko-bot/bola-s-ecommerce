@@ -3,6 +3,7 @@ package com.bolas.ecommerce.controller;
 import com.bolas.ecommerce.model.CustomerOrder;
 import com.bolas.ecommerce.model.OrderStatus;
 import com.bolas.ecommerce.repository.CustomerOrderRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,6 +32,10 @@ public class CourierController {
                     model.addAttribute("token", token);
                     model.addAttribute("tracking", order.getTrackingNumber());
                     model.addAttribute("customerName", order.getCustomerName());
+                    model.addAttribute("customerPhone", order.getCustomerPhone());
+                    model.addAttribute("customerAddress", order.getCustomerAddress());
+                    model.addAttribute("clientLatitude", order.getClientLatitude());
+                    model.addAttribute("clientLongitude", order.getClientLongitude());
                     model.addAttribute("active", active);
                     return "livreur";
                 })

@@ -484,12 +484,18 @@ public class AdminController {
     @PostMapping("/admin/orders/{id}/confirm")
     public String confirmOrder(@PathVariable Long id,
                                @RequestParam(required = false) String vendorPhone,
+                               @RequestParam(required = false, defaultValue = "0") long deliveryFee,
                                HttpServletRequest request,
                                RedirectAttributes ra) {
         CustomerOrder order = customerOrderRepository.findById(id).orElseThrow();
         if (order.getStatus() != OrderStatus.PENDING) {
             ra.addFlashAttribute("flashError", "Cette commande n'est plus en attente.");
             return "redirect:/admin/orders";
+        }
+        // Mettre à jour les frais de livraison si saisis
+        if (deliveryFee > 0) {
+            order.setDeliveryFeeCfa(deliveryFee);
+            customerOrderRepository.save(order);
         }
         String baseUrl = baseUrl(request);
         String phone = (vendorPhone != null && !vendorPhone.isBlank()) ? vendorPhone : "";
@@ -550,6 +556,11 @@ public class AdminController {
             var allCouriers = courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.APPROVED);
             model.addAttribute("allCouriers", allCouriers);
             log.info("      ✓ {} livreurs approuvés trouvés", allCouriers.size());
+
+            log.info("   → Recherche commandes READY pour assignation...");
+            var readyOrders = customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.READY);
+            model.addAttribute("readyOrders", readyOrders);
+            log.info("      ✓ {} commandes READY trouvées", readyOrders.size());
             
             log.info("✅ Page vendeurs chargée avec succès");
         } catch (Exception e) {
