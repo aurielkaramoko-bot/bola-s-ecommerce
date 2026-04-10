@@ -1032,6 +1032,14 @@ public class AdminController {
         return "redirect:/admin/reports";
     }
 
+    @PostMapping("/admin/reports/{id}/delete")
+    @Transactional
+    public String deleteReport(@PathVariable Long id, RedirectAttributes ra) {
+        reportRepository.deleteById(id);
+        ra.addFlashAttribute("flashOk", "Signalement supprimé.");
+        return "redirect:/admin/reports";
+    }
+
     /** Génère un lien GPS unique pour le livreur et passe la commande en IN_DELIVERY. */
     @PostMapping("/admin/delivery/{id}/generate-token")
     public String generateCourierToken(@PathVariable Long id,

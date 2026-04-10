@@ -28,6 +28,12 @@
       </span>
       <span th:if="${vendor.plan.name() == 'PRO_LOCAL' or vendor.plan.name() == 'PRO'}"
             class="badge bg-warning text-dark me-1">⭐ Pro</span>
+      <div class="mt-2">
+        <button type="button" class="btn btn-outline-danger btn-sm"
+                data-bs-toggle="modal" data-bs-target="#reportVendorModal">
+          <i class="bi bi-flag me-1"></i>Signaler cette boutique
+        </button>
+      </div>
     </div>
   </div>
 
@@ -51,5 +57,48 @@
 
 <div th:replace="~{fragments/footer :: footer}"></div>
 <th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+
+<!-- Modal signalement vendeur -->
+<div class="modal fade" id="reportVendorModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="border-color:var(--bolas-border);">
+        <h5 class="modal-title" style="color:var(--bolas-accent);">
+          <i class="bi bi-flag me-2"></i>Signaler cette boutique
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form th:action="@{/report}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <input type="hidden" name="targetType" value="VENDOR"/>
+        <input type="hidden" name="targetId" th:value="${vendor.id}"/>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Votre email</label>
+            <input type="email" class="form-control" name="reporterEmail"
+                   placeholder="Pour que nous puissions vous recontacter" maxlength="200"/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Raison <span class="text-danger">*</span></label>
+            <select class="form-select" name="reason" required>
+              <option value="">Choisir une raison</option>
+              <option value="Vendeur frauduleux">Vendeur frauduleux</option>
+              <option value="Produits contrefaits">Produits contrefaits</option>
+              <option value="Comportement inapproprié">Comportement inapproprié</option>
+              <option value="Arnaque suspectée">Arnaque suspectée</option>
+              <option value="Autre">Autre</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-color:var(--bolas-border);">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-flag me-1"></i>Signaler
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 </body>
 </html>
