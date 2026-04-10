@@ -6,7 +6,10 @@ import com.bolas.ecommerce.model.VendorUser;
 import com.bolas.ecommerce.repository.ChatMessageRepository;
 import com.bolas.ecommerce.repository.VendorUserRepository;
 import com.bolas.ecommerce.service.InputSanitizerService;
+import com.bolas.ecommerce.service.MetaWhatsAppService;
 import jakarta.servlet.http.HttpSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -21,16 +24,21 @@ import java.util.List;
 @Controller
 public class ChatController {
 
+    private static final Logger log = LoggerFactory.getLogger(ChatController.class);
+
     private final VendorUserRepository vendorUserRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final InputSanitizerService sanitizer;
+    private final MetaWhatsAppService metaWhatsApp;
 
     public ChatController(VendorUserRepository vendorUserRepository,
                           ChatMessageRepository chatMessageRepository,
-                          InputSanitizerService sanitizer) {
+                          InputSanitizerService sanitizer,
+                          MetaWhatsAppService metaWhatsApp) {
         this.vendorUserRepository = vendorUserRepository;
         this.chatMessageRepository = chatMessageRepository;
         this.sanitizer = sanitizer;
+        this.metaWhatsApp = metaWhatsApp;
     }
 
     /** Récupère le client en session */
@@ -104,6 +112,20 @@ public class ChatController {
         msg.setReadByCustomer(true);
         msg.setReadByVendor(false);
         chatMessageRepository.save(msg);
+
+        // Notifier le vendeur via WhatsApp si téléphone disponible
+        try {
+            if (vendor.getPhone() != null && !vendor.getPhone().isBlank()) {
+                String customerDisplay = customer.getFirstName() + " " + customer.getLastName();
+                String notif = "💬 Nouveau message de " + customerDisplay + " sur BOLA !\n\n"
+                        + "\"" + sanitized + "\"\n\n"
+                        + "→ Répondez depuis votre espace vendeur : Messages";
+                metaWhatsApp.sendText(vendor.getPhone(), notif);
+                log.info("✅ Notif WhatsApp chat envoyée au vendeur {}", vendor.getDisplayName());
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ Notif WhatsApp chat échouée pour vendeur {} : {}", vendor.getDisplayName(), e.getMessage());
+        }
 
         return "redirect:/chat/" + vendorId;
     }

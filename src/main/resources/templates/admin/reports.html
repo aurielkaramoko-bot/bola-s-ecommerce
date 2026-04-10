@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Signalements — Admin BOLA</title>
+</head>
+<body class="bolas-body">
+<nav th:replace="~{fragments/header :: navbar}"></nav>
+<div class="container-fluid">
+  <div class="row">
+    <div th:replace="~{fragments/admin-sidebar :: sidebar(active='reports')}"></div>
+    <main class="col-12 col-md-9 col-lg-10 ms-sm-auto px-4 py-4">
+
+      <h1 class="h3 fw-semibold mb-4" style="color:#8B5E3C;">
+        <i class="bi bi-flag me-2"></i>Signalements
+        <span th:if="${pendingReports != null and !pendingReports.isEmpty()}"
+              class="badge bg-danger ms-2" th:text="${pendingReports.size()}">0</span>
+      </h1>
+
+      <div th:if="${flashOk}" class="alert alert-success" th:text="${flashOk}"></div>
+      <div th:if="${flashError}" class="alert alert-danger" th:text="${flashError}"></div>
+
+      <!-- En attente -->
+      <div class="admin-card mb-4">
+        <div class="p-3 border-bottom fw-semibold" style="color:#8B5E3C;">
+          <i class="bi bi-hourglass-split me-1"></i>En attente de traitement
+          <span class="badge bg-danger ms-1" th:text="${pendingReports?.size() ?: 0}">0</span>
+        </div>
+        <div th:if="${pendingReports == null or pendingReports.isEmpty()}"
+             class="p-4 text-muted text-center small">Aucun signalement en attente.</div>
+        <div class="table-responsive" th:if="${pendingReports != null and !pendingReports.isEmpty()}">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light">
+              <tr><th>Type</th><th>Cible</th><th>Raison</th><th>Signalé par</th><th>Date</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              <tr th:each="r : ${pendingReports}">
+                <td>
+                  <span th:if="${r.targetType == 'PRODUCT'}" class="badge bg-info text-dark">Produit</span>
+                  <span th:if="${r.targetType == 'VENDOR'}" class="badge bg-warning text-dark">Vendeur</span>
+                </td>
+                <td>
+                  <span th:text="${r.targetName ?: '—'}">—</span>
+                  <a th:if="${r.targetType == 'PRODUCT'}"
+                     th:href="@{/products/{id}(id=${r.targetId})}" target="_blank"
+                     class="ms-1 text-muted small"><i class="bi bi-box-arrow-up-right"></i></a>
+                </td>
+                <td th:text="${r.reason}">—</td>
+                <td th:text="${r.reporterEmail ?: 'Anonyme'}">—</td>
+                <td th:text="${#temporals.format(r.createdAt,'dd/MM/yyyy HH:mm')}">—</td>
+                <td>
+                  <form th:action="@{/admin/reports/{id}/resolve(id=${r.id})}" method="post" class="m-0">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <button type="submit" class="btn btn-sm btn-outline-success">
+                      <i class="bi bi-check-circle me-1"></i>Traité
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Traités -->
+      <div class="admin-card" th:if="${resolvedReports != null and !resolvedReports.isEmpty()}">
+        <div class="p-3 border-bottom fw-semibold text-muted small">
+          <i class="bi bi-check-all me-1"></i>Traités récemment
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0 small">
+            <thead class="table-light">
+              <tr><th>Type</th><th>Cible</th><th>Raison</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+              <tr th:each="r : ${resolvedReports}">
+                <td>
+                  <span th:if="${r.targetType == 'PRODUCT'}" class="badge bg-secondary">Produit</span>
+                  <span th:if="${r.targetType == 'VENDOR'}" class="badge bg-secondary">Vendeur</span>
+                </td>
+                <td th:text="${r.targetName ?: '—'}">—</td>
+                <td th:text="${r.reason}">—</td>
+                <td th:text="${#temporals.format(r.createdAt,'dd/MM/yyyy')}">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+</body>
+</html>

@@ -22,6 +22,7 @@ import com.bolas.ecommerce.repository.VendorUserRepository;
 import com.bolas.ecommerce.repository.CourierApplicationRepository;
 import com.bolas.ecommerce.repository.CountryRepository;
 import com.bolas.ecommerce.repository.VendorCategoryRepository;
+import com.bolas.ecommerce.repository.ReportRepository;
 import com.bolas.ecommerce.service.WhatsAppNotificationService;
 import com.bolas.ecommerce.service.AuditLogService;
 import com.bolas.ecommerce.service.CategoryCoverImageUrlService;
@@ -74,6 +75,7 @@ public class AdminController {
     private final WhatsAppNotificationService whatsAppNotificationService;
     private final CountryRepository countryRepository;
     private final VendorCategoryRepository vendorCategoryRepository;
+    private final ReportRepository reportRepository;
 
     // --- ICI : RÉCUPÉRATION DE TA CLÉ API DEPUIS TON PC ---
     @Value("${google.maps.api.key}")
@@ -101,7 +103,8 @@ public class AdminController {
                            CourierApplicationRepository courierApplicationRepository,
                            WhatsAppNotificationService whatsAppNotificationService,
                            CountryRepository countryRepository,
-                           VendorCategoryRepository vendorCategoryRepository) {
+                           VendorCategoryRepository vendorCategoryRepository,
+                           ReportRepository reportRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.chatMessageRepository = chatMessageRepository;
@@ -119,6 +122,7 @@ public class AdminController {
         this.whatsAppNotificationService = whatsAppNotificationService;
         this.countryRepository = countryRepository;
         this.vendorCategoryRepository = vendorCategoryRepository;
+        this.reportRepository = reportRepository;
     }
 
     @InitBinder
@@ -1004,6 +1008,28 @@ public class AdminController {
         redirectAttributes.addFlashAttribute("flashOk",
                 "Informations livreur enregistrées. Le client les verra sur la page de suivi (carte ~30 s).");
         return "redirect:/admin/delivery";
+    }
+
+    // ─── Signalements ────────────────────────────────────────────────────────
+
+    @GetMapping("/admin/reports")
+    @Transactional(readOnly = true)
+    public String reports(Model model) {
+        model.addAttribute("pageTitle", "Signalements — Admin BOLA");
+        model.addAttribute("pendingReports", reportRepository.findByResolvedFalseOrderByCreatedAtAsc());
+        model.addAttribute("resolvedReports", reportRepository.findByResolvedTrueOrderByCreatedAtDesc());
+        return "admin/reports";
+    }
+
+    @PostMapping("/admin/reports/{id}/resolve")
+    @Transactional
+    public String resolveReport(@PathVariable Long id, RedirectAttributes ra) {
+        reportRepository.findById(id).ifPresent(r -> {
+            r.setResolved(true);
+            reportRepository.save(r);
+        });
+        ra.addFlashAttribute("flashOk", "Signalement marqué comme traité.");
+        return "redirect:/admin/reports";
     }
 
     /** Génère un lien GPS unique pour le livreur et passe la commande en IN_DELIVERY. */

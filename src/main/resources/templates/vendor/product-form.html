@@ -18,6 +18,7 @@
   </div>
 
   <div th:if="${flashError}" class="alert alert-danger" th:text="${flashError}"></div>
+  <div th:if="${flashOk}" class="alert alert-success" th:text="${flashOk}"></div>
 
   <div class="admin-card p-4">
     <form th:action="${isEdit} ? @{/vendor/products/{id}/edit(id=${product.id})} : @{/vendor/products/add}"
@@ -75,6 +76,26 @@
                     th:selected="${product.category != null and product.category.id == c.id}">
             </option>
           </select>
+          <div th:if="${categories == null or categories.isEmpty()}" class="form-text text-warning">
+            <i class="bi bi-exclamation-triangle me-1"></i>Aucune catégorie assignée. Envoyez une demande ci-dessous.
+          </div>
+        </div>
+
+        <!-- Demande de nouvelle catégorie -->
+        <div class="col-md-6 d-flex flex-column justify-content-end">
+          <div class="p-2 rounded-3" style="background:var(--bolas-light);border:1px dashed var(--bolas-accent);">
+            <p class="small fw-semibold mb-1" style="color:var(--bolas-accent);">
+              <i class="bi bi-plus-circle me-1"></i>Catégorie manquante ?
+            </p>
+            <form th:action="@{/vendor/products/request-category}" method="post" class="d-flex gap-2">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+              <input type="text" class="form-control form-control-sm" name="categoryName"
+                     placeholder="ex. Cosmétiques bio" maxlength="150" required/>
+              <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">
+                <i class="bi bi-send me-1"></i>Demander
+              </button>
+            </form>
+          </div>
         </div>
 
         <!-- Livraison -->

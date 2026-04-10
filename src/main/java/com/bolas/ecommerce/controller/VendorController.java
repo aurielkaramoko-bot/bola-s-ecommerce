@@ -101,11 +101,9 @@ public class VendorController {
         return null;
     }
 
-    /** Catégories autorisées pour ce vendeur */
+    /** Catégories autorisées pour ce vendeur — strictement celles assignées par l'admin */
     private List<Category> allowedCategories(VendorUser vendor) {
-        List<Category> cats = vendorCategoryRepository.findCategoriesByVendor(vendor);
-        // Si aucune restriction → toutes les catégories (rétro-compatible)
-        return cats.isEmpty() ? categoryRepository.findAll() : cats;
+        return vendorCategoryRepository.findCategoriesByVendor(vendor);
     }
 
     // ─── Authentification ─────────────────────────────────────────────────────
@@ -526,11 +524,11 @@ public class VendorController {
             return "redirect:/vendor/products/add";
         }
 
-        // Vérifier que le vendeur a accès à cette catégorie
+        // Vérifier strictement que le vendeur a accès à cette catégorie
         List<Category> allowed = allowedCategories(vendor);
-        if (!allowed.isEmpty() && allowed.stream().noneMatch(c -> c.getId().equals(categoryId))) {
+        if (allowed.stream().noneMatch(c -> c.getId().equals(categoryId))) {
             ra.addFlashAttribute("flashError",
-                    "Vous n'avez pas accès à cette catégorie. Demandez l'accès depuis votre dashboard.");
+                    "Vous n'avez pas accès à cette catégorie. Envoyez une demande à l'admin depuis le formulaire d'ajout de produit.");
             return "redirect:/vendor/products/add";
         }
 
@@ -616,6 +614,13 @@ public class VendorController {
         Category category = categoryRepository.findById(categoryId).orElse(null);
         if (category == null) {
             ra.addFlashAttribute("flashError", "Catégorie invalide.");
+            return "redirect:/vendor/products/" + id + "/edit";
+        }
+
+        // Vérifier strictement que le vendeur a accès à cette catégorie
+        List<Category> allowedEdit = allowedCategories(vendor);
+        if (allowedEdit.stream().noneMatch(c -> c.getId().equals(categoryId))) {
+            ra.addFlashAttribute("flashError", "Vous n'avez pas accès à cette catégorie.");
             return "redirect:/vendor/products/" + id + "/edit";
         }
 
@@ -848,6 +853,42 @@ public class VendorController {
 
         ra.addFlashAttribute("flashOk", "Demande envoyée ! L'admin validera ce livreur sous 24h.");
         return "redirect:/vendor/couriers";
+    }
+
+    // ─── Demande de nouvelle catégorie ───────────────────────────────────────
+
+    @PostMapping("/products/request-category")
+    public String requestCategory(@RequestParam String categoryName,
+                                  HttpSession session,
+                                  RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+        String cleanName = sanitizer.sanitizeText(categoryName);
+        if (cleanName == null || cleanName.isBlank()) {
+            ra.addFlashAttribute("flashError", "Veuillez préciser le nom de la catégorie souhaitée.");
+            return "redirect:/vendor/products/add";
+        }
+
+        // Notifier l'admin via WhatsApp
+        try {
+            String adminPhone = whatsAppService.getAdminWhatsApp();
+            if (adminPhone != null && !adminPhone.isBlank()) {
+                String msg = "📂 Demande de nouvelle catégorie sur BOLA !\n\n"
+                        + "🏪 Vendeur : " + vendor.getDisplayName() + "\n"
+                        + "📞 Téléphone : " + vendor.getPhone() + "\n"
+                        + "💡 Catégorie demandée : " + cleanName + "\n\n"
+                        + "→ Créez-la depuis l'admin BOLA si approprié.";
+                metaWhatsApp.sendText(adminPhone, msg);
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ Notif WhatsApp demande catégorie échouée : {}", e.getMessage());
+        }
+
+        ra.addFlashAttribute("flashOk",
+                "Demande envoyée ! L'admin créera la catégorie \"" + cleanName + "\" si elle est appropriée.");
+        return "redirect:/vendor/products/add";
     }
 
     // ─── Cartes de fidélité ─────────────────────────────────────────
