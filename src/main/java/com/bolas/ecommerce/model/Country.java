@@ -38,8 +38,8 @@ public class Country {
      * Taxe douanière appliquée aux commandes vers ce pays (en %).
      * Ex : 15 = 15%. 0 = pas de taxe (pays local).
      */
-    @Column(nullable = false)
-    private int customsTaxPercent = 0;
+    @Column(nullable = true)
+    private Integer customsTaxPercent = 0;
 
     public Long getId() { return id; }
 
@@ -55,6 +55,6 @@ public class Country {
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
 
-    public int getCustomsTaxPercent() { return customsTaxPercent; }
+    public int getCustomsTaxPercent() { return customsTaxPercent != null ? customsTaxPercent : 0; }
     public void setCustomsTaxPercent(int customsTaxPercent) { this.customsTaxPercent = customsTaxPercent; }
 }
