@@ -211,50 +211,56 @@
 <script>
 (function() {
   function initPlanSelection() {
-    console.log('Initializing plan selection...');
-    
-    const planOptions = document.querySelectorAll('.plan-option');
     const radios = document.querySelectorAll('input[name="plan"]');
+    const labels = document.querySelectorAll('label.plan-option');
     
     function updateStyles() {
       radios.forEach(radio => {
-        const label = radio.closest('.plan-option');
-        if (!label) return;
-        
-        if (radio.checked) {
-          label.style.borderColor = '#8B5E3C';
-          label.style.backgroundColor = '#f5ede6';
-        } else {
-          label.style.borderColor = '#dee2e6';
-          label.style.backgroundColor = '';
+        const label = radio.closest('label.plan-option');
+        if (label) {
+          if (radio.checked) {
+            label.style.borderColor = '#8B5E3C';
+            label.style.backgroundColor = '#f5ede6';
+          } else {
+            label.style.borderColor = '#dee2e6';
+            label.style.backgroundColor = '';
+          }
         }
       });
     }
     
-    // Au chargement, appliquer les styles au plan sélectionné
+    // Styles initiaux au chargement
     updateStyles();
     
-    // Cliquer sur un plan
-    planOptions.forEach(label => {
-      label.addEventListener('click', function(e) {
-        e.preventDefault();
-        const radio = this.querySelector('input[name="plan"]');
-        if (radio) {
-          radio.checked = true;
-          radio.dispatchEvent(new Event('change', { bubbles: true }));
-          updateStyles();
-          console.log('Plan sélectionné:', radio.value);
-        }
+    // Les radios natifs déclenchent le changement automatiquement quand on clique dessus
+    radios.forEach(radio => {
+      radio.addEventListener('change', updateStyles);
+      // Forcer le style quand on clique même sans changement visible
+      radio.addEventListener('click', function() {
+        updateStyles();
+        console.log('Plan cliqué:', this.value);
       });
     });
     
-    // Écouter les changements
-    radios.forEach(radio => {
-      radio.addEventListener('change', updateStyles);
+    // Permettre aussi de cliquer sur le label (le HTML standard le fait automatiquement)
+    // Mais on peut ajouter du feedback visuel
+    labels.forEach(label => {
+      label.style.cursor = 'pointer';
+      label.addEventListener('mouseenter', function() {
+        const radio = this.querySelector('input[name="plan"]');
+        if (radio && !radio.checked) {
+          this.style.borderColor = '#C49A6C';
+        }
+      });
+      label.addEventListener('mouseleave', function() {
+        const radio = this.querySelector('input[name="plan"]');
+        if (radio && !radio.checked) {
+          this.style.borderColor = '#dee2e6';
+        }
+      });
     });
   }
   
-  // Attendre que le DOM soit prêt
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initPlanSelection);
   } else {
