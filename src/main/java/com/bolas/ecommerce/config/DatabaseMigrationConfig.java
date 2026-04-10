@@ -233,6 +233,14 @@ public class DatabaseMigrationConfig {
                 } catch (SQLException e) {
                     log.warn("Migration vendor_users.subscription_expires_at: {}", e.getMessage());
                 }
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE vendor_users ADD COLUMN IF NOT EXISTS subscription_starts_at DATE"
+                    );
+                    log.info("Migration: colonne subscription_starts_at ajoutée sur vendor_users");
+                } catch (SQLException e) {
+                    log.warn("Migration vendor_users.subscription_starts_at: {}", e.getMessage());
+                }
 
                 // Migration 15 : table reports
                 try {

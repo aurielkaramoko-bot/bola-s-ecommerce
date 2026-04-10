@@ -146,6 +146,16 @@ public class AdminController {
         model.addAttribute("pendingVendorCount",
                 vendorUserRepository.countByVendorStatus(VendorStatus.PENDING));
 
+        // Abonnements expirant dans <= 5 jours
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate in5days = today.plusDays(5);
+        var expiring = vendorUserRepository.findAll().stream()
+                .filter(v -> v.getSubscriptionExpiresAt() != null
+                        && !v.getSubscriptionExpiresAt().isAfter(in5days))
+                .sorted(java.util.Comparator.comparing(v -> v.getSubscriptionExpiresAt()))
+                .toList();
+        model.addAttribute("expiringVendors", expiring);
+
         List<Category> categories = categoryRepository.findAll();
         List<String> chartLabels = new ArrayList<>();
         List<Long> chartCounts = new ArrayList<>();
@@ -679,17 +689,16 @@ public class AdminController {
     @PostMapping("/admin/vendors/{id}/plan")
     public String setVendorPlan(@PathVariable Long id,
                                 @RequestParam String plan,
+                                @RequestParam(required = false) String startsAt,
                                 @RequestParam(required = false) String expiresAt,
                                 RedirectAttributes ra) {
         vendorUserRepository.findById(id).ifPresent(v -> {
-            try {
-                v.setPlan(com.bolas.ecommerce.model.VendorPlan.valueOf(plan));
-            } catch (IllegalArgumentException ignored) {}
-            if (expiresAt != null && !expiresAt.isBlank()) {
-                v.setSubscriptionExpiresAt(java.time.LocalDate.parse(expiresAt));
-            } else {
-                v.setSubscriptionExpiresAt(null);
-            }
+            try { v.setPlan(com.bolas.ecommerce.model.VendorPlan.valueOf(plan)); }
+            catch (IllegalArgumentException ignored) {}
+            v.setSubscriptionStartsAt(startsAt != null && !startsAt.isBlank()
+                    ? java.time.LocalDate.parse(startsAt) : null);
+            v.setSubscriptionExpiresAt(expiresAt != null && !expiresAt.isBlank()
+                    ? java.time.LocalDate.parse(expiresAt) : null);
             vendorUserRepository.save(v);
         });
         ra.addFlashAttribute("flashOk", "Plan mis à jour.");

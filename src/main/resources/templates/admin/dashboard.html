@@ -12,6 +12,34 @@
     <main class="col-12 col-md-9 col-lg-10 ms-sm-auto px-4 py-4">
       <h1 class="h3 fw-semibold mb-4" style="color: #8B5E3C;" th:text="'Tableau de bord'">Tableau de bord</h1>
 
+      <!-- Alertes abonnements expirant bientôt -->
+      <div th:if="${expiringVendors != null and !expiringVendors.isEmpty()}"
+           class="alert alert-warning d-flex align-items-start gap-3 mb-4">
+        <i class="bi bi-exclamation-triangle-fill fs-4 flex-shrink-0"></i>
+        <div>
+          <div class="fw-semibold mb-1">⏰ Abonnements expirant dans moins de 5 jours :</div>
+          <ul class="mb-0 small">
+            <li th:each="v : ${expiringVendors}" class="mb-1 d-flex align-items-center gap-2 flex-wrap">
+              <strong th:text="${v.displayName}">—</strong>
+              — expire le <span th:text="${#temporals.format(v.subscriptionExpiresAt,'dd/MM/yyyy')}">—</span>
+              <span th:if="${v.daysUntilExpiry == 0}" class="text-danger fw-bold">(aujourd'hui !)</span>
+              <span th:if="${v.daysUntilExpiry < 0}" class="text-danger fw-bold">(expiré !)</span>
+              <span th:if="${v.daysUntilExpiry > 0}"
+                    th:text="'(' + ${v.daysUntilExpiry} + ' j restants)'" class="text-warning">—</span>
+              <a th:href="${'https://wa.me/' + v.phone + '?text=' +
+                  T(java.net.URLEncoder).encode(
+                    'Bonjour ' + v.displayName + ' ! 👋\n\nVotre abonnement BOLA (' + v.plan.name() + ') expire le ' +
+                    v.subscriptionExpiresAt + '.\n\nMerci de renouveler pour continuer à bénéficier de vos avantages. 🙏',
+                    'UTF-8')}"
+                 target="_blank"
+                 class="btn btn-success btn-sm py-0 px-2" style="font-size:.7rem;">
+                <i class="bi bi-whatsapp me-1"></i>Notifier
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
       <div class="row g-3 mb-4">
         <div class="col-sm-4">
           <div class="admin-card p-3 text-center">
