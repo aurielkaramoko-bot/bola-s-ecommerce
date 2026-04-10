@@ -48,6 +48,7 @@ public class VendorController {
     private final MetaWhatsAppService        metaWhatsApp;
     private final LoyaltyCardRepository      loyaltyCardRepository;
     private final SessionCounterService      sessionCounter;
+    private final com.bolas.ecommerce.service.PackPricingService packPricingService;
 
     public VendorController(CustomerOrderRepository orderRepository,
                             VendorUserRepository vendorUserRepository,
@@ -63,7 +64,8 @@ public class VendorController {
                             CourierApplicationRepository courierApplicationRepository,
                             MetaWhatsAppService metaWhatsApp,
                             LoyaltyCardRepository loyaltyCardRepository,
-                            SessionCounterService sessionCounter) {
+                            SessionCounterService sessionCounter,
+                            com.bolas.ecommerce.service.PackPricingService packPricingService) {
         this.orderRepository               = orderRepository;
         this.vendorUserRepository          = vendorUserRepository;
         this.productRepository             = productRepository;
@@ -79,6 +81,7 @@ public class VendorController {
         this.metaWhatsApp                  = metaWhatsApp;
         this.loyaltyCardRepository         = loyaltyCardRepository;
         this.sessionCounter                = sessionCounter;
+        this.packPricingService            = packPricingService;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -159,6 +162,10 @@ public class VendorController {
         if (currentVendor(session) != null) return "redirect:/vendor/dashboard";
         model.addAttribute("pageTitle", "Ouvrir ma boutique — BOLA");
         model.addAttribute("categories", categoryRepository.findAll());
+        model.addAttribute("gratuitPrice",  packPricingService.getGratuitPrice());
+        model.addAttribute("proLocalPrice", packPricingService.getProLocalPrice());
+        model.addAttribute("proPrice",      packPricingService.getProPrice());
+        model.addAttribute("premiumPrice",  packPricingService.getPremiumPrice());
         return "vendor/register";
     }
 

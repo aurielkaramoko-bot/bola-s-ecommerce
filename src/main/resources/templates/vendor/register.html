@@ -23,7 +23,7 @@
   <div class="row g-3 mb-5" id="plan-cards">
 
     <!-- Pack Débutant -->
-    <div class="col-md-4">
+    <div class="col-md-3">
       <label class="plan-card h-100 d-block position-relative" style="cursor:pointer;">
         <input type="radio" name="selectedPlanRadio" value="GRATUIT" class="d-none plan-radio" checked/>
         <div class="admin-card p-4 h-100 plan-card-inner" data-plan="GRATUIT">
@@ -39,13 +39,14 @@
             <li><i class="bi bi-dash text-muted me-1"></i>Pas de mise en avant homepage</li>
             <li><i class="bi bi-dash text-muted me-1"></i>Pas de suivi commande</li>
           </ul>
-          <div class="mt-3 fw-bold" style="color:var(--bolas-accent);">0 FCFA</div>
+          <div class="mt-3 fw-bold" style="color:var(--bolas-accent);"
+               th:text="${gratuitPrice} + ' FCFA'">0 FCFA</div>
         </div>
       </label>
     </div>
 
     <!-- Pro Local -->
-    <div class="col-md-4">
+    <div class="col-md-3">
       <label class="plan-card h-100 d-block position-relative" style="cursor:pointer;">
         <input type="radio" name="selectedPlanRadio" value="PRO_LOCAL" class="d-none plan-radio"/>
         <div class="admin-card p-4 h-100 plan-card-inner" data-plan="PRO_LOCAL" style="border:2px solid var(--bolas-accent);">
@@ -61,13 +62,36 @@
             <li><i class="bi bi-check text-success me-1"></i>Statistiques de vente</li>
             <li><i class="bi bi-check text-success me-1"></i>Suivi & gestion commandes</li>
           </ul>
-          <div class="mt-3 fw-bold" style="color:var(--bolas-accent);">3 000 FCFA / mois</div>
+          <div class="mt-3 fw-bold" style="color:var(--bolas-accent);"
+               th:text="${proLocalPrice} + ' FCFA / mois'">3 000 FCFA / mois</div>
+        </div>
+      </label>
+    </div>
+
+    <!-- Pro -->
+    <div class="col-md-3">
+      <label class="plan-card h-100 d-block position-relative" style="cursor:pointer;">
+        <input type="radio" name="selectedPlanRadio" value="PRO" class="d-none plan-radio"/>
+        <div class="admin-card p-4 h-100 plan-card-inner" data-plan="PRO" style="border:2px solid var(--bolas-accent);">
+          <span class="badge position-absolute top-0 end-0 m-3" style="background:var(--bolas-accent);">Pro</span>
+          <i class="bi bi-rocket" style="font-size:1.6rem;color:var(--bolas-accent);"></i>
+          <h3 class="h6 fw-bold mt-2 mb-1">Pack Pro</h3>
+          <p class="text-muted small mb-2">Produits illimités + mise en avant</p>
+          <ul class="list-unstyled small text-muted mb-0">
+            <li><i class="bi bi-check text-success me-1"></i>Produits illimités</li>
+            <li><i class="bi bi-check text-success me-1"></i>Page boutique personnelle</li>
+            <li><i class="bi bi-check text-success me-1"></i>Visible dans la recherche</li>
+            <li><i class="bi bi-check text-success me-1"></i>Visible homepage</li>
+            <li><i class="bi bi-check text-success me-1"></i>Suivi & gestion commandes</li>
+          </ul>
+          <div class="mt-3 fw-bold" style="color:var(--bolas-accent);"
+               th:text="${proPrice} + ' FCFA / mois'">3 000 FCFA / mois</div>
         </div>
       </label>
     </div>
 
     <!-- Premium -->
-    <div class="col-md-4">
+    <div class="col-md-3">
       <label class="plan-card h-100 d-block position-relative" style="cursor:pointer;">
         <input type="radio" name="selectedPlanRadio" value="PREMIUM" class="d-none plan-radio"/>
         <div class="admin-card p-4 h-100 plan-card-inner" data-plan="PREMIUM" style="border:2px solid #c49a6c;">
@@ -84,7 +108,8 @@
             <li><i class="bi bi-check text-success me-1"></i>Badge vendeur vérifié ⭐</li>
             <li><i class="bi bi-check text-success me-1"></i>Support prioritaire</li>
           </ul>
-          <div class="mt-3 fw-bold" style="color:#8B5E3C;">10 000 FCFA / mois</div>
+          <div class="mt-3 fw-bold" style="color:#8B5E3C;"
+               th:text="${premiumPrice} + ' FCFA / mois'">10 000 FCFA / mois</div>
         </div>
       </label>
     </div>
