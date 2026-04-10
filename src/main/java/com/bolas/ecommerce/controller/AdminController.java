@@ -591,6 +591,12 @@ public class AdminController {
             model.addAttribute("readyOrders", assignableOrders);
             log.info("      ✓ {} commandes assignables trouvées", assignableOrders.size());
             
+            // Prix des packs pour le formulaire de tarification
+            model.addAttribute("gratuitPrice", packPricingService.getGratuitPrice());
+            model.addAttribute("proLocalPrice", packPricingService.getProLocalPrice());
+            model.addAttribute("proPrice", packPricingService.getProPrice());
+            model.addAttribute("premiumPrice", packPricingService.getPremiumPrice());
+
             log.info("✅ Page vendeurs chargée avec succès");
         } catch (Exception e) {
             log.error("❌ Erreur CRITIQUE chargement vendeurs", e);
@@ -713,13 +719,15 @@ public class AdminController {
 
     @PostMapping("/admin/vendors/{id}/plan")
     public String setVendorPlan(@PathVariable Long id,
-                                @RequestParam String plan,
+                                @RequestParam(required = false) String plan,
                                 @RequestParam(required = false) String startsAt,
                                 @RequestParam(required = false) String expiresAt,
                                 RedirectAttributes ra) {
         vendorUserRepository.findById(id).ifPresent(v -> {
-            try { v.setPlan(com.bolas.ecommerce.model.VendorPlan.valueOf(plan)); }
-            catch (IllegalArgumentException ignored) {}
+            if (plan != null && !plan.isBlank()) {
+                try { v.setPlan(com.bolas.ecommerce.model.VendorPlan.valueOf(plan)); }
+                catch (IllegalArgumentException ignored) {}
+            }
             v.setSubscriptionStartsAt(startsAt != null && !startsAt.isBlank()
                     ? java.time.LocalDate.parse(startsAt) : null);
             v.setSubscriptionExpiresAt(expiresAt != null && !expiresAt.isBlank()
@@ -728,6 +736,20 @@ public class AdminController {
         });
         ra.addFlashAttribute("flashOk", "Plan mis à jour.");
         return "redirect:/admin/vendors/" + id + "/manage";
+    }
+
+    @PostMapping("/admin/packs/prices")
+    public String updatePackPrices(@RequestParam(required = false, defaultValue = "0") int gratuit,
+                                   @RequestParam(required = false, defaultValue = "0") int proLocal,
+                                   @RequestParam(required = false, defaultValue = "0") int pro,
+                                   @RequestParam(required = false, defaultValue = "0") int premium,
+                                   RedirectAttributes ra) {
+        packPricingService.updatePrice("GRATUIT", gratuit);
+        packPricingService.updatePrice("PRO_LOCAL", proLocal);
+        packPricingService.updatePrice("PRO", pro);
+        packPricingService.updatePrice("PREMIUM", premium);
+        ra.addFlashAttribute("flashOk", "Prix des packs mis à jour.");
+        return "redirect:/admin/vendors";
     }
 
     @PostMapping("/admin/vendors/{id}/banner")

@@ -261,6 +261,19 @@ public class DatabaseMigrationConfig {
                     log.warn("Migration reports: {}", e.getMessage());
                 }
 
+                // Migration 16 : table app_settings (paramètres persistés : prix des packs, etc.)
+                try {
+                    conn.createStatement().execute("""
+                        CREATE TABLE IF NOT EXISTS app_settings (
+                            setting_key VARCHAR(100) PRIMARY KEY,
+                            setting_value VARCHAR(500) NOT NULL
+                        )
+                    """);
+                    log.info("Migration: table app_settings créée/vérifiée");
+                } catch (SQLException e) {
+                    log.warn("Migration app_settings: {}", e.getMessage());
+                }
+
             } catch (Exception e) {
                 log.error("Migration échouée: {}", e.getMessage());
             }
