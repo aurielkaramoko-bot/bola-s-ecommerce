@@ -100,7 +100,7 @@ public class HomeController {
     @Transactional(readOnly = true)
     public String boutiqueDetail(@PathVariable Long id, Model model) {
         var vendor = vendorUserRepository.findById(id)
-                .filter(v -> v.getVendorStatus() == VendorStatus.ACTIVE)
+                .filter(v -> v.getVendorStatus() == VendorStatus.ACTIVE && v.isActive())
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
                         org.springframework.http.HttpStatus.NOT_FOUND, "Boutique introuvable"));
         model.addAttribute("pageTitle", vendor.getDisplayName() + " — BOLA");
