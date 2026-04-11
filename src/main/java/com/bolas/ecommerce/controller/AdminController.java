@@ -1233,4 +1233,39 @@ public class AdminController {
         ra.addFlashAttribute("courierLink", link);
         return "redirect:/admin/orders";
     }
+
+    @GetMapping("/admin/vendors/{id}/notify-plan")
+public String notifyPlan(@PathVariable Long id) {
+    VendorUser v = vendorUserRepository.findById(id).orElseThrow();
+    String planName = v.getPlan() != null ? switch(v.getPlan().name()) {
+        case "PREMIUM" -> "Premium";
+        case "PRO_LOCAL" -> "Pro Local";
+        case "PRO" -> "Pro";
+        default -> "Gratuit";
+    } : "Gratuit";
+    String msg = "Bonjour " + v.getDisplayName() + " ! Votre plan BOLA a été mis à jour : " + planName +
+        (v.getSubscriptionExpiresAt() != null ? ". Valable jusqu'au " + v.getSubscriptionExpiresAt() + "." : ".") +
+        " Connectez-vous sur BOLA pour profiter de vos avantages.";
+    String url = "https://wa.me/" + v.getPhone() + "?text=" + 
+        java.net.URLEncoder.encode(msg, java.nio.charset.StandardCharsets.UTF_8);
+    return "redirect:" + url;
+}
+
+@GetMapping("/admin/vendors/{id}/notify-expiry")
+public String notifyExpiry(@PathVariable Long id) {
+    VendorUser v = vendorUserRepository.findById(id).orElseThrow();
+    String planName = v.getPlan() != null ? switch(v.getPlan().name()) {
+        case "PREMIUM" -> "Premium";
+        case "PRO_LOCAL" -> "Pro Local";
+        case "PRO" -> "Pro";
+        default -> "Gratuit";
+    } : "Gratuit";
+    String msg = "Bonjour " + v.getDisplayName() + " ! " +
+        (v.getSubscriptionExpiresAt() != null ?
+            "Votre abonnement BOLA (" + planName + ") expire le " + v.getSubscriptionExpiresAt() + ". Renouvelez vite !" :
+            "Pensez à activer ou renouveler votre abonnement BOLA.");
+    String url = "https://wa.me/" + v.getPhone() + "?text=" +
+        java.net.URLEncoder.encode(msg, java.nio.charset.StandardCharsets.UTF_8);
+    return "redirect:" + url;
+}
 }
