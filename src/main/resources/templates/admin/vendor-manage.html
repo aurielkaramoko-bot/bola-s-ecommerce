@@ -71,17 +71,14 @@
             <label class="form-label fw-semibold small">Plan d'abonnement</label>
             <select name="plan" class="form-select">
               <option value="GRATUIT"
-                      th:selected="${vendor.plan?.name() == 'GRATUIT'}">
-                Gratuit — [[${gratuitPrice}]] FCFA
-              </option>
+                      th:selected="${vendor.plan?.name() == 'GRATUIT'}"
+                      th:text="'Gratuit — ' + ${gratuitPrice} + ' FCFA'">Gratuit</option>
               <option value="PRO_LOCAL"
-                      th:selected="${vendor.plan?.name() == 'PRO_LOCAL'}">
-                Pro Local — [[${proLocalPrice}]] FCFA/mois
-              </option>
+                      th:selected="${vendor.plan?.name() == 'PRO_LOCAL'}"
+                      th:text="'Pro Local — ' + ${proLocalPrice} + ' FCFA/mois'">Pro Local</option>
               <option value="PREMIUM"
-                      th:selected="${vendor.plan?.name() == 'PREMIUM'}">
-                Premium — [[${premiumPrice}]] FCFA/mois
-              </option>
+                      th:selected="${vendor.plan?.name() == 'PREMIUM'}"
+                      th:text="'Premium — ' + ${premiumPrice} + ' FCFA/mois'">Premium</option>
             </select>
           </div>
 
@@ -158,14 +155,29 @@
           <i class="bi bi-whatsapp me-1"></i>Notifier le vendeur
         </h2>
         <div class="d-flex gap-2 flex-wrap">
+          <!-- Notif mise à jour plan : inclut le plan actuel -->
           <a th:href="${'https://wa.me/' + vendor.phone + '?text=' +
-              T(java.net.URLEncoder).encode('Bonjour ' + vendor.displayName + ' ! Votre plan BOLA a été mis à jour. Connectez-vous pour voir vos nouveaux avantages.', 'UTF-8')}"
+              T(java.net.URLEncoder).encode(
+                'Bonjour ' + vendor.displayName + ' ! Votre plan BOLA a été mis à jour : ' +
+                (vendor.plan?.name() == 'PREMIUM' ? 'Premium' :
+                 vendor.plan?.name() == 'PRO_LOCAL' ? 'Pro Local' : 'Gratuit') +
+                (vendor.subscriptionExpiresAt != null ? '. Valable jusqu\'au ' + vendor.subscriptionExpiresAt + '.' : '.') +
+                ' Connectez-vous sur BOLA pour profiter de vos avantages.',
+              'UTF-8')}"
              target="_blank" class="btn btn-success btn-sm">
             <i class="bi bi-whatsapp me-1"></i>Notifier mise à jour plan
           </a>
-          <a th:if="${vendor.subscriptionExpiresAt != null}"
-             th:href="${'https://wa.me/' + vendor.phone + '?text=' +
-              T(java.net.URLEncoder).encode('Bonjour ' + vendor.displayName + ' ! Votre abonnement BOLA expire le ' + vendor.subscriptionExpiresAt + '. Merci de renouveler pour continuer à bénéficier de vos avantages.', 'UTF-8')}"
+          <!-- Rappel expiration : inclut la date si disponible -->
+          <a th:href="${'https://wa.me/' + vendor.phone + '?text=' +
+              T(java.net.URLEncoder).encode(
+                'Bonjour ' + vendor.displayName + ' ! ' +
+                (vendor.subscriptionExpiresAt != null ?
+                  'Votre abonnement BOLA (' +
+                  (vendor.plan?.name() == 'PREMIUM' ? 'Premium' :
+                   vendor.plan?.name() == 'PRO_LOCAL' ? 'Pro Local' : 'Gratuit') +
+                  ') expire le ' + vendor.subscriptionExpiresAt + '. Renouvelez vite pour continuer à bénéficier de vos avantages !' :
+                  'Pensez à activer ou renouveler votre abonnement BOLA pour continuer à vendre.'),
+              'UTF-8')}"
              target="_blank" class="btn btn-warning btn-sm">
             <i class="bi bi-whatsapp me-1"></i>Rappel expiration
           </a>

@@ -60,10 +60,13 @@
                   <span class="badge bg-success position-absolute top-0 end-0 m-2">Gratuit</span>
                   <i class="bi bi-box-seam" style="font-size:1.4rem;color:var(--bolas-accent);"></i>
                   <h3 class="h6 fw-bold mt-2 mb-1">Pack Débutant</h3>
+                  <p class="text-muted small mb-2">Pour commencer sans risque</p>
                   <ul class="list-unstyled small text-muted mb-0">
                     <li><i class="bi bi-check text-success me-1"></i>Jusqu'à 10 produits</li>
-                    <li><i class="bi bi-check text-success me-1"></i>Page boutique</li>
-                    <li><i class="bi bi-dash text-muted me-1"></i>Pas de mise en avant</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Page boutique personnelle</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Visible dans la recherche</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Visible dans votre catégorie</li>
+                    <li><i class="bi bi-dash text-muted me-1"></i>Pas de mise en avant homepage</li>
                   </ul>
                   <div class="mt-2 fw-bold" style="color:var(--bolas-accent);"
                        th:text="${gratuitPrice} + ' FCFA'">0 FCFA</div>
@@ -80,13 +83,17 @@
                   <span class="badge position-absolute top-0 end-0 m-2" style="background:var(--bolas-accent);">Pro Local</span>
                   <i class="bi bi-shop" style="font-size:1.4rem;color:var(--bolas-accent);"></i>
                   <h3 class="h6 fw-bold mt-2 mb-1">Pack Pro Local</h3>
+                  <p class="text-muted small mb-2">Pour les boutiques locales</p>
                   <ul class="list-unstyled small text-muted mb-0">
                     <li><i class="bi bi-check text-success me-1"></i>Produits illimités</li>
-                    <li><i class="bi bi-check text-success me-1"></i>Visible homepage</li>
-                    <li><i class="bi bi-check text-success me-1"></i>Suivi commandes</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Page boutique personnelle</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Visible dans la recherche</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Mise en avant homepage</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Statistiques de vente</li>
+                    <li><i class="bi bi-dash text-muted me-1"></i>Pas de priorité homepage</li>
                   </ul>
                   <div class="mt-2 fw-bold" style="color:var(--bolas-accent);"
-                       th:text="${proLocalPrice} + ' FCFA/mois'">3 000 FCFA/mois</div>
+                       th:text="${proLocalPrice} + ' FCFA / mois'">3 000 FCFA / mois</div>
                 </div>
               </label>
             </div>
@@ -100,13 +107,17 @@
                   <span class="badge position-absolute top-0 end-0 m-2" style="background:linear-gradient(135deg,#8B5E3C,#C49A6C);">Premium</span>
                   <i class="bi bi-stars" style="font-size:1.4rem;color:#C49A6C;"></i>
                   <h3 class="h6 fw-bold mt-2 mb-1">Pack Premium</h3>
+                  <p class="text-muted small mb-2">Pour les pros ambitieux</p>
                   <ul class="list-unstyled small text-muted mb-0">
                     <li><i class="bi bi-check text-success me-1"></i>Produits illimités</li>
-                    <li><i class="bi bi-check text-success me-1"></i>Badge vérifié ⭐</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Page boutique personnelle</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Visible dans la recherche</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Mise en avant prioritaire homepage</li>
+                    <li><i class="bi bi-check text-success me-1"></i>Badge vendeur vérifié ⭐</li>
                     <li><i class="bi bi-check text-success me-1"></i>Support prioritaire</li>
                   </ul>
                   <div class="mt-2 fw-bold" style="color:#8B5E3C;"
-                       th:text="${premiumPrice} + ' FCFA/mois'">10 000 FCFA/mois</div>
+                       th:text="${premiumPrice} + ' FCFA / mois'">10 000 FCFA / mois</div>
                 </div>
               </label>
             </div>
