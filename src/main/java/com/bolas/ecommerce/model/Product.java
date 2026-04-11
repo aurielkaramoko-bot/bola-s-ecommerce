@@ -192,4 +192,5 @@ public class Product {
 
     public VendorUser getVendor() { return vendor; }
     public void setVendor(VendorUser vendor) { this.vendor = vendor; }
+
 }

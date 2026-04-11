@@ -8,6 +8,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import com.bolas.ecommerce.service.CartService;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -17,8 +18,12 @@ public class CustomerAuthController {
 
     private final CustomerService customerService;
 
-    public CustomerAuthController(CustomerService customerService) {
+    private final CartService cartService; 
+
+    
+    public CustomerAuthController(CustomerService customerService, CartService cartService) {
         this.customerService = customerService;
+        this.cartService = cartService;
     }
 
     @GetMapping("/customer/login")
