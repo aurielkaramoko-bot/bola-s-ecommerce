@@ -11,7 +11,7 @@ import java.util.List;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    /** 1. Produits mis en avant (Featured) : Uniquement si le vendeur est actif */
+    /** 1. Produits mis en avant (Featured) */
     @Query("""
         SELECT p FROM Product p
         WHERE p.available = true
@@ -27,7 +27,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         """)
     List<Product> findFeaturedForHomepage();
 
-    /** 2. Produits populaires : Uniquement si le vendeur est actif */
+    /** 2. Produits populaires */
     @Query("""
         SELECT p FROM Product p
         WHERE p.available = true
@@ -45,7 +45,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         """)
     List<Product> findPopularForHomepage();
 
-    /** 3. Recherche par mot-clé : Sécurité totale sur le statut du vendeur */
+    /** 3. Recherche par mot-clé */
     @Query("""
         SELECT p FROM Product p
         WHERE p.available = true
@@ -56,7 +56,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         """)
     List<Product> searchByKeyword(@Param("q") String q);
 
-    /** 4. Recherche par mot-clé + Catégorie : Sécurité totale */
+    /** 4. Recherche par mot-clé + Catégorie */
     @Query("""
         SELECT p FROM Product p
         WHERE p.available = true
@@ -66,12 +66,27 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
           OR LOWER(p.description) LIKE LOWER(CONCAT('%',:q,'%')))
         ORDER BY p.sponsored DESC, p.id DESC
         """)
-        List<Product> findByAvailableTrueAndCategoryIdAndPriceCfaBetween(Long categoryId, long min, long max);
+    List<Product> searchByKeywordAndCategory(@Param("q") String q, @Param("categoryId") Long categoryId);
 
-        List<Product> findByAvailableTrueAndPriceCfaBetween(long min, long max);
-        List<Product> searchByKeywordAndCategory(@Param("q") String q, @Param("categoryId") Long categoryId);
+    /** 5. Filtrage par Catégorie et Prix (Correction ici : on utilise min/max dans la Query) */
+    @Query("""
+        SELECT p FROM Product p 
+        WHERE p.available = true
+        AND p.vendor.active = true
+        AND p.category.id = :categoryId
+        AND p.priceCfa BETWEEN :min AND :max
+        ORDER BY p.sponsored DESC, p.id DESC
+        """)
+    List<Product> findByAvailableTrueAndCategoryIdAndPriceCfaBetween(
+        @Param("categoryId") Long categoryId, 
+        @Param("min") long min, 
+        @Param("max") long max
+    );
 
-    /** 5. Filtrage par Catégorie et Prix : Sécurité totale */
+    /** --- Autres méthodes de filtrage --- */
+
+    List<Product> findByAvailableTrueAndPriceCfaBetween(long min, long max);
+
     @Query("""
         SELECT p FROM Product p 
         WHERE p.available = true
@@ -83,32 +98,28 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByAvailableAndCategoryAndPriceRange(
         @Param("categoryId") Long categoryId,
         @Param("min") Long min,
-        @Param("max") Long max);
+        @Param("max") Long max
+    );
 
-    /** --- Méthodes de gestion de stock et boutique --- */
+    /** --- Gestion Stock et Boutique --- */
 
-    // Utilisé pour la page publique d'une boutique (le contrôleur filtre déjà le vendor)
     List<Product> findByVendorAndAvailableTrue(VendorUser vendor);
 
-    // Compte des produits pour les limites de plan (Gratuit/Pro)
     long countByVendor(VendorUser vendor);
 
-    // Utile pour les statistiques par catégorie (Uniquement produits de vendeurs actifs)
     @Query("SELECT COUNT(p) FROM Product p WHERE p.category = :category AND p.vendor.active = true")
     long countActiveByCategory(@Param("category") Category category);
 
-    // Fallback simple pour les listes automatiques
     List<Product> findByAvailableTrueAndVendorActiveTrue();
+    
     List<Product> findTop6ByAvailableTrueOrderByFeaturedDescIdDesc();
 
-    // Pour l'AdminController qui veut le compte total par catégorie
-long countByCategory(Category category);
+    long countByCategory(Category category);
 
-// Pour le VendorController qui veut voir tous ses produits (stock etc.)
-List<Product> findByVendor(VendorUser vendor);
+    List<Product> findByVendor(VendorUser vendor);
 
-// Pour les listes simples
-List<Product> findByAvailableTrue();
-List<Product> findByAvailableTrueAndCategory_IdAndPriceCfaBetween(Long categoryId, long min, long max);
+    List<Product> findByAvailableTrue();
 
+    // Version Spring Data JPA (sans @Query)
+    List<Product> findByAvailableTrueAndCategory_IdAndPriceCfaBetween(Long categoryId, long min, long max);
 }
