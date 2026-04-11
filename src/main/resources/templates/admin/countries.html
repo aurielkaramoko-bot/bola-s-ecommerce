@@ -15,12 +15,23 @@
       </h1>
 
       <div th:if="${flashOk}" class="alert alert-success" th:text="${flashOk}"></div>
+      <div th:if="${flashError}" class="alert alert-danger" th:text="${flashError}"></div>
 
-      <!-- Ajouter un pays -->
-      <div class="admin-card p-4 mb-4" style="max-width:500px;">
-        <h2 class="h6 fw-bold mb-3" style="color:#8B5E3C;">
-          <i class="bi bi-plus-circle me-1"></i>Ajouter un pays
-        </h2>
+      <!-- Ajouter un pays + Import Afrique -->
+      <div class="admin-card p-4 mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+          <h2 class="h6 fw-bold mb-0" style="color:#8B5E3C;">
+            <i class="bi bi-plus-circle me-1"></i>Ajouter un pays
+          </h2>
+          <!-- Bouton import Afrique -->
+          <form th:action="@{/admin/countries/import-africa}" method="post" class="m-0"
+                onsubmit="return confirm('Importer les 54 pays d\'Afrique ? Les pays déjà existants seront ignorés.')">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="btn btn-outline-success btn-sm">
+              <i class="bi bi-cloud-download me-1"></i>Importer tous les pays africains
+            </button>
+          </form>
+        </div>
         <form th:action="@{/admin/countries}" method="post" class="row g-3">
           <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
           <div class="col-md-3">
@@ -70,12 +81,24 @@
                 <td th:text="${c.flag ?: '🌍'}">🌍</td>
                 <td><code th:text="${c.code}">TG</code></td>
                 <td th:text="${c.name}">Togo</td>
+
+                <!-- Taxe : édition inline -->
                 <td>
-                  <span th:if="${c.customsTaxPercent > 0}"
-                        class="badge bg-warning text-dark"
-                        th:text="${c.customsTaxPercent} + '%'">0%</span>
-                  <span th:if="${c.customsTaxPercent == 0}" class="text-muted small">Aucune</span>
+                  <form th:action="@{/admin/countries/{id}/tax(id=${c.id})}" method="post"
+                        class="d-flex align-items-center gap-1 m-0">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <input type="number" name="customsTaxPercent"
+                           th:value="${c.customsTaxPercent}"
+                           min="0" max="100" class="form-control form-control-sm"
+                           style="width:70px;"/>
+                    <span class="text-muted small">%</span>
+                    <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-2"
+                            title="Enregistrer la taxe">
+                      <i class="bi bi-check2"></i>
+                    </button>
+                  </form>
                 </td>
+
                 <td>
                   <span th:if="${c.active}" class="badge bg-success">Actif</span>
                   <span th:if="${!c.active}" class="badge bg-secondary">Inactif</span>
@@ -98,7 +121,7 @@
                 </td>
               </tr>
               <tr th:if="${countries.isEmpty()}">
-                <td colspan="5" class="text-muted text-center p-3">Aucun pays configuré.</td>
+                <td colspan="6" class="text-muted text-center p-3">Aucun pays configuré.</td>
               </tr>
             </tbody>
           </table>

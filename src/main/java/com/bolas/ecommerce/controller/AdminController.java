@@ -1268,4 +1268,61 @@ public String notifyExpiry(@PathVariable Long id) {
         java.net.URLEncoder.encode(msg, java.nio.charset.StandardCharsets.UTF_8);
     return "redirect:" + url;
 }
+// ─── les AdminController.java après deleteCountry ───────────────
+
+    @PostMapping("/admin/countries/{id}/tax")
+    public String updateCountryTax(@PathVariable Long id,
+                                   @RequestParam(defaultValue = "0") int customsTaxPercent,
+                                   RedirectAttributes ra) {
+        countryRepository.findById(id).ifPresent(c -> {
+            c.setCustomsTaxPercent(Math.max(0, Math.min(100, customsTaxPercent)));
+            countryRepository.save(c);
+        });
+        ra.addFlashAttribute("flashOk", "Taxe mise à jour.");
+        return "redirect:/admin/countries";
+    }
+
+    @PostMapping("/admin/countries/import-africa")
+    public String importAfricanCountries(RedirectAttributes ra) {
+        // Les 54 pays d'Afrique avec drapeaux emoji
+        Object[][] africa = {
+            {"DZ","Algérie","🇩🇿"},{"AO","Angola","🇦🇴"},{"BJ","Bénin","🇧🇯"},
+            {"BW","Botswana","🇧🇼"},{"BF","Burkina Faso","🇧🇫"},{"BI","Burundi","🇧🇮"},
+            {"CV","Cap-Vert","🇨🇻"},{"CM","Cameroun","🇨🇲"},{"CF","Centrafrique","🇨🇫"},
+            {"TD","Tchad","🇹🇩"},{"KM","Comores","🇰🇲"},{"CG","Congo","🇨🇬"},
+            {"CD","RD Congo","🇨🇩"},{"CI","Côte d'Ivoire","🇨🇮"},{"DJ","Djibouti","🇩🇯"},
+            {"EG","Égypte","🇪🇬"},{"GQ","Guinée Équatoriale","🇬🇶"},{"ER","Érythrée","🇪🇷"},
+            {"SZ","Eswatini","🇸🇿"},{"ET","Éthiopie","🇪🇹"},{"GA","Gabon","🇬🇦"},
+            {"GM","Gambie","🇬🇲"},{"GH","Ghana","🇬🇭"},{"GN","Guinée","🇬🇳"},
+            {"GW","Guinée-Bissau","🇬🇼"},{"KE","Kenya","🇰🇪"},{"LS","Lesotho","🇱🇸"},
+            {"LR","Liberia","🇱🇷"},{"LY","Libye","🇱🇾"},{"MG","Madagascar","🇲🇬"},
+            {"MW","Malawi","🇲🇼"},{"ML","Mali","🇲🇱"},{"MR","Mauritanie","🇲🇷"},
+            {"MU","Maurice","🇲🇺"},{"MA","Maroc","🇲🇦"},{"MZ","Mozambique","🇲🇿"},
+            {"NA","Namibie","🇳🇦"},{"NE","Niger","🇳🇪"},{"NG","Nigeria","🇳🇬"},
+            {"RW","Rwanda","🇷🇼"},{"ST","São Tomé-et-Príncipe","🇸🇹"},{"SN","Sénégal","🇸🇳"},
+            {"SC","Seychelles","🇸🇨"},{"SL","Sierra Leone","🇸🇱"},{"SO","Somalie","🇸🇴"},
+            {"ZA","Afrique du Sud","🇿🇦"},{"SS","Soudan du Sud","🇸🇸"},{"SD","Soudan","🇸🇩"},
+            {"TZ","Tanzanie","🇹🇿"},{"TG","Togo","🇹🇬"},{"TN","Tunisie","🇹🇳"},
+            {"UG","Ouganda","🇺🇬"},{"ZM","Zambie","🇿🇲"},{"ZW","Zimbabwe","🇿🇼"}
+        };
+
+        int added = 0;
+        for (Object[] row : africa) {
+            String code = (String) row[0];
+            // Ne pas dupliquer si déjà existant
+            if (countryRepository.findByCode(code).isEmpty()) {
+                com.bolas.ecommerce.model.Country c = new com.bolas.ecommerce.model.Country();
+                c.setCode(code);
+                c.setName((String) row[1]);
+                c.setFlag((String) row[2]);
+                c.setCustomsTaxPercent(0);
+                c.setActive(false); // inactif par défaut, tu actives manuellement
+                countryRepository.save(c);
+                added++;
+            }
+        }
+        ra.addFlashAttribute("flashOk", added + " pays africains importés (inactifs par défaut). Active ceux que tu veux desservir.");
+        return "redirect:/admin/countries";
+    }
+
 }

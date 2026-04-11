@@ -88,9 +88,7 @@ public class HomeController {
     public String boutiques(Model model) {
         model.addAttribute("pageTitle", "Boutiques — BOLA");
         try {
-            List<VendorUser> activeVendors = vendorUserRepository.findAll().stream()
-                    .filter(v -> v.getVendorStatus() == VendorStatus.ACTIVE && v.isActive())
-                    .toList();
+            List<VendorUser> activeVendors = vendorUserRepository.findByVendorStatusAndActiveTrue(VendorStatus.ACTIVE);
             model.addAttribute("vendors", activeVendors);
         } catch (Exception e) {
             model.addAttribute("vendors", java.util.List.of());
