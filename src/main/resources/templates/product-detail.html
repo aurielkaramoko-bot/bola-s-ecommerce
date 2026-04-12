@@ -47,6 +47,11 @@
             class="badge bg-danger mb-2 px-3 py-2"
             style="font-size:.8rem;letter-spacing:.06em;">PROMO</span>
 
+      <span th:if="${product.promoLabel != null and !product.promoLabel.isEmpty()}"
+            class="badge bg-warning text-dark mb-2 ms-1 px-3 py-2"
+            style="font-size:.8rem;letter-spacing:.06em;"
+            th:text="${product.promoLabel}">Promo</span>
+
       <span th:if="${product.limitedStock}"
             class="badge bg-warning text-dark mb-2 ms-1 px-3 py-2"
             style="font-size:.8rem;letter-spacing:.06em;">🔥 Stock limité</span>

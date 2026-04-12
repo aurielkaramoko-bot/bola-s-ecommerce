@@ -72,6 +72,11 @@ public class Product {
     @Column(nullable = false)
     private boolean limitedStock = false;
 
+    /** Badge promo personnalisé (PRO/PREMIUM) — ex: "Soldes", "Fête des mères -20%" */
+    @Size(max = 60)
+    @Column(name = "promo_label", length = 60)
+    private String promoLabel;
+
     /** URL de la vidéo du produit (YouTube ou TikTok). Optionnel. */
     @Size(max = 2000)
     @Column(name = "video_url", length = 2000)
@@ -181,6 +186,9 @@ public class Product {
 
     public boolean isLimitedStock() { return limitedStock; }
     public void setLimitedStock(boolean limitedStock) { this.limitedStock = limitedStock; }
+
+    public String getPromoLabel() { return promoLabel; }
+    public void setPromoLabel(String promoLabel) { this.promoLabel = promoLabel; }
 
     public String getVideoUrl() {
         return videoUrl;

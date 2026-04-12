@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -510,6 +511,7 @@ public class VendorController {
                               @RequestParam(required = false) String description,
                               @RequestParam Long priceCfa,
                               @RequestParam(required = false) Long promoPriceCfa,
+                              @RequestParam(required = false) String promoLabel,
                               @RequestParam Long categoryId,
                               @RequestParam(required = false) String imageUrl,
                               @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
@@ -559,6 +561,12 @@ public class VendorController {
         p.setFeatured(false);
         p.setVendor(vendor);
         p.setLimitedStock(limitedStock);
+        // promoLabel réservé aux plans PRO et PREMIUM
+        if ((vendor.getPlan() == VendorPlan.PRO || vendor.getPlan() == VendorPlan.PRO_LOCAL
+                || vendor.getPlan() == VendorPlan.PREMIUM)
+                && promoLabel != null && !promoLabel.isBlank()) {
+            p.setPromoLabel(promoLabel.trim());
+        }
 
         try {
             if (imageFile != null && !imageFile.isEmpty()) {
@@ -609,6 +617,7 @@ public class VendorController {
                                 @RequestParam(required = false) String description,
                                 @RequestParam Long priceCfa,
                                 @RequestParam(required = false) Long promoPriceCfa,
+                                @RequestParam(required = false) String promoLabel,
                                 @RequestParam Long categoryId,
                                 @RequestParam(required = false) String imageUrl,
                                 @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
@@ -651,6 +660,14 @@ public class VendorController {
         p.setDeliveryAvailable(deliveryAvailable);
         p.setDeliveryPriceCfa(deliveryPriceCfa);
         p.setLimitedStock(limitedStock);
+        // promoLabel réservé aux plans PRO et PREMIUM
+        if ((vendor.getPlan() == VendorPlan.PRO || vendor.getPlan() == VendorPlan.PRO_LOCAL
+                || vendor.getPlan() == VendorPlan.PREMIUM)
+                && promoLabel != null && !promoLabel.isBlank()) {
+            p.setPromoLabel(promoLabel.trim());
+        } else if (promoLabel == null || promoLabel.isBlank()) {
+            p.setPromoLabel(null);
+        }
 
         try {
             if (imageFile != null && !imageFile.isEmpty()) {
@@ -876,17 +893,17 @@ public class VendorController {
     // ─── Demande de nouvelle catégorie ───────────────────────────────────────
 
     @PostMapping("/products/request-category")
-    public String requestCategory(@RequestParam String categoryName,
-                                  HttpSession session,
-                                  RedirectAttributes ra) {
-        String redirect = requireVendor(session);
-        if (redirect != null) return redirect;
+    @ResponseBody
+    public ResponseEntity<String> requestCategory(@RequestParam String categoryName,
+                                                  HttpSession session) {
+        if (currentVendor(session) == null) {
+            return ResponseEntity.status(401).body("Non connecté");
+        }
 
         VendorUser vendor = currentVendor(session);
         String cleanName = sanitizer.sanitizeText(categoryName);
         if (cleanName == null || cleanName.isBlank()) {
-            ra.addFlashAttribute("flashError", "Veuillez préciser le nom de la catégorie souhaitée.");
-            return "redirect:/vendor/products/add";
+            return ResponseEntity.badRequest().body("Nom de catégorie invalide.");
         }
 
         // Notifier l'admin via WhatsApp
@@ -904,9 +921,7 @@ public class VendorController {
             log.warn("⚠️ Notif WhatsApp demande catégorie échouée : {}", e.getMessage());
         }
 
-        ra.addFlashAttribute("flashOk",
-                "Demande envoyée ! L'admin créera la catégorie \"" + cleanName + "\" si elle est appropriée.");
-        return "redirect:/vendor/products/add";
+        return ResponseEntity.ok("Demande envoyée !");
     }
 
     // ─── Cartes de fidélité ─────────────────────────────────────────

@@ -4,17 +4,20 @@ import com.bolas.ecommerce.repository.CategoryRepository;
 import com.bolas.ecommerce.repository.CountryRepository;
 import com.bolas.ecommerce.repository.ProductRepository;
 import com.bolas.ecommerce.repository.VendorUserRepository;
+import com.bolas.ecommerce.model.Product;
 import com.bolas.ecommerce.model.VendorStatus;
 import com.bolas.ecommerce.model.VendorUser;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -144,6 +147,20 @@ public class HomeController {
     public String contact(Model model) {
         model.addAttribute("pageTitle", "Contact — BOLA");
         return "contact";
+    }
+
+    @GetMapping("/products/{id}")
+    @Transactional(readOnly = true)
+    public String productDetail(@PathVariable Long id, Model model) {
+        Product product = productRepository.findById(id)
+                .filter(p -> p.isAvailable()
+                        && (p.getVendor() == null
+                            || (p.getVendor().isActive()
+                                && p.getVendor().getVendorStatus() == VendorStatus.ACTIVE)))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produit introuvable"));
+        model.addAttribute("pageTitle", product.getName() + " — BOLA");
+        model.addAttribute("product", product);
+        return "product-detail";
     }
 
     /** Résoit le pays : param URL > cookie > Accept-Language > défaut TG */

@@ -202,6 +202,21 @@
           </div>
         </div>
 
+        <!-- Badge promo personnalisé — PRO / PREMIUM uniquement -->
+        <div class="col-12"
+             th:if="${vendor.plan.name() == 'PRO' or vendor.plan.name() == 'PRO_LOCAL' or vendor.plan.name() == 'PREMIUM'}">
+          <label for="prod-promo-label" class="form-label fw-semibold small">
+            <span class="badge bg-warning text-dark me-1" style="font-size:.7rem;">🎉 Promo</span>
+            Badge promotion personnalisé
+            <span class="text-muted fw-normal">(optionnel — ex: "Soldes", "Fête des mères -20%")</span>
+          </label>
+          <input type="text" class="form-control" id="prod-promo-label" name="promoLabel"
+                 th:value="${product.promoLabel}"
+                 maxlength="60"
+                 placeholder="ex. Soldes d'été, Fête des mères -20%, Noël spécial..."/>
+          <div class="form-text">Affiché comme badge coloré sur la fiche produit. Laissez vide pour désactiver.</div>
+        </div>
+
         <!-- Actions -->
         <div class="col-12 d-flex gap-2 pt-2">
           <button type="submit" id="btn-save-product" class="btn btn-hero-solid">
