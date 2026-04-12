@@ -40,16 +40,18 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         """)
     List<Product> findPopularForHomepage();
 
-    /** 3. Recherche par mot-clé */
+
+    /** 3. Recherche par mot-clé (Correction du crash Render) */
     @Query("""
         SELECT p FROM Product p
         WHERE p.available = true
         AND (p.vendor IS NULL OR p.vendor.active = true)
         AND (LOWER(p.name) LIKE LOWER(CONCAT('%',:q,'%'))
           OR LOWER(p.description) LIKE LOWER(CONCAT('%',:q,'%')))
+        AND (:categoryId IS NULL OR p.category.id = :categoryId)
         ORDER BY p.sponsored DESC, p.id DESC
         """)
-    List<Product> searchByKeyword(@Param("q") String q, @Param("categoryId") Long categoryId);
+        List<Product> searchByKeyword(@Param("q") String q, @Param("categoryId") Long categoryId);
 
     /** 4. Méthodes utilisées par ProductController (Filtrage) */
     
