@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Avis clients — BOLA Vendeur</title>
+</head>
+<body class="bolas-body">
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container py-4 flex-grow-1">
+  <div class="d-flex align-items-center gap-2 mb-4">
+    <a th:href="@{/vendor/dashboard}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h4 fw-bold mb-0" style="color:var(--bolas-accent);">
+      <i class="bi bi-star me-2"></i>Avis clients
+    </h1>
+  </div>
+
+  <!-- Flash -->
+  <div th:if="${flashOk}" class="alert alert-success mb-3" th:text="${flashOk}"></div>
+  <div th:if="${flashError}" class="alert alert-danger mb-3" th:text="${flashError}"></div>
+
+  <!-- Note moyenne -->
+  <div class="admin-card p-3 mb-4 text-center">
+    <div class="h2 fw-bold mb-0">
+      <i class="bi bi-star-fill text-warning me-1"></i>
+      <span th:text="${#numbers.formatDecimal(avgRating, 1, 1)}">0.0</span>/5
+    </div>
+    <div class="small text-muted"><span th:text="${#lists.size(reviews)}">0</span> avis clients</div>
+  </div>
+
+  <!-- Aucun avis -->
+  <div th:if="${reviews.isEmpty()}" class="text-center text-muted py-5">
+    <i class="bi bi-chat-square-text" style="font-size:3rem;opacity:.3;"></i>
+    <p class="mt-2 mb-0">Aucun avis clients pour le moment. Les avis apparaîtront ici une fois approuvés.</p>
+  </div>
+
+  <!-- Liste des avis -->
+  <div th:each="review : ${reviews}" class="admin-card p-3 mb-3">
+    <div class="d-flex align-items-start gap-3">
+      <div style="width:40px;height:40px;background:linear-gradient(135deg,#eee,#ddd);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="bi bi-person" style="font-size:1.2rem;color:#999;"></i>
+      </div>
+      <div class="flex-grow-1">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <strong th:text="${review.reviewerName}">Client</strong>
+          <div>
+            <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+              <i class="bi" th:classappend="${i <= review.rating} ? 'bi-star-fill text-warning' : 'bi-star text-muted'" style="font-size:0.85rem;"></i>
+            </th:block>
+          </div>
+          <span class="small text-muted ms-auto" th:text="${#temporals.format(review.createdAt, 'dd/MM/yyyy')}">01/01/2026</span>
+        </div>
+        <!-- Produit -->
+        <div class="small text-muted mb-1" th:if="${review.product != null}">
+          <i class="bi bi-box-seam me-1"></i>
+          <span th:text="${review.product.name}">Produit</span>
+        </div>
+        <!-- Commentaire -->
+        <p th:if="${review.comment != null and !review.comment.isEmpty()}" class="mb-2 small" th:text="${review.comment}">Commentaire</p>
+
+        <!-- Réponse existante -->
+        <div th:if="${review.vendorReply != null}" class="p-2 rounded small" style="background:rgba(139,94,60,0.05);border-left:3px solid var(--bolas-accent);">
+          <div class="fw-semibold mb-1" style="color:var(--bolas-accent);">
+            <i class="bi bi-reply me-1"></i>Votre réponse
+            <span th:if="${review.vendorReplyAt != null}" class="text-muted fw-normal ms-1"
+                  th:text="'— ' + ${#temporals.format(review.vendorReplyAt, 'dd/MM/yyyy')}"></span>
+          </div>
+          <span th:text="${review.vendorReply}">Réponse</span>
+        </div>
+
+        <!-- Formulaire réponse (PREMIUM uniquement, pas encore répondu) -->
+        <div th:if="${vendor.canRespondToReviews() and review.vendorReply == null}" class="mt-2">
+          <form th:action="@{/vendor/reviews/{id}/reply(id=${review.id})}" method="post" class="d-flex gap-2">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="text" name="reply" class="form-control form-control-sm" placeholder="Répondre à cet avis..." required maxlength="1000"/>
+            <button type="submit" class="btn btn-sm btn-hero-solid"><i class="bi bi-send"></i></button>
+          </form>
+        </div>
+
+        <!-- Badge verrouillé si pas PREMIUM et pas de réponse -->
+        <div th:if="${!vendor.canRespondToReviews() and review.vendorReply == null}" class="mt-2">
+          <span class="badge bg-secondary"><i class="bi bi-lock me-1"></i>Réponse aux avis — Pack Premium</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+</body>
+</html>

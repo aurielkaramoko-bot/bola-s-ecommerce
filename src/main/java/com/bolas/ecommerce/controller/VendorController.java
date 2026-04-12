@@ -8,6 +8,7 @@ import com.bolas.ecommerce.service.ImageUploadService;
 import com.bolas.ecommerce.service.MetaWhatsAppService;
 import com.bolas.ecommerce.service.SessionCounterService;
 import com.bolas.ecommerce.service.WhatsAppNotificationService;
+import com.bolas.ecommerce.service.VendorStatsService;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -23,7 +24,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -52,6 +55,8 @@ public class VendorController {
     private final SessionCounterService      sessionCounter;
     private final com.bolas.ecommerce.service.PackPricingService packPricingService;
     private final com.bolas.ecommerce.service.OrderFlowService   orderFlowService;
+    private final VendorStatsService          vendorStatsService;
+    private final ReviewRepository            reviewRepository;
 
     public VendorController(CustomerOrderRepository orderRepository,
                             VendorUserRepository vendorUserRepository,
@@ -69,7 +74,9 @@ public class VendorController {
                             LoyaltyCardRepository loyaltyCardRepository,
                             SessionCounterService sessionCounter,
                             com.bolas.ecommerce.service.PackPricingService packPricingService,
-                            com.bolas.ecommerce.service.OrderFlowService orderFlowService) {
+                            com.bolas.ecommerce.service.OrderFlowService orderFlowService,
+                            VendorStatsService vendorStatsService,
+                            ReviewRepository reviewRepository) {
         this.orderRepository               = orderRepository;
         this.vendorUserRepository          = vendorUserRepository;
         this.productRepository             = productRepository;
@@ -87,6 +94,8 @@ public class VendorController {
         this.sessionCounter                = sessionCounter;
         this.packPricingService            = packPricingService;
         this.orderFlowService              = orderFlowService;
+        this.vendorStatsService            = vendorStatsService;
+        this.reviewRepository              = reviewRepository;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -344,8 +353,9 @@ public class VendorController {
         session.setAttribute(SESSION_KEY, vendor);
 
         long productCount   = productRepository.countByVendor(vendor);
-        long pendingOrders  = orderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.PENDING).size();
-        long confirmedOrders = orderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.CONFIRMED).size();
+        // Compter uniquement les commandes de CE vendeur
+        long pendingOrders  = orderRepository.countByVendorAndStatus(vendor, OrderStatus.PENDING);
+        long confirmedOrders = orderRepository.countByVendorAndStatus(vendor, OrderStatus.CONFIRMED);
 
         String scheme = request.getHeader("X-Forwarded-Proto") != null
                 ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
@@ -363,6 +373,35 @@ public class VendorController {
         model.addAttribute("products",
                 productRepository.findByVendor(vendor).stream()
                         .limit(5).toList());
+
+        // Stats basiques si PRO/PREMIUM
+        if (vendor.canViewStats()) {
+            try {
+                model.addAttribute("stats", vendorStatsService.getBasicStats(vendor));
+            } catch (Exception e) {
+                log.warn("Erreur chargement stats vendeur {}: {}", vendor.getId(), e.getMessage());
+            }
+        }
+
+        // Livreur assigné
+        if (vendor.getAssignedCourierId() != null) {
+            courierApplicationRepository.findById(vendor.getAssignedCourierId())
+                    .ifPresent(c -> model.addAttribute("assignedCourier", c));
+        }
+
+        // Messages non lus
+        long unreadMessages = chatMessageRepository.countByVendorAndReadByVendorFalseAndSenderType(vendor, "CUSTOMER");
+        model.addAttribute("unreadMessages", unreadMessages);
+
+        // Avis
+        try {
+            model.addAttribute("avgRating", reviewRepository.averageRatingByVendor(vendor));
+            model.addAttribute("reviewCount", reviewRepository.countApprovedByVendor(vendor));
+        } catch (Exception e) {
+            model.addAttribute("avgRating", 0.0);
+            model.addAttribute("reviewCount", 0L);
+        }
+
         return "vendor/dashboard";
     }
 
@@ -376,32 +415,50 @@ public class VendorController {
 
         VendorUser vendor = currentVendor(session);
 
-        // Suivi commande réservé aux packs PRO, PRO_LOCAL et PREMIUM
+        // GRATUIT : voit les commandes mais boutons grisés avec message upgrade
         if (vendor.getPlan() == VendorPlan.GRATUIT) {
+            // Montrer les commandes en lecture seule pour frustrer gentiment
+            var allVendorOrders = orderRepository.findByVendorOrderByCreatedAtDesc(vendor);
             model.addAttribute("pageTitle", "Mes commandes — BOLA Vendeur");
             model.addAttribute("vendor", vendor);
-            model.addAttribute("flashError",
-                    "Le suivi de commandes est disponible à partir du Pack Pro. Passez au niveau supérieur pour accéder à cette fonctionnalité.");
-            model.addAttribute("toProcess", List.of());
-            model.addAttribute("done", List.of());
+            model.addAttribute("readOnlyMode", true);
+            model.addAttribute("upgradeMessage",
+                    "Passez en PRO pour gérer vos commandes vous-même ! " +
+                    "Actuellement, c'est l'admin BOLA qui gère vos commandes.");
+            model.addAttribute("toProcess", allVendorOrders.stream()
+                    .filter(o -> o.getStatus() == OrderStatus.PENDING || o.getStatus() == OrderStatus.CONFIRMED)
+                    .toList());
+            model.addAttribute("done", allVendorOrders.stream()
+                    .filter(o -> o.getStatus() == OrderStatus.READY || o.getStatus() == OrderStatus.DELIVERED)
+                    .toList());
+            model.addAttribute("approvedCouriers", List.of());
             return "vendor/orders";
         }
 
+        // PRO / PREMIUM : gère ses commandes
         List<CustomerOrder> toProcess =
-                orderRepository.findByVendorProductsAndStatusIn(vendor,
+                orderRepository.findByVendorAndStatusInOrderByCreatedAtDesc(vendor,
                         List.of(OrderStatus.CONFIRMED));
         List<CustomerOrder> done =
-                orderRepository.findByVendorProductsAndStatusIn(vendor,
+                orderRepository.findByVendorAndStatusInOrderByCreatedAtDesc(vendor,
                         List.of(OrderStatus.READY));
 
-        // Livreurs approuvés proposés par ce vendeur (pour assignation)
+        // Livreurs approuvés proposés par ce vendeur + livreur assigné par admin
         var approvedCouriers = courierApplicationRepository.findByVendorOrderBySubmittedAtDesc(vendor)
                 .stream()
                 .filter(a -> a.getStatus() == CourierApplicationStatus.APPROVED)
-                .toList();
+                .collect(Collectors.toList());
+        // Ajouter le livreur assigné par admin s'il n'est pas déjà dans la liste
+        if (vendor.getAssignedCourierId() != null) {
+            courierApplicationRepository.findById(vendor.getAssignedCourierId())
+                    .filter(c -> c.getStatus() == CourierApplicationStatus.APPROVED)
+                    .filter(c -> approvedCouriers.stream().noneMatch(a -> a.getId().equals(c.getId())))
+                    .ifPresent(approvedCouriers::add);
+        }
 
         model.addAttribute("pageTitle", "Mes commandes — BOLA Vendeur");
         model.addAttribute("vendor",    vendor);
+        model.addAttribute("readOnlyMode", false);
         model.addAttribute("toProcess", toProcess);
         model.addAttribute("done",      done);
         model.addAttribute("approvedCouriers", approvedCouriers);
@@ -738,6 +795,18 @@ public class VendorController {
         if (redirect != null) return redirect;
 
         VendorUser vendor = currentVendor(session);
+
+        // Chat réservé aux PRO/PREMIUM
+        if (!vendor.canChat()) {
+            model.addAttribute("pageTitle", "Messages — BOLA Vendeur");
+            model.addAttribute("vendor", vendor);
+            model.addAttribute("flashError",
+                    "Le chat avec vos clients est disponible à partir du Pack Pro. Passez au niveau supérieur !");
+            model.addAttribute("conversations", List.of());
+            model.addAttribute("unreadCount", 0L);
+            return "vendor/messages";
+        }
+
         List<String> customerIds = chatMessageRepository.findDistinctCustomersByVendor(vendor);
         List<ChatMessage> conversations = customerIds.stream()
                 .map(cid -> chatMessageRepository.findFirstByVendorAndCustomerIdentifierOrderBySentAtDesc(vendor, cid))
@@ -1049,5 +1118,129 @@ public class VendorController {
         ra.addFlashAttribute("flashOk", "Carte supprimée.");
         return "redirect:/vendor/loyalty";
     }
-   
+
+    // ─── Statistiques vendeur ────────────────────────────────────────────────
+
+    @GetMapping("/stats")
+    @Transactional(readOnly = true)
+    public String statsPage(HttpSession session, Model model) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+
+        if (!vendor.canViewStats()) {
+            model.addAttribute("pageTitle", "Statistiques — BOLA Vendeur");
+            model.addAttribute("vendor", vendor);
+            model.addAttribute("flashError",
+                    "Les statistiques sont disponibles à partir du Pack Pro. Passez au niveau supérieur !");
+            return "vendor/stats";
+        }
+
+        try {
+            if (vendor.hasAdvancedStats()) {
+                model.addAttribute("stats", vendorStatsService.getAdvancedStats(vendor));
+            } else {
+                model.addAttribute("stats", vendorStatsService.getBasicStats(vendor));
+            }
+        } catch (Exception e) {
+            log.warn("Erreur chargement stats : {}", e.getMessage());
+        }
+
+        model.addAttribute("pageTitle", "Statistiques — BOLA Vendeur");
+        model.addAttribute("vendor", vendor);
+        return "vendor/stats";
+    }
+
+    // ─── Avis clients ──────────────────────────────────────────────────────
+
+    @GetMapping("/reviews")
+    @Transactional(readOnly = true)
+    public String reviewsPage(HttpSession session, Model model) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+        var reviews = reviewRepository.findApprovedByVendor(vendor);
+        double avgRating = reviewRepository.averageRatingByVendor(vendor);
+
+        model.addAttribute("pageTitle", "Avis clients — BOLA Vendeur");
+        model.addAttribute("vendor",    vendor);
+        model.addAttribute("reviews",   reviews);
+        model.addAttribute("avgRating", avgRating);
+        return "vendor/reviews";
+    }
+
+    @PostMapping("/reviews/{id}/reply")
+    @Transactional
+    public String replyToReview(@PathVariable Long id,
+                                @RequestParam String reply,
+                                HttpSession session,
+                                RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+        if (!vendor.canRespondToReviews()) {
+            ra.addFlashAttribute("flashError", "La réponse aux avis est réservée au Pack Premium.");
+            return "redirect:/vendor/reviews";
+        }
+
+        reviewRepository.findById(id).ifPresent(review -> {
+            // Vérifier que l'avis concerne un produit de ce vendeur
+            if (review.getProduct() != null
+                    && review.getProduct().getVendor() != null
+                    && review.getProduct().getVendor().getId().equals(vendor.getId())) {
+                String cleanReply = sanitizer.sanitizeText(reply);
+                if (cleanReply != null && !cleanReply.isBlank()) {
+                    review.setVendorReply(cleanReply);
+                    review.setVendorReplyAt(Instant.now());
+                    reviewRepository.save(review);
+                }
+            }
+        });
+        ra.addFlashAttribute("flashOk", "Réponse publiée !");
+        return "redirect:/vendor/reviews";
+    }
+
+    // ─── API Polling pour le chat (refresh automatique 5s) ──────────────────
+
+    @GetMapping("/api/messages/poll")
+    @ResponseBody
+    @Transactional(readOnly = true)
+    public ResponseEntity<Map<String, Object>> pollMessages(HttpSession session) {
+        VendorUser vendor = currentVendor(session);
+        if (vendor == null || !vendor.canChat()) {
+            return ResponseEntity.status(401).body(Map.of("error", "Non autorisé"));
+        }
+
+        long unread = chatMessageRepository.countByVendorAndReadByVendorFalseAndSenderType(vendor, "CUSTOMER");
+        Map<String, Object> result = new HashMap<>();
+        result.put("unreadCount", unread);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/api/messages/{custId}/poll")
+    @ResponseBody
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<Map<String, Object>>> pollThread(@PathVariable String custId,
+                                                                 HttpSession session) {
+        VendorUser vendor = currentVendor(session);
+        if (vendor == null || !vendor.canChat()) {
+            return ResponseEntity.status(401).body(List.of());
+        }
+
+        var messages = chatMessageRepository
+                .findByVendorAndCustomerIdentifierOrderBySentAtAsc(vendor, custId);
+        var result = messages.stream().map(m -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", m.getId());
+            map.put("senderType", m.getSenderType());
+            map.put("message", m.getMessage());
+            map.put("sentAt", m.getSentAt().toString());
+            map.put("customerName", m.getCustomerName());
+            return map;
+        }).toList();
+        return ResponseEntity.ok(result);
+    }
 }

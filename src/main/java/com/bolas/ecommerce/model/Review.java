@@ -43,6 +43,15 @@ public class Review {
     @Column(nullable = false)
     private boolean approved = false;
 
+    /** Réponse du vendeur PREMIUM à l'avis */
+    @Size(max = 1000)
+    @Column(name = "vendor_reply", length = 1000)
+    private String vendorReply;
+
+    /** Date de la réponse du vendeur */
+    @Column(name = "vendor_reply_at")
+    private Instant vendorReplyAt;
+
     // ─── Getters / Setters ────────────────────────────────────────────
 
     public Long getId() { return id; }
@@ -68,4 +77,10 @@ public class Review {
 
     public boolean isApproved() { return approved; }
     public void setApproved(boolean approved) { this.approved = approved; }
+
+    public String getVendorReply() { return vendorReply; }
+    public void setVendorReply(String vendorReply) { this.vendorReply = vendorReply; }
+
+    public Instant getVendorReplyAt() { return vendorReplyAt; }
+    public void setVendorReplyAt(Instant vendorReplyAt) { this.vendorReplyAt = vendorReplyAt; }
 }

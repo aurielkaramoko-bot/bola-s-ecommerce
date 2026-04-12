@@ -64,7 +64,7 @@
   </form>
 
   <p class="small text-muted text-center mt-2">
-    <i class="bi bi-arrow-clockwise me-1"></i>Actualisation automatique toutes les 10 secondes.
+    <i class="bi bi-arrow-clockwise me-1"></i>Actualisation automatique toutes les 5 secondes.
   </p>
 </main>
 
@@ -81,7 +81,7 @@
     if (!inputField || inputField.value.trim() === '') {
       location.reload();
     }
-  }, 10000);
+  }, 5000);
 
   // Annuler le refresh si l'utilisateur tape
   if (inputField) {

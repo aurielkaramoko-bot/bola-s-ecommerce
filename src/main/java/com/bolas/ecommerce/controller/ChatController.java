@@ -65,6 +65,13 @@ public class ChatController {
             return "redirect:/products";
         }
 
+        // Chat bloqué si le vendeur n'a pas un plan PRO/PREMIUM
+        if (!vendor.canChat()) {
+            ra.addFlashAttribute("flashError",
+                    "Ce vendeur n'a pas encore activé le chat. Contactez-le via WhatsApp.");
+            return "redirect:/boutiques/" + vendorId;
+        }
+
         String custId = customer.getEmail();
         List<ChatMessage> messages = chatMessageRepository
                 .findByVendorAndCustomerIdentifierOrderBySentAtAsc(vendor, custId);

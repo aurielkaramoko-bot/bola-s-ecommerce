@@ -28,7 +28,19 @@
       </span>
       <span th:if="${vendor.plan.name() == 'PRO_LOCAL' or vendor.plan.name() == 'PRO'}"
             class="badge bg-warning text-dark me-1">⭐ Pro</span>
-      <div class="mt-2">
+      <!-- Note moyenne -->
+      <div th:if="${reviewCount != null and reviewCount > 0}" class="mt-1">
+        <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+          <i class="bi" th:classappend="${i <= avgRating} ? 'bi-star-fill text-warning' : 'bi-star text-muted'" style="font-size:0.9rem;"></i>
+        </th:block>
+        <span class="small text-muted ms-1">(<span th:text="${reviewCount}">0</span> avis)</span>
+      </div>
+      <div class="mt-2 d-flex gap-2 flex-wrap">
+        <!-- Bouton chat si PRO/PREMIUM -->
+        <a th:if="${vendor.canChat()}" th:href="@{/chat/{id}(id=${vendor.id})}"
+           class="btn btn-sm btn-hero-solid">
+          <i class="bi bi-chat-dots me-1"></i>Contacter le vendeur
+        </a>
         <button type="button" class="btn btn-outline-danger btn-sm"
                 data-bs-toggle="modal" data-bs-target="#reportVendorModal">
           <i class="bi bi-flag me-1"></i>Signaler cette boutique
@@ -51,6 +63,42 @@
   <div th:if="${products.isEmpty()}" class="text-muted small py-4 text-center">
     <i class="bi bi-box fs-2 d-block mb-2 opacity-25"></i>
     Cette boutique n'a pas encore de produits.
+  </div>
+
+  <!-- Section avis clients -->
+  <div th:if="${vendorReviews != null and !vendorReviews.isEmpty()}" class="mt-5">
+    <h2 class="h5 fw-bold mb-3" style="color:var(--bolas-accent);">
+      <i class="bi bi-chat-quote me-2"></i>Avis clients
+    </h2>
+    <div th:each="review : ${vendorReviews}" class="admin-card p-3 mb-2">
+      <div class="d-flex align-items-start gap-3">
+        <div style="width:36px;height:36px;background:linear-gradient(135deg,#eee,#ddd);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-person" style="font-size:1rem;color:#999;"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <strong class="small" th:text="${review.reviewerName}">Client</strong>
+            <div>
+              <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                <i class="bi" th:classappend="${i <= review.rating} ? 'bi-star-fill text-warning' : 'bi-star text-muted'" style="font-size:0.75rem;"></i>
+              </th:block>
+            </div>
+            <span class="small text-muted ms-auto" th:text="${#temporals.format(review.createdAt, 'dd/MM/yyyy')}"></span>
+          </div>
+          <div class="small text-muted mb-1" th:if="${review.product != null}">
+            <i class="bi bi-box-seam me-1"></i><span th:text="${review.product.name}">Produit</span>
+          </div>
+          <p th:if="${review.comment != null}" class="small mb-1" th:text="${review.comment}"></p>
+          <!-- Réponse vendeur -->
+          <div th:if="${review.vendorReply != null}" class="p-2 rounded small mt-1" style="background:rgba(139,94,60,0.05);border-left:3px solid var(--bolas-accent);">
+            <span class="fw-semibold" style="color:var(--bolas-accent);">
+              <i class="bi bi-reply me-1"></i>Réponse du vendeur :
+            </span>
+            <span th:text="${review.vendorReply}"></span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
 </main>

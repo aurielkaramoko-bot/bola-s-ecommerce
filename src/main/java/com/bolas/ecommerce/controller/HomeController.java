@@ -3,6 +3,7 @@ package com.bolas.ecommerce.controller;
 import com.bolas.ecommerce.repository.CategoryRepository;
 import com.bolas.ecommerce.repository.CountryRepository;
 import com.bolas.ecommerce.repository.ProductRepository;
+import com.bolas.ecommerce.repository.ReviewRepository;
 import com.bolas.ecommerce.repository.VendorUserRepository;
 import com.bolas.ecommerce.model.Product;
 import com.bolas.ecommerce.model.VendorStatus;
@@ -21,8 +22,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
-import java.util.List;
-
 @Controller
 public class HomeController {
 
@@ -30,15 +29,18 @@ public class HomeController {
     private final CategoryRepository categoryRepository;
     private final VendorUserRepository vendorUserRepository;
     private final CountryRepository countryRepository;
+    private final ReviewRepository reviewRepository;
 
     public HomeController(ProductRepository productRepository,
                           CategoryRepository categoryRepository,
                           VendorUserRepository vendorUserRepository,
-                          CountryRepository countryRepository) {
+                          CountryRepository countryRepository,
+                          ReviewRepository reviewRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.vendorUserRepository = vendorUserRepository;
         this.countryRepository = countryRepository;
+        this.reviewRepository = reviewRepository;
     }
 
     @GetMapping("/")
@@ -140,6 +142,18 @@ public class HomeController {
         model.addAttribute("pageTitle", vendor.getDisplayName() + " — BOLA");
         model.addAttribute("vendor", vendor);
         model.addAttribute("products", productRepository.findByVendorAndAvailableTrue(vendor));
+
+        // Avis et note moyenne
+        try {
+            model.addAttribute("vendorReviews", reviewRepository.findApprovedByVendor(vendor));
+            model.addAttribute("avgRating", reviewRepository.averageRatingByVendor(vendor));
+            model.addAttribute("reviewCount", reviewRepository.countApprovedByVendor(vendor));
+        } catch (Exception e) {
+            model.addAttribute("vendorReviews", java.util.List.of());
+            model.addAttribute("avgRating", 0.0);
+            model.addAttribute("reviewCount", 0L);
+        }
+
         return "boutique-detail";
     }
 

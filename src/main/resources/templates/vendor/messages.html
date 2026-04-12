@@ -19,34 +19,62 @@
           th:text="${unreadCount} + ' non lu(s)'">0</span>
   </div>
 
-  <!-- Liste des conversations -->
-  <div th:if="${conversations.isEmpty()}" class="admin-card p-5 text-center text-muted">
-    <i class="bi bi-inbox" style="font-size:2.5rem;opacity:.3;display:block;"></i>
-    <p class="mt-2 mb-0">Aucune conversation. Les messages de vos clients apparaîtront ici.</p>
-  </div>
-
-  <div th:each="conv : ${conversations}" class="admin-card p-3 mb-2">
-    <a th:href="@{/vendor/messages/{custId}(custId=${conv.customerIdentifier})}"
-       class="d-flex align-items-center gap-3 text-decoration-none" style="color:var(--bolas-text);">
-      <div style="width:44px;height:44px;background:var(--bolas-light);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <i class="bi bi-person" style="font-size:1.2rem;color:var(--bolas-accent);"></i>
-      </div>
-      <div class="flex-grow-1">
-        <div class="fw-semibold small" th:text="${conv.customerName ?: conv.customerIdentifier}">Client</div>
-        <div class="small text-muted text-truncate" style="max-width:400px;"
-             th:text="${conv.message}">Dernier message...</div>
-      </div>
-      <div class="text-end flex-shrink-0">
-        <span class="small text-muted"
-              th:text="${#temporals.format(conv.sentAt,'dd/MM HH:mm')}">12:00</span>
-        <span th:if="${!conv.readByVendor and conv.senderType == 'CUSTOMER'}"
-              class="badge rounded-pill ms-1" style="background:var(--bolas-accent);">Nouveau</span>
-      </div>
+  <!-- Bloqué si GRATUIT -->
+  <div th:if="${flashError}" class="admin-card p-5 text-center">
+    <i class="bi bi-lock" style="font-size:3rem;color:#ccc;display:block;"></i>
+    <p class="mt-3 mb-2" th:text="${flashError}"></p>
+    <a th:href="@{/contact}" class="btn btn-hero-solid btn-sm">
+      <i class="bi bi-whatsapp me-1"></i>Contacter BOLA pour upgrader
     </a>
   </div>
+
+  <!-- Liste des conversations (PRO/PREMIUM) -->
+  <th:block th:if="${flashError == null}">
+    <div th:if="${conversations.isEmpty()}" class="admin-card p-5 text-center text-muted">
+      <i class="bi bi-inbox" style="font-size:2.5rem;opacity:.3;display:block;"></i>
+      <p class="mt-2 mb-0">Aucune conversation. Les messages de vos clients apparaîtront ici.</p>
+    </div>
+
+    <div th:each="conv : ${conversations}" class="admin-card p-3 mb-2">
+      <a th:href="@{/vendor/messages/{custId}(custId=${conv.customerIdentifier})}"
+         class="d-flex align-items-center gap-3 text-decoration-none" style="color:var(--bolas-text);">
+        <div style="width:44px;height:44px;background:var(--bolas-light);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-person" style="font-size:1.2rem;color:var(--bolas-accent);"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-semibold small" th:text="${conv.customerName ?: conv.customerIdentifier}">Client</div>
+          <div class="small text-muted text-truncate" style="max-width:400px;"
+               th:text="${conv.message}">Dernier message...</div>
+        </div>
+        <div class="text-end flex-shrink-0">
+          <span class="small text-muted"
+                th:text="${#temporals.format(conv.sentAt,'dd/MM HH:mm')}">12:00</span>
+          <span th:if="${!conv.readByVendor and conv.senderType == 'CUSTOMER'}"
+                class="badge rounded-pill ms-1" style="background:var(--bolas-accent);">Nouveau</span>
+        </div>
+      </a>
+    </div>
+  </th:block>
 </div>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
 <th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+
+<!-- Polling pour les nouveaux messages (5s) — PRO/PREMIUM uniquement -->
+<script th:if="${flashError == null}" th:inline="javascript">
+(function(){
+  function pollMessages() {
+    fetch('/vendor/api/messages/poll', { credentials: 'same-origin' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.unreadCount && data.unreadCount > 0) {
+          document.title = '(' + data.unreadCount + ') Messages — BOLA';
+        }
+      })
+      .catch(() => {});
+  }
+  setInterval(pollMessages, 5000);
+})();
+</script>
 </body>
 </html>

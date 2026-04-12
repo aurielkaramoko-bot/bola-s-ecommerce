@@ -107,6 +107,10 @@ public class VendorUser {
     @Column(name = "subscription_expires_at")
     private java.time.LocalDate subscriptionExpiresAt;
 
+    /** ID du livreur (CourierApplication) assigné par l'admin à l'activation PRO/PREMIUM */
+    @Column(name = "assigned_courier_id")
+    private Long assignedCourierId;
+
     // ─── Getters / Setters ────────────────────────────────────────────────────
 
     public Long getId() { return id; }
@@ -166,6 +170,9 @@ public class VendorUser {
     public java.time.LocalDate getSubscriptionExpiresAt() { return subscriptionExpiresAt; }
     public void setSubscriptionExpiresAt(java.time.LocalDate subscriptionExpiresAt) { this.subscriptionExpiresAt = subscriptionExpiresAt; }
 
+    public Long getAssignedCourierId() { return assignedCourierId; }
+    public void setAssignedCourierId(Long assignedCourierId) { this.assignedCourierId = assignedCourierId; }
+
     /** Jours restants avant expiration (négatif = expiré) */
     public long getDaysUntilExpiry() {
         if (subscriptionExpiresAt == null) return Long.MAX_VALUE;
@@ -176,4 +183,34 @@ public class VendorUser {
     public String getDisplayName() {
         return (shopName != null && !shopName.isBlank()) ? shopName : username;
     }
+
+    // ─── Plan-based helpers ──────────────────────────────────────────────────
+
+    private boolean isPaidPlan() {
+        return plan == VendorPlan.PRO_LOCAL || plan == VendorPlan.PRO || plan == VendorPlan.PREMIUM;
+    }
+
+    /** Le vendeur peut gérer ses commandes lui-même (confirmer, préparer, expédier) */
+    public boolean canManageOrders() { return isPaidPlan(); }
+
+    /** Le vendeur peut chatter avec ses clients */
+    public boolean canChat() { return isPaidPlan(); }
+
+    /** Le vendeur a accès aux statistiques basiques */
+    public boolean canViewStats() { return isPaidPlan(); }
+
+    /** Le vendeur a accès aux statistiques avancées (graphiques 6 mois, conversion) */
+    public boolean hasAdvancedStats() { return plan == VendorPlan.PREMIUM; }
+
+    /** Badge vérifié ⭐ visible partout */
+    public boolean isVerified() { return plan == VendorPlan.PREMIUM; }
+
+    /** Le vendeur peut répondre aux avis clients */
+    public boolean canRespondToReviews() { return plan == VendorPlan.PREMIUM; }
+
+    /** Le vendeur bénéficie d'une mise en avant prioritaire homepage et recherche */
+    public boolean hasHomepagePriority() { return plan == VendorPlan.PREMIUM; }
+
+    /** Nombre maximum de produits autorisés */
+    public int getMaxProducts() { return plan == VendorPlan.GRATUIT ? 10 : Integer.MAX_VALUE; }
 }

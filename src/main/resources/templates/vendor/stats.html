@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Statistiques — BOLA Vendeur</title>
+</head>
+<body class="bolas-body">
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container py-4 flex-grow-1">
+  <div class="d-flex align-items-center gap-2 mb-4">
+    <a th:href="@{/vendor/dashboard}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="h4 fw-bold mb-0" style="color:var(--bolas-accent);">
+      <i class="bi bi-graph-up me-2"></i>Statistiques
+    </h1>
+    <span class="badge ms-2"
+          th:classappend="${vendor.plan.name() == 'PREMIUM'} ? 'text-bg-warning' : 'text-bg-info'"
+          th:text="${vendor.plan.name() == 'PREMIUM'} ? 'Premium' : 'Pro'">Plan</span>
+  </div>
+
+  <!-- Bloqué si GRATUIT -->
+  <div th:if="${flashError}" class="alert alert-warning text-center">
+    <i class="bi bi-lock" style="font-size:2rem;"></i>
+    <p class="mt-2 mb-2" th:text="${flashError}"></p>
+    <a th:href="@{/contact}" class="btn btn-hero-solid btn-sm">
+      <i class="bi bi-whatsapp me-1"></i>Contacter BOLA pour upgrader
+    </a>
+  </div>
+
+  <th:block th:if="${stats != null}">
+    <!-- Stats basiques (PRO + PREMIUM) -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3">
+        <div class="admin-card p-3 text-center">
+          <i class="bi bi-currency-exchange" style="font-size:1.6rem;color:var(--bolas-accent);"></i>
+          <div class="h3 fw-bold mt-1 mb-0" th:text="${#numbers.formatInteger(stats.monthlyRevenue,1,'COMMA')} + ' CFA'">0</div>
+          <div class="small text-muted">CA ce mois</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="admin-card p-3 text-center">
+          <i class="bi bi-receipt" style="font-size:1.6rem;color:#27ae60;"></i>
+          <div class="h3 fw-bold mt-1 mb-0" th:text="${stats.monthlyOrders}">0</div>
+          <div class="small text-muted">Commandes ce mois</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="admin-card p-3 text-center">
+          <i class="bi bi-cart-check" style="font-size:1.6rem;color:#8B5E3C;"></i>
+          <div class="h3 fw-bold mt-1 mb-0" th:text="${stats.totalOrders}">0</div>
+          <div class="small text-muted">Total commandes</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="admin-card p-3 text-center">
+          <i class="bi bi-box-seam" style="font-size:1.6rem;color:#f39c12;"></i>
+          <div class="h3 fw-bold mt-1 mb-0" th:text="${stats.totalProducts}">0</div>
+          <div class="small text-muted">Produits</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top 5 produits -->
+    <div class="admin-card mb-4" th:if="${stats.topProducts != null and !stats.topProducts.isEmpty()}">
+      <div class="p-3 border-bottom"><h2 class="h6 fw-bold mb-0" style="color:var(--bolas-accent);">🏆 Top 5 produits</h2></div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light"><tr><th>#</th><th>Produit</th><th>Commandes</th><th>Revenu estimé</th></tr></thead>
+          <tbody>
+            <tr th:each="tp, iter : ${stats.topProducts}">
+              <td th:text="${iter.index + 1}">1</td>
+              <td th:text="${tp.name}">Produit</td>
+              <td th:text="${tp.orderCount}">0</td>
+              <td th:text="${#numbers.formatInteger(tp.revenue,1,'COMMA')} + ' CFA'">0 CFA</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Graphiques avancés PREMIUM -->
+    <th:block th:if="${vendor.hasAdvancedStats() and stats.monthLabels != null}">
+      <div class="row g-4 mb-4">
+        <div class="col-12 col-lg-6">
+          <div class="admin-card p-3">
+            <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);">📈 CA sur 6 mois</h2>
+            <canvas id="revenueChart" height="200"></canvas>
+          </div>
+        </div>
+        <div class="col-12 col-lg-6">
+          <div class="admin-card p-3">
+            <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);">📦 Commandes sur 6 mois</h2>
+            <canvas id="ordersChart" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Note et avis -->
+      <div class="admin-card p-3 mb-4" th:if="${stats.reviewCount > 0}">
+        <div class="d-flex align-items-center gap-3">
+          <div>
+            <i class="bi bi-star-fill text-warning" style="font-size:2rem;"></i>
+          </div>
+          <div>
+            <div class="h4 fw-bold mb-0" th:text="${#numbers.formatDecimal(stats.averageRating, 1, 1)} + '/5'">0/5</div>
+            <div class="small text-muted"><span th:text="${stats.reviewCount}">0</span> avis clients</div>
+          </div>
+        </div>
+      </div>
+    </th:block>
+
+    <!-- Upgrade vers PREMIUM si PRO -->
+    <div th:if="${!vendor.hasAdvancedStats()}" class="admin-card p-3 mb-4" style="border-left:4px solid #f39c12;">
+      <h6 class="fw-bold mb-2" style="color:var(--bolas-accent);">📊 Débloquez les stats avancées</h6>
+      <p class="small mb-2">Graphiques sur 6 mois, taux de conversion, et plus — disponible avec le <strong>Pack Premium (10 000 FCFA/mois)</strong>.</p>
+      <a th:href="@{/contact}" class="btn btn-sm btn-hero-solid"><i class="bi bi-arrow-up-circle me-1"></i>Passer en Premium</a>
+    </div>
+  </th:block>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+
+<!-- Chart.js pour les graphiques PREMIUM -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script th:if="${stats != null and stats.monthLabels != null}" th:inline="javascript">
+(function(){
+  const labels = /*[[${stats.monthLabels}]]*/ [];
+  const revenues = /*[[${stats.monthRevenues}]]*/ [];
+  const orders = /*[[${stats.monthOrderCounts}]]*/ [];
+
+  if (document.getElementById('revenueChart')) {
+    new Chart(document.getElementById('revenueChart'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'CA (CFA)',
+          data: revenues,
+          backgroundColor: 'rgba(139, 94, 60, 0.6)',
+          borderColor: '#8B5E3C',
+          borderWidth: 1,
+          borderRadius: 4
+        }]
+      },
+      options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+  }
+
+  if (document.getElementById('ordersChart')) {
+    new Chart(document.getElementById('ordersChart'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Commandes',
+          data: orders,
+          borderColor: '#27ae60',
+          backgroundColor: 'rgba(39,174,96,0.1)',
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+  }
+})();
+</script>
+</body>
+</html>

@@ -14,15 +14,20 @@
       <i class="bi bi-shop-window" style="font-size:1.5rem;color:#fff;"></i>
     </div>
     <div>
-      <h1 class="h4 fw-bold mb-0" style="color:var(--bolas-accent);"
-          th:text="${vendor.displayName}">Ma boutique</h1>
+      <h1 class="h4 fw-bold mb-0" style="color:var(--bolas-accent);">
+        <span th:text="${vendor.displayName}">Ma boutique</span>
+        <span th:if="${vendor.verified}" class="badge text-bg-warning ms-1" title="Vendeur vérifié PREMIUM">⭐ Vérifié</span>
+      </h1>
       <span class="badge me-1"
             th:classappend="${vendor.plan.name() == 'PREMIUM'} ? 'text-bg-warning' :
-                             (${vendor.plan.name() == 'PRO_LOCAL' or vendor.plan.name() == 'PRO'} ? 'text-bg-warning' : 'bg-secondary')"
+                             (${vendor.plan.name() == 'PRO_LOCAL' or vendor.plan.name() == 'PRO'} ? 'text-bg-info' : 'bg-secondary')"
             th:text="${vendor.plan.name() == 'PREMIUM'} ? '⭐ Pack Premium' :
-                      (${vendor.plan.name() == 'PRO_LOCAL'} ? '⭐ Pack Pro Local' :
-                      (${vendor.plan.name() == 'PRO'} ? '⭐ Pack Pro' : 'Pack Débutant'))">Pack</span>
+                      (${vendor.plan.name() == 'PRO_LOCAL'} ? 'Pack Pro Local' :
+                      (${vendor.plan.name() == 'PRO'} ? 'Pack Pro' : 'Pack Débutant'))">Pack</span>
       <span class="badge bg-success">Actif</span>
+      <span th:if="${vendor.subscriptionExpiresAt != null}" class="badge bg-light text-dark ms-1">
+        Expire le <span th:text="${vendor.subscriptionExpiresAt}"></span>
+      </span>
     </div>
     <div class="ms-auto d-flex gap-2">
       <a th:href="@{/vendor/products}" id="btn-my-products" class="btn btn-hero-solid btn-sm">
@@ -40,7 +45,6 @@
 
   <!-- Stats cards -->
   <div class="row g-3 mb-4">
-    <!-- Produits -->
     <div class="col-6 col-md-3">
       <div class="admin-card p-3 text-center">
         <i class="bi bi-box-seam" style="font-size:1.6rem;color:var(--bolas-accent);"></i>
@@ -51,8 +55,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Barre de capacité plan GRATUIT -->
     <div class="col-6 col-md-3">
       <div class="admin-card p-3 text-center">
         <i class="bi bi-hourglass-split" style="font-size:1.6rem;color:#f39c12;"></i>
@@ -60,7 +62,6 @@
         <div class="small text-muted">Commandes en attente</div>
       </div>
     </div>
-
     <div class="col-6 col-md-3">
       <div class="admin-card p-3 text-center">
         <i class="bi bi-check2-circle" style="font-size:1.6rem;color:#27ae60;"></i>
@@ -68,36 +69,84 @@
         <div class="small text-muted">Commandes confirmées</div>
       </div>
     </div>
-
     <div class="col-6 col-md-3">
       <div class="admin-card p-3 text-center">
-        <i class="bi bi-graph-up-arrow" style="font-size:1.6rem;color:#8B5E3C;"></i>
-        <div class="h3 fw-bold mt-1 mb-0">—</div>
-        <div class="small text-muted">Stats Pack Pro</div>
+        <th:block th:if="${stats != null}">
+          <i class="bi bi-graph-up-arrow" style="font-size:1.6rem;color:#8B5E3C;"></i>
+          <div class="h3 fw-bold mt-1 mb-0" th:text="${#numbers.formatInteger(stats.monthlyRevenue,1,'COMMA')} + ' CFA'">0 CFA</div>
+          <div class="small text-muted">CA ce mois</div>
+        </th:block>
+        <th:block th:if="${stats == null}">
+          <i class="bi bi-lock" style="font-size:1.6rem;color:#ccc;"></i>
+          <div class="h5 fw-bold mt-1 mb-0 text-muted">—</div>
+          <div class="small text-muted">Stats Pack Pro</div>
+        </th:block>
       </div>
     </div>
   </div>
 
-  <!-- Limite plan GRATUIT -->
-  <div th:if="${vendor.plan.name() == 'GRATUIT'}" class="admin-card p-3 mb-4">
+  <!-- Messages non lus -->
+  <div th:if="${unreadMessages != null and unreadMessages > 0}" class="alert alert-info mb-3 d-flex align-items-center">
+    <i class="bi bi-chat-dots me-2" style="font-size:1.3rem;"></i>
+    <span>Vous avez <strong th:text="${unreadMessages}">0</strong> message(s) non lu(s).</span>
+    <a th:href="@{/vendor/messages}" class="btn btn-sm btn-hero-solid ms-auto"
+       th:if="${vendor.canChat()}">Lire les messages</a>
+    <span th:if="${!vendor.canChat()}" class="ms-auto badge bg-secondary">Chat dispo en Pack Pro</span>
+  </div>
+
+  <!-- Avis clients résumé -->
+  <div th:if="${reviewCount != null and reviewCount > 0}" class="admin-card p-3 mb-4">
+    <div class="d-flex align-items-center justify-content-between">
+      <div>
+        <i class="bi bi-star-fill text-warning me-1"></i>
+        <strong th:text="${#numbers.formatDecimal(avgRating, 1, 1)}">0.0</strong>/5
+        <span class="text-muted ms-1">(<span th:text="${reviewCount}">0</span> avis)</span>
+      </div>
+      <a th:href="@{/vendor/reviews}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-chat-quote me-1"></i>Voir les avis
+      </a>
+    </div>
+  </div>
+
+  <!-- Livreur assigné -->
+  <div th:if="${assignedCourier != null}" class="admin-card p-3 mb-4 border-start border-3" style="border-color: var(--bolas-accent) !important;">
+    <div class="d-flex align-items-center gap-3">
+      <i class="bi bi-bicycle" style="font-size:1.6rem;color:var(--bolas-accent);"></i>
+      <div>
+        <div class="fw-bold" th:text="${assignedCourier.courierName}">Livreur</div>
+        <div class="small text-muted">
+          <i class="bi bi-telephone me-1"></i><span th:text="${assignedCourier.courierPhone}">—</span>
+          | <span th:text="${assignedCourier.vehicleType}">—</span>
+        </div>
+      </div>
+      <span class="badge bg-success ms-auto">Assigné par BOLA</span>
+    </div>
+  </div>
+
+  <!-- Upgrade banner GRATUIT -->
+  <div th:if="${vendor.plan.name() == 'GRATUIT'}" class="admin-card p-3 mb-4" style="border-left: 4px solid #f39c12;">
     <div class="d-flex justify-content-between align-items-center mb-1">
       <span class="small fw-semibold">Capacité produits (Pack Débutant)</span>
       <span class="small text-muted" th:text="${productCount} + '/' + ${gratuitLimit}">0/10</span>
     </div>
     <div class="progress" style="height:8px;border-radius:4px;">
-      <div class="progress-bar"
-           style="background:var(--bolas-accent);"
+      <div class="progress-bar" style="background:var(--bolas-accent);"
            th:style="'width:' + (${productCount} * 100 / ${gratuitLimit}) + '%;'"
            role="progressbar"></div>
     </div>
-    <div class="mt-2 small text-muted">
-      Passez au <strong>Pack Pro Local (3 000 FCFA)</strong> ou <strong>Pack Premium (10 000 FCFA)</strong> pour des produits illimités et une visibilité sur la page d'accueil.
-      <a th:href="@{/contact}" style="color:var(--bolas-accent);">Nous contacter →</a>
+    <div class="mt-3 p-3 rounded" style="background:rgba(139,94,60,0.05);border:1px dashed rgba(139,94,60,0.3);">
+      <h6 class="fw-bold mb-2" style="color:var(--bolas-accent);">🚀 Passez au niveau supérieur !</h6>
+      <ul class="small mb-2">
+        <li><strong>Pack Pro Local (3 000 FCFA/mois)</strong> : Produits illimités, gestion commandes, chat client, stats, 1 livreur</li>
+        <li><strong>Pack Premium (10 000 FCFA/mois)</strong> : + badge vérifié ⭐, stats avancées, réponse avis, priorité homepage</li>
+      </ul>
+      <a th:href="@{/contact}" class="btn btn-sm btn-hero-solid">
+        <i class="bi bi-whatsapp me-1"></i>Contacter BOLA pour upgrader
+      </a>
     </div>
   </div>
 
   <div class="row g-4">
-
     <!-- Derniers produits -->
     <div class="col-12 col-lg-7">
       <div class="admin-card">
@@ -105,9 +154,7 @@
           <h2 class="h6 fw-bold mb-0" style="color:var(--bolas-accent);">
             <i class="bi bi-box-seam me-2"></i>Mes derniers produits
           </h2>
-          <a th:href="@{/vendor/products}" class="btn btn-sm btn-hero-solid" id="btn-see-all-products">
-            Voir tout
-          </a>
+          <a th:href="@{/vendor/products}" class="btn btn-sm btn-hero-solid" id="btn-see-all-products">Voir tout</a>
         </div>
         <div th:if="${products.isEmpty()}" class="p-4 text-center text-muted">
           <i class="bi bi-box" style="font-size:2rem;opacity:.3;"></i>
@@ -115,46 +162,21 @@
         </div>
         <div class="table-responsive" th:if="${!products.isEmpty()}">
           <table class="table table-hover align-middle mb-0 small">
-            <thead class="table-light">
-              <tr>
-                <th>Produit</th>
-                <th>Prix</th>
-                <th>Dispo</th>
-                <th></th>
-              </tr>
-            </thead>
+            <thead class="table-light"><tr><th>Produit</th><th>Prix</th><th>Dispo</th><th></th></tr></thead>
             <tbody>
               <tr th:each="p : ${products}">
                 <td>
                   <div class="d-flex align-items-center gap-2">
-                    <img th:src="${p.imageUrl}" th:if="${p.imageUrl != null}"
-                         style="width:36px;height:36px;object-fit:cover;border-radius:6px;"
-                         alt=""/>
+                    <img th:src="${p.imageUrl}" th:if="${p.imageUrl != null}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;" alt=""/>
                     <span th:text="${p.name}">Produit</span>
                   </div>
                 </td>
-                <td>
-                  <span th:text="${#numbers.formatInteger(p.effectivePriceCfa,1,'COMMA')} + ' FCFA'"
-                        th:style="${p.onPromotion}? 'color:var(--bolas-accent);font-weight:600;' : ''">
-                  </span>
-                </td>
+                <td><span th:text="${#numbers.formatInteger(p.effectivePriceCfa,1,'COMMA')} + ' FCFA'" th:style="${p.onPromotion}? 'color:var(--bolas-accent);font-weight:600;' : ''"></span></td>
                 <td>
                   <span th:if="${p.available}" class="badge bg-success">Oui</span>
                   <span th:if="${!p.available}" class="badge bg-secondary">Non</span>
                 </td>
-                <td>
-                  <a th:href="@{/vendor/products/{id}/edit(id=${p.id})}" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-pencil"></i>
-                  </a>
-                  <form th:action="@{/vendor/products/{id}/delete(id=${p.id})}"
-                        method="post" class="d-inline m-0"
-                        onsubmit="return confirm('Supprimer ce produit ?')">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer">
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </form>
-                </td>
+                <td><a th:href="@{/vendor/products/{id}/edit(id=${p.id})}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a></td>
               </tr>
             </tbody>
           </table>
@@ -164,22 +186,14 @@
 
     <!-- Actions rapides -->
     <div class="col-12 col-lg-5">
-      <!-- Lien de partage boutique -->
       <div class="admin-card p-3 mb-3">
-        <h2 class="h6 fw-bold mb-2" style="color:var(--bolas-accent);">
-          <i class="bi bi-share me-2"></i>Partager ma boutique
-        </h2>
+        <h2 class="h6 fw-bold mb-2" style="color:var(--bolas-accent);"><i class="bi bi-share me-2"></i>Partager ma boutique</h2>
         <p class="small text-muted mb-2">Copie ce lien et colle-le sur ton statut WhatsApp, TikTok ou Instagram :</p>
         <div class="input-group input-group-sm">
-          <input type="text" class="form-control" id="shop-link" readonly
-                 th:value="${shopBaseUrl + '/boutiques/' + vendor.id}"/>
-          <button class="btn btn-hero-solid" type="button" onclick="copyShopLink()">
-            <i class="bi bi-clipboard me-1"></i>Copier
-          </button>
+          <input type="text" class="form-control" id="shop-link" readonly th:value="${shopBaseUrl + '/boutiques/' + vendor.id}"/>
+          <button class="btn btn-hero-solid" type="button" onclick="copyShopLink()"><i class="bi bi-clipboard me-1"></i>Copier</button>
         </div>
-        <div id="copy-ok" class="small text-success mt-1" style="display:none;">
-          <i class="bi bi-check-circle me-1"></i>Lien copié !
-        </div>
+        <div id="copy-ok" class="small text-success mt-1" style="display:none;"><i class="bi bi-check-circle me-1"></i>Lien copié !</div>
         <a th:href="${'https://wa.me/?text=Découvrez+ma+boutique+sur+BOLA+%3A+' + shopBaseUrl + '/boutiques/' + vendor.id}"
            target="_blank" class="btn btn-sm mt-2 text-white w-100" style="background:#25D366;">
           <i class="bi bi-whatsapp me-1"></i>Partager sur WhatsApp
@@ -187,53 +201,36 @@
       </div>
 
       <div class="admin-card p-3 mb-3">
-        <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);">
-          <i class="bi bi-lightning me-2"></i>Actions rapides
-        </h2>
+        <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);"><i class="bi bi-lightning me-2"></i>Actions rapides</h2>
         <div class="d-grid gap-2">
-          <a th:href="@{/vendor/products/add}" id="btn-add-product" class="btn btn-hero-solid text-start">
-            <i class="bi bi-plus-circle me-2"></i>Ajouter un produit
-          </a>
+          <a th:href="@{/vendor/products/add}" id="btn-add-product" class="btn btn-hero-solid text-start"><i class="bi bi-plus-circle me-2"></i>Ajouter un produit</a>
           <a th:href="@{/vendor/orders}" id="btn-my-orders" class="btn btn-outline-secondary text-start">
             <i class="bi bi-receipt me-2"></i>Voir mes commandes
+            <span th:if="${pendingOrders > 0}" class="badge bg-danger ms-1" th:text="${pendingOrders}">0</span>
           </a>
-          <a th:href="@{/vendor/couriers}" class="btn btn-outline-secondary text-start">
-            <i class="bi bi-bicycle me-2"></i>Proposer un livreur
+          <a th:href="@{/vendor/messages}" class="btn btn-outline-secondary text-start position-relative">
+            <i class="bi bi-chat-dots me-2"></i>Messages clients
+            <span th:if="${unreadMessages != null and unreadMessages > 0}" class="badge bg-danger ms-1" th:text="${unreadMessages}">0</span>
+            <span th:if="${!vendor.canChat()}" class="badge bg-secondary ms-auto">PRO</span>
           </a>
-          <a th:href="@{/boutiques/{id}(id=${vendor.id})}" id="btn-see-shop" target="_blank" class="btn btn-outline-secondary text-start">
-            <i class="bi bi-eye me-2"></i>Voir ma boutique (aperçu)
+          <a th:href="@{/vendor/stats}" class="btn btn-outline-secondary text-start">
+            <i class="bi bi-graph-up me-2"></i>Statistiques
+            <span th:if="${!vendor.canViewStats()}" class="badge bg-secondary ms-auto">PRO</span>
           </a>
-          <a th:href="@{/contact}" class="btn btn-outline-secondary text-start">
-            <i class="bi bi-headset me-2"></i>Contacter le support BOLA
-          </a>
+          <a th:href="@{/vendor/reviews}" class="btn btn-outline-secondary text-start"><i class="bi bi-star me-2"></i>Avis clients</a>
+          <a th:href="@{/vendor/couriers}" class="btn btn-outline-secondary text-start"><i class="bi bi-bicycle me-2"></i>Proposer un livreur</a>
+          <a th:href="@{/vendor/loyalty}" class="btn btn-outline-secondary text-start"><i class="bi bi-award me-2"></i>Cartes fidélité</a>
+          <a th:href="@{/boutiques/{id}(id=${vendor.id})}" id="btn-see-shop" target="_blank" class="btn btn-outline-secondary text-start"><i class="bi bi-eye me-2"></i>Voir ma boutique</a>
         </div>
       </div>
 
-      <!-- Infos boutique -->
       <div class="admin-card p-3">
-        <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);">
-          <i class="bi bi-info-circle me-2"></i>Informations boutique
-        </h2>
+        <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);"><i class="bi bi-info-circle me-2"></i>Informations boutique</h2>
         <ul class="list-unstyled small mb-0">
-          <li class="mb-2">
-            <span class="text-muted">Identifiant :</span>
-            <strong th:text="${vendor.username}" class="ms-1">—</strong>
-          </li>
-          <li class="mb-2" th:if="${vendor.shopName != null}">
-            <span class="text-muted">Boutique :</span>
-            <strong th:text="${vendor.shopName}" class="ms-1">—</strong>
-          </li>
-          <li class="mb-2">
-            <span class="text-muted">Téléphone :</span>
-            <a th:href="${'https://wa.me/' + vendor.phone}" class="ms-1" target="_blank">
-              <i class="bi bi-whatsapp text-success me-1"></i>
-              <span th:text="${vendor.phone}">—</span>
-            </a>
-          </li>
-          <li th:if="${vendor.email != null}">
-            <span class="text-muted">Email :</span>
-            <span th:text="${vendor.email}" class="ms-1">—</span>
-          </li>
+          <li class="mb-2"><span class="text-muted">Identifiant :</span> <strong th:text="${vendor.username}" class="ms-1">—</strong></li>
+          <li class="mb-2" th:if="${vendor.shopName != null}"><span class="text-muted">Boutique :</span> <strong th:text="${vendor.shopName}" class="ms-1">—</strong></li>
+          <li class="mb-2"><span class="text-muted">Téléphone :</span> <a th:href="${'https://wa.me/' + vendor.phone}" class="ms-1" target="_blank"><i class="bi bi-whatsapp text-success me-1"></i><span th:text="${vendor.phone}">—</span></a></li>
+          <li th:if="${vendor.email != null}"><span class="text-muted">Email :</span> <span th:text="${vendor.email}" class="ms-1">—</span></li>
         </ul>
       </div>
     </div>
