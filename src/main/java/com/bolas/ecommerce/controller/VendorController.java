@@ -998,4 +998,5 @@ public class VendorController {
         ra.addFlashAttribute("flashOk", "Carte supprimée.");
         return "redirect:/vendor/loyalty";
     }
+   
 }

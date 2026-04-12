@@ -36,4 +36,5 @@ public interface VendorUserRepository extends JpaRepository<VendorUser, Long> {
     /** Vendeurs dont l'abonnement expire dans une plage de dates */
     @Query("SELECT v FROM VendorUser v WHERE v.subscriptionExpiresAt >= :startDate AND v.subscriptionExpiresAt <= :endDate AND v.active = true")
     List<VendorUser> findBySubscriptionExpiresAtBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    List<VendorUser> findBySubscriptionExpiresAtNotNullAndSubscriptionExpiresAtBeforeOrderBySubscriptionExpiresAtAsc(java.time.LocalDate date);
 }

@@ -49,7 +49,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
           OR LOWER(p.description) LIKE LOWER(CONCAT('%',:q,'%')))
         ORDER BY p.sponsored DESC, p.id DESC
         """)
-    List<Product> searchByKeyword(@Param("q") String q);
+    List<Product> searchByKeyword(@Param("q") String q, @Param("categoryId") Long categoryId);
 
     /** 4. Méthodes utilisées par ProductController (Filtrage) */
     
