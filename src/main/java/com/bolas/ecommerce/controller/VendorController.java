@@ -513,6 +513,7 @@ public class VendorController {
                               @RequestParam Long categoryId,
                               @RequestParam(required = false) String imageUrl,
                               @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
+                              @RequestParam(value = "videoFile", required = false) MultipartFile videoFile,
                               @RequestParam(defaultValue = "true") boolean available,
                               @RequestParam(defaultValue = "true") boolean deliveryAvailable,
                               @RequestParam(defaultValue = "0") long deliveryPriceCfa,
@@ -565,8 +566,11 @@ public class VendorController {
             } else if (imageUrl != null && !imageUrl.isBlank()) {
                 p.setImageUrl(imageUrl.trim());
             }
+            if (videoFile != null && !videoFile.isEmpty()) {
+                p.setVideoUrl(imageUploadService.storeVideo(videoFile));
+            }
         } catch (IllegalArgumentException | IOException e) {
-            ra.addFlashAttribute("flashError", "Échec upload image : " + e.getMessage());
+            ra.addFlashAttribute("flashError", "Échec upload : " + e.getMessage());
             return "redirect:/vendor/products/add";
         }
 

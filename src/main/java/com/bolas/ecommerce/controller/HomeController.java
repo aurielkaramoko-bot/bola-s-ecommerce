@@ -108,7 +108,7 @@ public class HomeController {
         } else if (priceMin != null && priceMax != null) {
             products = productRepository.findByAvailableTrueAndPriceCfaBetween(priceMin, priceMax);
         } else {
-            products = productRepository.findByAvailableTrue();
+            products = productRepository.findAllAvailablePremiumFirst();
         }
         model.addAttribute("products", products);
         return "products";

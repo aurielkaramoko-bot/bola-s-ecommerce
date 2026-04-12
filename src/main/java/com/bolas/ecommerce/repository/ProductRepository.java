@@ -16,7 +16,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         SELECT p FROM Product p
         WHERE p.available = true
         AND (p.vendor IS NULL OR p.vendor.active = true)
-        AND (p.vendor IS NULL OR p.featured = true)
+        AND (p.vendor IS NULL OR p.featured = true OR p.vendor.plan = 'PREMIUM')
         ORDER BY
           CASE WHEN p.vendor IS NULL THEN 0
                WHEN p.vendor.plan = 'PREMIUM' THEN 1
@@ -82,6 +82,21 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     long countByVendor(VendorUser vendor);
     List<Product> findByVendor(VendorUser vendor);
     List<Product> findByAvailableTrue();
+
+    @Query("""
+        SELECT p FROM Product p
+        LEFT JOIN FETCH p.category
+        LEFT JOIN FETCH p.vendor v
+        WHERE p.available = true
+        AND (v IS NULL OR v.active = true)
+        ORDER BY
+          CASE WHEN v IS NULL THEN 1
+               WHEN v.plan = 'PREMIUM' THEN 0
+               ELSE 1 END ASC,
+          p.sponsored DESC,
+          p.id DESC
+        """)
+    List<Product> findAllAvailablePremiumFirst();
 
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category LEFT JOIN FETCH p.vendor ORDER BY p.id DESC")
     List<Product> findAllWithCategoryAndVendor();

@@ -64,11 +64,12 @@
         </div>
 
         <!-- Catégorie -->
-        <div class="col-md-6">
+        <div class="col-12">
           <label for="prod-cat" class="form-label fw-semibold small">
             Catégorie <span class="text-danger">*</span>
           </label>
-          <select class="form-select" id="prod-cat" name="categoryId" required>
+          <select class="form-select" id="prod-cat" name="categoryId"
+                  th:required="${categories != null and !categories.isEmpty()}">
             <option value="">— Choisir une catégorie —</option>
             <option th:each="c : ${categories}"
                     th:value="${c.id}"
@@ -81,20 +82,23 @@
           </div>
         </div>
 
-        <!-- Demande de nouvelle catégorie -->
-        <div class="col-md-6 d-flex flex-column justify-content-end">
+        <!-- Demande de nouvelle catégorie — form séparé hors du form principal -->
+        <div class="col-12">
           <div class="p-2 rounded-3" style="background:var(--bolas-light);border:1px dashed var(--bolas-accent);">
             <p class="small fw-semibold mb-1" style="color:var(--bolas-accent);">
               <i class="bi bi-plus-circle me-1"></i>Catégorie manquante ?
             </p>
-            <form th:action="@{/vendor/products/request-category}" method="post" class="d-flex gap-2">
-              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-              <input type="text" class="form-control form-control-sm" name="categoryName"
-                     placeholder="ex. Cosmétiques bio" maxlength="150" required/>
-              <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">
+            <div class="d-flex gap-2">
+              <input type="text" class="form-control form-control-sm" id="cat-request-input"
+                     placeholder="ex. Cosmétiques bio" maxlength="150"/>
+              <button type="button" class="btn btn-sm btn-outline-secondary text-nowrap"
+                      onclick="sendCategoryRequest()">
                 <i class="bi bi-send me-1"></i>Demander
               </button>
-            </form>
+            </div>
+            <div id="cat-request-ok" class="small text-success mt-1" style="display:none;">
+              <i class="bi bi-check-circle me-1"></i>Demande envoyée !
+            </div>
           </div>
         </div>
 
@@ -112,8 +116,8 @@
           </div>
         </div>
 
-        <!-- Image URL -->
-        <div class="col-12">
+        <!-- Image URL — masquée sur mobile -->
+        <div class="col-12 d-none d-md-block">
           <label for="prod-image-url" class="form-label fw-semibold small">URL de l'image</label>
           <input type="url" class="form-control" id="prod-image-url" name="imageUrl"
                  th:value="${product.imageUrl}"
@@ -122,15 +126,35 @@
 
         <!-- Image file upload -->
         <div class="col-12">
-          <label for="prod-image-file" class="form-label fw-semibold small">Uploader une image</label>
+          <label for="prod-image-file" class="form-label fw-semibold small">
+            <i class="bi bi-image me-1"></i>Image du produit
+          </label>
           <input type="file" class="form-control" id="prod-image-file" name="imageFile"
                  accept="image/*"/>
-          <div class="form-text">JPEG/PNG/WebP, max 5 Mo. Prioritaire sur l'URL.</div>
-          <!-- Aperçu image existante -->
+          <div class="form-text">JPEG/PNG/WebP, max 5 Mo.</div>
           <div th:if="${product.imageUrl != null}" class="mt-2">
             <img th:src="${product.imageUrl}" alt="Image actuelle"
                  style="height:80px;border-radius:8px;object-fit:cover;"/>
             <span class="small text-muted ms-2">Image actuelle</span>
+          </div>
+        </div>
+
+        <!-- Vidéo du produit -->
+        <div class="col-12">
+          <label for="prod-video-file" class="form-label fw-semibold small">
+            <i class="bi bi-camera-video me-1"></i>Vidéo du produit (optionnel)
+          </label>
+          <input type="file" class="form-control" id="prod-video-file" name="videoFile"
+                 accept="video/mp4,video/webm,video/quicktime"/>
+          <div class="form-text">MP4/WebM, max 50 Mo.</div>
+          <div th:if="${product.videoUrl != null}" class="mt-2 d-flex align-items-center gap-2">
+            <i class="bi bi-camera-video-fill text-success"></i>
+            <span class="small text-muted">Vidéo actuelle enregistrée</span>
+            <input type="hidden" name="removeVideo" id="removeVideo" value="false"/>
+            <button type="button" class="btn btn-sm btn-outline-danger"
+                    onclick="document.getElementById('removeVideo').value='true';this.closest('.mt-2').querySelector('span').textContent='Vidéo supprimée au prochain enregistrement';">
+              <i class="bi bi-trash me-1"></i>Supprimer la vidéo
+            </button>
           </div>
         </div>
 
@@ -195,5 +219,25 @@
 
 <div th:replace="~{fragments/footer :: footer}"></div>
 <th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+<script th:inline="javascript">
+var csrfToken = /*[[${_csrf.token}]]*/ '';
+var csrfHeader = /*[[${_csrf.headerName}]]*/ 'X-CSRF-TOKEN';
+
+function sendCategoryRequest() {
+  var input = document.getElementById('cat-request-input');
+  var name = input.value.trim();
+  if (!name) { input.focus(); return; }
+  fetch('/vendor/products/request-category', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', [csrfHeader]: csrfToken },
+    body: 'categoryName=' + encodeURIComponent(name)
+  }).then(function() {
+    document.getElementById('cat-request-ok').style.display = 'block';
+    input.value = '';
+  }).catch(function() {
+    alert('Erreur lors de l\'envoi. Réessayez.');
+  });
+}
+</script>
 </body>
 </html>

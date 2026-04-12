@@ -146,6 +146,14 @@
                   <a th:href="@{/vendor/products/{id}/edit(id=${p.id})}" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-pencil"></i>
                   </a>
+                  <form th:action="@{/vendor/products/{id}/delete(id=${p.id})}"
+                        method="post" class="d-inline m-0"
+                        onsubmit="return confirm('Supprimer ce produit ?')">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
                 </td>
               </tr>
             </tbody>
