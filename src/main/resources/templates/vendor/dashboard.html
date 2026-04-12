@@ -156,6 +156,28 @@
 
     <!-- Actions rapides -->
     <div class="col-12 col-lg-5">
+      <!-- Lien de partage boutique -->
+      <div class="admin-card p-3 mb-3">
+        <h2 class="h6 fw-bold mb-2" style="color:var(--bolas-accent);">
+          <i class="bi bi-share me-2"></i>Partager ma boutique
+        </h2>
+        <p class="small text-muted mb-2">Copie ce lien et colle-le sur ton statut WhatsApp, TikTok ou Instagram :</p>
+        <div class="input-group input-group-sm">
+          <input type="text" class="form-control" id="shop-link" readonly
+                 th:value="${shopBaseUrl + '/boutiques/' + vendor.id}"/>
+          <button class="btn btn-hero-solid" type="button" onclick="copyShopLink()">
+            <i class="bi bi-clipboard me-1"></i>Copier
+          </button>
+        </div>
+        <div id="copy-ok" class="small text-success mt-1" style="display:none;">
+          <i class="bi bi-check-circle me-1"></i>Lien copié !
+        </div>
+        <a th:href="${'https://wa.me/?text=Découvrez+ma+boutique+sur+BOLA+%3A+' + shopBaseUrl + '/boutiques/' + vendor.id}"
+           target="_blank" class="btn btn-sm mt-2 text-white w-100" style="background:#25D366;">
+          <i class="bi bi-whatsapp me-1"></i>Partager sur WhatsApp
+        </a>
+      </div>
+
       <div class="admin-card p-3 mb-3">
         <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);">
           <i class="bi bi-lightning me-2"></i>Actions rapides
@@ -170,7 +192,7 @@
           <a th:href="@{/vendor/couriers}" class="btn btn-outline-secondary text-start">
             <i class="bi bi-bicycle me-2"></i>Proposer un livreur
           </a>
-          <a th:href="@{/products}" id="btn-see-shop" target="_blank" class="btn btn-outline-secondary text-start">
+          <a th:href="@{/boutiques/{id}(id=${vendor.id})}" id="btn-see-shop" target="_blank" class="btn btn-outline-secondary text-start">
             <i class="bi bi-eye me-2"></i>Voir ma boutique (aperçu)
           </a>
           <a th:href="@{/contact}" class="btn btn-outline-secondary text-start">
@@ -212,5 +234,15 @@
 
 <div th:replace="~{fragments/footer :: footer}"></div>
 <th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+<script>
+function copyShopLink() {
+  var input = document.getElementById('shop-link');
+  navigator.clipboard.writeText(input.value).then(function() {
+    var ok = document.getElementById('copy-ok');
+    ok.style.display = 'block';
+    setTimeout(function(){ ok.style.display = 'none'; }, 2500);
+  });
+}
+</script>
 </body>
 </html>

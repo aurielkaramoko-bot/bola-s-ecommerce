@@ -9,6 +9,7 @@ import com.bolas.ecommerce.service.MetaWhatsAppService;
 import com.bolas.ecommerce.service.SessionCounterService;
 import com.bolas.ecommerce.service.WhatsAppNotificationService;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -330,7 +331,7 @@ public class VendorController {
 
     @GetMapping("/dashboard")
     @Transactional(readOnly = true)
-    public String dashboard(HttpSession session, Model model) {
+    public String dashboard(HttpSession session, Model model, HttpServletRequest request) {
         String redirect = requireVendor(session);
         if (redirect != null) return redirect;
 
@@ -342,6 +343,11 @@ public class VendorController {
         long pendingOrders  = orderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.PENDING).size();
         long confirmedOrders = orderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.CONFIRMED).size();
 
+        String scheme = request.getHeader("X-Forwarded-Proto") != null
+                ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
+        String shopBaseUrl = scheme + "://" + request.getServerName()
+                + (request.getServerPort() == 80 || request.getServerPort() == 443 ? "" : ":" + request.getServerPort());
+
         model.addAttribute("pageTitle", "Mon espace vendeur — BOLA");
         model.addAttribute("vendor",    vendor);
         model.addAttribute("productCount",    productCount);
@@ -349,6 +355,7 @@ public class VendorController {
         model.addAttribute("confirmedOrders", confirmedOrders);
         model.addAttribute("gratuitLimit",    GRATUIT_LIMIT);
         model.addAttribute("allowedCategories", allowedCategories(vendor));
+        model.addAttribute("shopBaseUrl", shopBaseUrl);
         model.addAttribute("products",
                 productRepository.findByVendor(vendor).stream()
                         .limit(5).toList());

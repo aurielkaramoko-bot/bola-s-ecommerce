@@ -706,14 +706,14 @@ public class AdminController {
         VendorUser v = vendorUserRepository.findById(id).orElseThrow();
         model.addAttribute("pageTitle", "Gérer " + v.getDisplayName() + " — Admin BOLA");
         model.addAttribute("vendor", v);
-        
-        // Ajouter les prix des packs
-        model.addAttribute("packPrices", packPricingService.getAllPrices());
+        model.addAttribute("allCategories", categoryRepository.findAll());
+        model.addAttribute("assignedCategoryIds",
+                vendorCategoryRepository.findCategoriesByVendor(v).stream()
+                        .map(c -> c.getId()).toList());
         model.addAttribute("gratuitPrice", packPricingService.getGratuitPrice());
         model.addAttribute("proLocalPrice", packPricingService.getProLocalPrice());
         model.addAttribute("proPrice", packPricingService.getProPrice());
         model.addAttribute("premiumPrice", packPricingService.getPremiumPrice());
-        
         return "admin/vendor-manage";
     }
 
@@ -753,13 +753,39 @@ public class AdminController {
     @PostMapping("/admin/vendors/{id}/banner")
     public String setVendorBanner(@PathVariable Long id,
                                   @RequestParam(required = false) String bannerUrl,
+                                  @RequestParam(value = "bannerFile", required = false) MultipartFile bannerFile,
                                   RedirectAttributes ra) {
         vendorUserRepository.findById(id).ifPresent(v -> {
-            v.setBannerUrl(bannerUrl != null && !bannerUrl.isBlank() ? bannerUrl.trim() : null);
-            vendorUserRepository.save(v);
+            try {
+                if (bannerFile != null && !bannerFile.isEmpty()) {
+                    v.setBannerUrl(imageUploadService.store(bannerFile));
+                } else {
+                    v.setBannerUrl(bannerUrl != null && !bannerUrl.isBlank() ? bannerUrl.trim() : null);
+                }
+                vendorUserRepository.save(v);
+            } catch (IOException e) {
+                log.error("Erreur upload bannière", e);
+            }
         });
         ra.addFlashAttribute("flashOk", "Bannière mise à jour.");
         return "redirect:/admin/vendors";
+    }
+
+    @PostMapping("/admin/vendors/{id}/categories")
+    @Transactional
+    public String assignCategories(@PathVariable Long id,
+                                   @RequestParam(value = "categoryIds", required = false) List<Long> categoryIds,
+                                   RedirectAttributes ra) {
+        VendorUser v = vendorUserRepository.findById(id).orElseThrow();
+        vendorCategoryRepository.deleteByVendor(v);
+        if (categoryIds != null) {
+            for (Long catId : categoryIds) {
+                categoryRepository.findById(catId).ifPresent(cat ->
+                        vendorCategoryRepository.save(new com.bolas.ecommerce.model.VendorCategory(v, cat)));
+            }
+        }
+        ra.addFlashAttribute("flashOk", "Catégories assignées.");
+        return "redirect:/admin/vendors/" + id + "/manage";
     }
 
     @PostMapping("/admin/vendors/{id}/delete")
