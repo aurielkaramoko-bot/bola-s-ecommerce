@@ -180,7 +180,7 @@ public class AdminController {
     @Transactional(readOnly = true)
     public String products(Model model) {
         model.addAttribute("pageTitle", "Produits — Admin Bola's");
-        model.addAttribute("products", productRepository.findAll());
+        model.addAttribute("products", productRepository.findAllWithCategoryAndVendor());
         return "admin/products";
     }
 
