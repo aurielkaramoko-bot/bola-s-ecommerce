@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
+import java.util.List;
+
 @Controller
 public class HomeController {
 
@@ -81,6 +83,35 @@ public class HomeController {
         model.addAttribute("premiumBanners",
                 vendorUserRepository.findActivePremiumWithBanner());
         return "index";
+    }
+
+    @GetMapping("/products")
+    @Transactional(readOnly = true)
+    public String products(@RequestParam(required = false) String q,
+                           @RequestParam(required = false) Long categoryId,
+                           @RequestParam(required = false) Long priceMin,
+                           @RequestParam(required = false) Long priceMax,
+                           Model model) {
+        model.addAttribute("pageTitle", "Produits — BOLA");
+        model.addAttribute("categories", categoryRepository.findAll());
+        model.addAttribute("q", q);
+        model.addAttribute("selectedCategoryId", categoryId);
+        model.addAttribute("priceMin", priceMin);
+        model.addAttribute("priceMax", priceMax);
+
+        List<?> products;
+        if (q != null && !q.isBlank()) {
+            products = productRepository.searchByKeyword(q.trim(), categoryId);
+        } else if (categoryId != null && priceMin != null && priceMax != null) {
+            products = productRepository.findByAvailableTrueAndCategory_IdAndPriceCfaBetween(
+                    categoryId, priceMin, priceMax);
+        } else if (priceMin != null && priceMax != null) {
+            products = productRepository.findByAvailableTrueAndPriceCfaBetween(priceMin, priceMax);
+        } else {
+            products = productRepository.findByAvailableTrue();
+        }
+        model.addAttribute("products", products);
+        return "products";
     }
 
     @GetMapping("/boutiques")

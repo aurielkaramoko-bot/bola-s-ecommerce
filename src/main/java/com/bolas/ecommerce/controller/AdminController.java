@@ -1268,7 +1268,7 @@ public String notifyExpiry(@PathVariable Long id) {
         java.net.URLEncoder.encode(msg, java.nio.charset.StandardCharsets.UTF_8);
     return "redirect:" + url;
 }
-// ─── les AdminController.java après deleteCountry ───────────────
+// ───  AdminController.java après deleteCountry ───────────────
 
     @PostMapping("/admin/countries/{id}/tax")
     public String updateCountryTax(@PathVariable Long id,
