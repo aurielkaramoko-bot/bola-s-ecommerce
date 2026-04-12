@@ -198,16 +198,17 @@ public class CartController {
         order.setDeliveryFeeCfa(0L);
 
         // Calcul commission BOLA selon le plan du vendeur principal
-        VendorPlan vendorPlan = lines.stream()
+        com.bolas.ecommerce.model.VendorUser mainVendor = lines.stream()
                 .map(l -> l.product().getVendor())
                 .filter(v -> v != null)
                 .findFirst()
-                .map(v -> v.getPlan())
                 .orElse(null);
+        VendorPlan vendorPlan = mainVendor != null ? mainVendor.getPlan() : null;
         int commissionPct = commissionService.rateFor(vendorPlan);
         long commissionAmt = commissionService.compute(subtotal, vendorPlan);
         order.setCommissionPercent(commissionPct);
         order.setCommissionCfa(commissionAmt);
+        order.setVendor(mainVendor);
         if (clientLatitude != null)  order.setClientLatitude(clientLatitude);
         if (clientLongitude != null) order.setClientLongitude(clientLongitude);
 
@@ -243,9 +244,44 @@ public class CartController {
             log.warn("Notification WhatsApp admin \u00e9chou\u00e9e (commande sauvegard\u00e9e quand m\u00eame): {}", e.getMessage());
         }
 
-        // Construire le message WhatsApp
+        // Notifier le vendeur PRO/PREMIUM directement (il gère sa propre préparation)
+        if (mainVendor != null && mainVendor.getPhone() != null
+                && (mainVendor.getPlan() == VendorPlan.PRO
+                    || mainVendor.getPlan() == VendorPlan.PRO_LOCAL
+                    || mainVendor.getPlan() == VendorPlan.PREMIUM)) {
+            try {
+                StringBuilder vendorMsg = new StringBuilder();
+                vendorMsg.append("🛍️ Nouvelle commande pour votre boutique !\n\n");
+                vendorMsg.append("📦 N° : ").append(order.getTrackingNumber()).append("\n");
+                vendorMsg.append("👤 Client : ").append(customerName.trim()).append("\n");
+                vendorMsg.append("📞 Tél : ").append(customerPhone.trim()).append("\n");
+                vendorMsg.append("📍 Option : ").append("PICKUP".equals(deliveryOption) ? "Retrait boutique" : "Livraison domicile").append("\n");
+                vendorMsg.append("💰 Total : ").append(order.getTotalAmountCfa()).append(" CFA\n\n");
+                vendorMsg.append("Produits commandés :\n");
+                for (var line : lines) {
+                    vendorMsg.append("• ").append(line.product().getName())
+                             .append(" x").append(line.quantity()).append("\n");
+                }
+                vendorMsg.append("\n→ Préparez la commande : https://bola-s-ecommerce.onrender.com/vendor/orders");
+                metaWhatsApp.sendText(mainVendor.getPhone(), vendorMsg.toString());
+                log.info("   → Vendeur {} notifié", mainVendor.getDisplayName());
+            } catch (Exception e) {
+                log.warn("Notification WhatsApp vendeur échouée : {}", e.getMessage());
+            }
+        }
+
+        // Construire le message WhatsApp vers le bon destinataire
+        // Si produit d'un vendeur → message va chez le vendeur (tous plans)
+        // Si produit BOLA direct (pas de vendeur) → message va chez l'admin
+        String targetPhone = cleanedPhone; // admin par défaut
+        String targetName = "Bola's";
+        if (mainVendor != null && mainVendor.getPhone() != null && !mainVendor.getPhone().isBlank()) {
+            targetPhone = mainVendor.getPhone().replaceAll("[^0-9]", "");
+            targetName = mainVendor.getDisplayName();
+        }
+
         StringBuilder msg = new StringBuilder();
-        msg.append("Bonjour Bola's \uD83D\uDC4B\nJe souhaite commander :\n\n");
+        msg.append("Bonjour ").append(targetName).append(" 👋\nJe souhaite commander :\n\n");
         for (var line : lines) {
             msg.append("• ").append(line.product().getName())
                .append(" x").append(line.quantity())
@@ -258,9 +294,9 @@ public class CartController {
         msg.append("\nTotal : ").append(order.getTotalAmountCfa()).append(" CFA");
         msg.append("\nPays : ").append(country.toUpperCase());
         msg.append("\nOption : ").append("PICKUP".equals(deliveryOption) ? "Retrait en boutique" : "Livraison à domicile");
-        msg.append("\n\n\uD83D\uDCE6 N° de suivi : ").append(order.getTrackingNumber());
+        msg.append("\n\n📦 N° de suivi : ").append(order.getTrackingNumber());
 
-        String waUrl = "https://wa.me/" + cleanedPhone
+        String waUrl = "https://wa.me/" + targetPhone
                 + "?text=" + URLEncoder.encode(msg.toString(), StandardCharsets.UTF_8);
 
         return "redirect:" + waUrl;

@@ -274,6 +274,26 @@ public class DatabaseMigrationConfig {
                     log.warn("Migration app_settings: {}", e.getMessage());
                 }
 
+                // Migration 17 : vendor_id sur shop_orders (commandes liées directement au vendeur)
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE shop_orders ADD COLUMN IF NOT EXISTS vendor_id BIGINT"
+                    );
+                    log.info("Migration: colonne vendor_id ajoutée sur shop_orders");
+                } catch (SQLException e) {
+                    log.warn("Migration shop_orders.vendor_id: {}", e.getMessage());
+                }
+
+                // Migration 18 : promo_label sur products (badge promo personnalisé PRO/PREMIUM)
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE products ADD COLUMN IF NOT EXISTS promo_label VARCHAR(60)"
+                    );
+                    log.info("Migration: colonne promo_label ajoutée sur products");
+                } catch (SQLException e) {
+                    log.warn("Migration products.promo_label: {}", e.getMessage());
+                }
+
             } catch (Exception e) {
                 log.error("Migration échouée: {}", e.getMessage());
             }

@@ -51,6 +51,7 @@ public class VendorController {
     private final LoyaltyCardRepository      loyaltyCardRepository;
     private final SessionCounterService      sessionCounter;
     private final com.bolas.ecommerce.service.PackPricingService packPricingService;
+    private final com.bolas.ecommerce.service.OrderFlowService   orderFlowService;
 
     public VendorController(CustomerOrderRepository orderRepository,
                             VendorUserRepository vendorUserRepository,
@@ -67,7 +68,8 @@ public class VendorController {
                             MetaWhatsAppService metaWhatsApp,
                             LoyaltyCardRepository loyaltyCardRepository,
                             SessionCounterService sessionCounter,
-                            com.bolas.ecommerce.service.PackPricingService packPricingService) {
+                            com.bolas.ecommerce.service.PackPricingService packPricingService,
+                            com.bolas.ecommerce.service.OrderFlowService orderFlowService) {
         this.orderRepository               = orderRepository;
         this.vendorUserRepository          = vendorUserRepository;
         this.productRepository             = productRepository;
@@ -84,6 +86,7 @@ public class VendorController {
         this.loyaltyCardRepository         = loyaltyCardRepository;
         this.sessionCounter                = sessionCounter;
         this.packPricingService            = packPricingService;
+        this.orderFlowService              = orderFlowService;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -412,14 +415,36 @@ public class VendorController {
         String redirect = requireVendor(session);
         if (redirect != null) return redirect;
 
-        CustomerOrder order = orderRepository.findById(id).orElseThrow();
+        VendorUser vendor = currentVendor(session);
+        CustomerOrder order = orderRepository.findById(id).orElse(null);
+        if (order == null) {
+            ra.addFlashAttribute("flashError", "Commande introuvable.");
+            return "redirect:/vendor/orders";
+        }
+
+        // Vérifier que cette commande appartient bien à ce vendeur
+        boolean belongs = order.getVendor() != null && order.getVendor().getId().equals(vendor.getId());
+        if (!belongs) {
+            // Fallback : vérifier via les lignes (commandes créées avant la migration)
+            belongs = order.getLines().stream()
+                    .anyMatch(l -> l.getProduct() != null
+                            && l.getProduct().getVendor() != null
+                            && l.getProduct().getVendor().getId().equals(vendor.getId()));
+        }
+        if (!belongs) {
+            ra.addFlashAttribute("flashError", "Accès refusé à cette commande.");
+            return "redirect:/vendor/orders";
+        }
+
         if (order.getStatus() != OrderStatus.CONFIRMED) {
             ra.addFlashAttribute("flashError", "Cette commande ne peut pas être marquée prête.");
             return "redirect:/vendor/orders";
         }
-        order.setStatus(OrderStatus.READY);
-        orderRepository.save(order);
+
+        String appBaseUrl = "https://bola-s-ecommerce.onrender.com";
+        String waAdminLink = orderFlowService.markReady(order, appBaseUrl);
         ra.addFlashAttribute("flashOk", "Commande marquée comme prête !");
+        ra.addFlashAttribute("waAdminLink", waAdminLink);
         return "redirect:/vendor/orders";
     }
 

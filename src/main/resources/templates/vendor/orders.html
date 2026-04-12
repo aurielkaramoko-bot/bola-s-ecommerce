@@ -25,6 +25,18 @@
   <div th:if="${flashOk}" class="alert alert-success" th:text="${flashOk}"></div>
   <div th:if="${flashError}" class="alert alert-danger" th:text="${flashError}"></div>
 
+  <!-- Lien WhatsApp admin après markReady -->
+  <div th:if="${waAdminLink}" class="alert alert-info d-flex align-items-center gap-3">
+    <i class="bi bi-whatsapp fs-4 text-success"></i>
+    <div>
+      Commande marquée prête. Notifiez BOLA pour la livraison :
+      <a th:href="${waAdminLink}" target="_blank" rel="noopener noreferrer"
+         class="btn btn-sm btn-success ms-2">
+        <i class="bi bi-whatsapp me-1"></i>Notifier BOLA
+      </a>
+    </div>
+  </div>
+
   <!-- Commandes à préparer -->
   <h2 class="h5 fw-semibold mb-3" style="color:var(--bolas-accent);">
     <i class="bi bi-clock me-2"></i>À préparer

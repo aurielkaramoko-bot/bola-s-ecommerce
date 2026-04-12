@@ -9,6 +9,8 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
@@ -77,6 +79,14 @@ public class CustomerOrder {
     @Size(max = 2)
     @Column(length = 2)
     private String country = "TG";
+
+    /**
+     * Vendeur principal de cette commande (null = produit BOLA direct géré par admin).
+     * Pour les packs PRO/PREMIUM, le vendeur gère lui-même la préparation.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vendor_id")
+    private VendorUser vendor;
 
     /** Téléphone du livreur (affiché au client pour appel / WhatsApp). */
     @Size(max = 40)
@@ -217,6 +227,9 @@ public class CustomerOrder {
 
     public String getCountry() { return country != null ? country : "TG"; }
     public void setCountry(String country) { this.country = country; }
+
+    public VendorUser getVendor() { return vendor; }
+    public void setVendor(VendorUser vendor) { this.vendor = vendor; }
 
     public String getCourierPhone() {
         return courierPhone;
