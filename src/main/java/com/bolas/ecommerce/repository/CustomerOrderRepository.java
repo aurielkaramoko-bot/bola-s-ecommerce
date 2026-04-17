@@ -89,5 +89,15 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
     long countItemsByCustomerPhoneAndVendor(
             @Param("phone") String phone,
             @Param("vendor") VendorUser vendor);
+
+    /** Compte par statut (optimisé : pas de chargement en mémoire) */
+    long countByStatus(OrderStatus status);
+
+    /** Compte les commandes dans une période (analytics optimisé) */
+    @Query("SELECT COUNT(o) FROM CustomerOrder o WHERE o.createdAt >= :start AND o.createdAt <= :end")
+    long countByCreatedAtBetween(@Param("start") Instant start, @Param("end") Instant end);
+
+    /** Top 50 commandes récentes — pour la page livraison admin (évite de charger tout) */
+    List<CustomerOrder> findTop50ByOrderByCreatedAtDesc();
 }
 

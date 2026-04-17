@@ -157,11 +157,7 @@ public class AdminController {
         // Abonnements expirant dans <= 5 jours
         java.time.LocalDate today = java.time.LocalDate.now();
         java.time.LocalDate in5days = today.plusDays(5);
-        var expiring = vendorUserRepository.findAll().stream()
-                .filter(v -> v.getSubscriptionExpiresAt() != null
-                        && !v.getSubscriptionExpiresAt().isAfter(in5days))
-                .sorted(java.util.Comparator.comparing(v -> v.getSubscriptionExpiresAt()))
-                .toList();
+        var expiring = vendorUserRepository.findBySubscriptionExpiresAtBetween(today, in5days);
         model.addAttribute("expiringVendors", expiring);
 
         List<Category> categories = categoryRepository.findAll();
@@ -502,9 +498,21 @@ public class AdminController {
     @PostMapping("/admin/orders/{id}/status")
     public String updateOrderStatus(@PathVariable Long id, @RequestParam OrderStatus status) {
         CustomerOrder order = customerOrderRepository.findById(id).orElseThrow();
+        OrderStatus oldStatus = order.getStatus();
         order.setStatus(status);
         customerOrderRepository.save(order);
         auditLogService.orderStatusChanged(id, order.getTrackingNumber(), status.name());
+
+        // Notifications WhatsApp automatiques selon le nouveau statut
+        try {
+            if (status == OrderStatus.DELIVERED) {
+                orderFlowService.notifyOrderDelivered(order);
+            } else if (status == OrderStatus.CANCELLED) {
+                orderFlowService.notifyVendorOrderCancelled(order);
+            }
+        } catch (Exception e) {
+            log.warn("⚠️ Notification WhatsApp échouée pour changement statut : {}", e.getMessage());
+        }
         return "redirect:/admin/orders";
     }
 
@@ -1048,7 +1056,7 @@ public class AdminController {
         model.addAttribute("shopLatitude", shopLatitude);
         model.addAttribute("shopLongitude", shopLongitude);
         model.addAttribute("courierUpdate", new CourierUpdateDto());
-        model.addAttribute("orders", customerOrderRepository.findAllByOrderByCreatedAtDesc());
+        model.addAttribute("orders", customerOrderRepository.findTop50ByOrderByCreatedAtDesc());
         return "admin/delivery-update";
     }
 
@@ -1087,7 +1095,7 @@ public class AdminController {
                 model.addAttribute("apiKey", googleMapsApiKey);
                 model.addAttribute("shopLatitude", shopLatitude);
                 model.addAttribute("shopLongitude", shopLongitude);
-                model.addAttribute("orders", customerOrderRepository.findAllByOrderByCreatedAtDesc());
+                model.addAttribute("orders", customerOrderRepository.findTop50ByOrderByCreatedAtDesc());
                 model.addAttribute("flashError", e.getMessage());
                 return "admin/delivery-update";
             } catch (IOException e) {
@@ -1095,7 +1103,7 @@ public class AdminController {
                 model.addAttribute("apiKey", googleMapsApiKey);
                 model.addAttribute("shopLatitude", shopLatitude);
                 model.addAttribute("shopLongitude", shopLongitude);
-                model.addAttribute("orders", customerOrderRepository.findAllByOrderByCreatedAtDesc());
+                model.addAttribute("orders", customerOrderRepository.findTop50ByOrderByCreatedAtDesc());
                 model.addAttribute("flashError", "Échec de l'enregistrement de la photo livreur.");
                 return "admin/delivery-update";
             }
@@ -1123,23 +1131,18 @@ public class AdminController {
         java.time.YearMonth thisMonth = java.time.YearMonth.now();
         java.time.Instant startOfMonth = thisMonth.atDay(1).atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
         java.time.Instant endOfMonth = thisMonth.atEndOfMonth().atTime(23,59,59).toInstant(java.time.ZoneOffset.UTC);
-        long ordersThisMonth = customerOrderRepository.findAllByOrderByCreatedAtDesc().stream()
-                .filter(o -> !o.getCreatedAt().isBefore(startOfMonth) && !o.getCreatedAt().isAfter(endOfMonth))
-                .count();
+        long ordersThisMonth = customerOrderRepository.countByCreatedAtBetween(startOfMonth, endOfMonth);
         model.addAttribute("ordersThisMonth", ordersThisMonth);
 
-        // Commandes par mois (12 derniers mois) — toutes commandes confondues
+        // Commandes par mois (12 derniers mois) — requête optimisée par mois
         java.util.List<String> monthLabels = new java.util.ArrayList<>();
         java.util.List<Long> monthCounts = new java.util.ArrayList<>();
-        var allOrders = customerOrderRepository.findAllByOrderByCreatedAtDesc();
         java.time.ZoneId zone = java.time.ZoneId.of("Africa/Abidjan"); // UTC+0 Togo/CI
         for (int i = 11; i >= 0; i--) {
             java.time.YearMonth ym = java.time.YearMonth.now(zone).minusMonths(i);
             java.time.Instant start = ym.atDay(1).atStartOfDay(zone).toInstant();
             java.time.Instant end = ym.atEndOfMonth().atTime(23, 59, 59).atZone(zone).toInstant();
-            long count = allOrders.stream()
-                    .filter(o -> !o.getCreatedAt().isBefore(start) && !o.getCreatedAt().isAfter(end))
-                    .count();
+            long count = customerOrderRepository.countByCreatedAtBetween(start, end);
             monthLabels.add(ym.getMonth().getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.FRENCH)
                     + " " + ym.getYear());
             monthCounts.add(count);
@@ -1151,7 +1154,7 @@ public class AdminController {
         java.util.List<String> statusLabels = new java.util.ArrayList<>();
         java.util.List<Long> statusCounts = new java.util.ArrayList<>();
         for (com.bolas.ecommerce.model.OrderStatus s : com.bolas.ecommerce.model.OrderStatus.values()) {
-            long c = customerOrderRepository.findByStatusOrderByCreatedAtAsc(s).size();
+            long c = customerOrderRepository.countByStatus(s);
             if (c > 0) { statusLabels.add(s.name()); statusCounts.add(c); }
         }
         model.addAttribute("statusLabels", statusLabels);
@@ -1161,8 +1164,7 @@ public class AdminController {
         java.util.List<String> planLabels = new java.util.ArrayList<>();
         java.util.List<Long> planCounts = new java.util.ArrayList<>();
         for (com.bolas.ecommerce.model.VendorPlan p : com.bolas.ecommerce.model.VendorPlan.values()) {
-            long c = vendorUserRepository.findAll().stream()
-                    .filter(v -> v.getPlan() == p).count();
+            long c = vendorUserRepository.countByPlan(p);
             if (c > 0) { planLabels.add(p.name()); planCounts.add(c); }
         }
         model.addAttribute("planLabels", planLabels);

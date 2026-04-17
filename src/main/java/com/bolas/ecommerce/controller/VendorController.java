@@ -435,13 +435,16 @@ public class VendorController {
             return "vendor/orders";
         }
 
-        // PRO / PREMIUM : gère ses commandes
+        // PRO / PREMIUM : gère ses commandes (PENDING + CONFIRMED)
+        List<CustomerOrder> pendingOrders =
+                orderRepository.findByVendorAndStatusInOrderByCreatedAtDesc(vendor,
+                        List.of(OrderStatus.PENDING));
         List<CustomerOrder> toProcess =
                 orderRepository.findByVendorAndStatusInOrderByCreatedAtDesc(vendor,
                         List.of(OrderStatus.CONFIRMED));
         List<CustomerOrder> done =
                 orderRepository.findByVendorAndStatusInOrderByCreatedAtDesc(vendor,
-                        List.of(OrderStatus.READY));
+                        List.of(OrderStatus.READY, OrderStatus.IN_DELIVERY, OrderStatus.DELIVERED));
 
         // Livreurs approuvés proposés par ce vendeur + livreur assigné par admin
         var approvedCouriers = courierApplicationRepository.findByVendorOrderBySubmittedAtDesc(vendor)
@@ -459,48 +462,103 @@ public class VendorController {
         model.addAttribute("pageTitle", "Mes commandes — BOLA Vendeur");
         model.addAttribute("vendor",    vendor);
         model.addAttribute("readOnlyMode", false);
+        model.addAttribute("pendingOrders", pendingOrders);
         model.addAttribute("toProcess", toProcess);
         model.addAttribute("done",      done);
         model.addAttribute("approvedCouriers", approvedCouriers);
         return "vendor/orders";
     }
 
-    @PostMapping("/orders/{id}/ready")
-    public String markReady(@PathVariable Long id,
-                            HttpSession session,
-                            RedirectAttributes ra) {
+    /** Vérifie qu'une commande appartient bien à ce vendeur */
+    private boolean orderBelongsToVendor(CustomerOrder order, VendorUser vendor) {
+        if (order.getVendor() != null && order.getVendor().getId().equals(vendor.getId())) {
+            return true;
+        }
+        // Fallback : vérifier via les lignes (commandes créées avant la migration)
+        return order.getLines().stream()
+                .anyMatch(l -> l.getProduct() != null
+                        && l.getProduct().getVendor() != null
+                        && l.getProduct().getVendor().getId().equals(vendor.getId()));
+    }
+
+    /**
+     * Vendeur PRO/PREMIUM confirme une commande PENDING → CONFIRMED.
+     * C'est le vendeur qui gère sa propre commande, pas l'admin.
+     */
+    @PostMapping("/orders/{id}/confirm")
+    @Transactional
+    public String vendorConfirmOrder(@PathVariable Long id,
+                                     HttpSession session,
+                                     HttpServletRequest request,
+                                     RedirectAttributes ra) {
         String redirect = requireVendor(session);
         if (redirect != null) return redirect;
 
         VendorUser vendor = currentVendor(session);
+        if (!vendor.canManageOrders()) {
+            ra.addFlashAttribute("flashError", "Passez en PRO pour gérer vos commandes !");
+            return "redirect:/vendor/orders";
+        }
+
         CustomerOrder order = orderRepository.findById(id).orElse(null);
         if (order == null) {
             ra.addFlashAttribute("flashError", "Commande introuvable.");
             return "redirect:/vendor/orders";
         }
-
-        // Vérifier que cette commande appartient bien à ce vendeur
-        boolean belongs = order.getVendor() != null && order.getVendor().getId().equals(vendor.getId());
-        if (!belongs) {
-            // Fallback : vérifier via les lignes (commandes créées avant la migration)
-            belongs = order.getLines().stream()
-                    .anyMatch(l -> l.getProduct() != null
-                            && l.getProduct().getVendor() != null
-                            && l.getProduct().getVendor().getId().equals(vendor.getId()));
-        }
-        if (!belongs) {
+        if (!orderBelongsToVendor(order, vendor)) {
             ra.addFlashAttribute("flashError", "Accès refusé à cette commande.");
             return "redirect:/vendor/orders";
         }
+        if (order.getStatus() != OrderStatus.PENDING) {
+            ra.addFlashAttribute("flashError", "Cette commande n'est plus en attente.");
+            return "redirect:/vendor/orders";
+        }
 
+        String scheme = request.getHeader("X-Forwarded-Proto") != null
+                ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
+        String appBaseUrl = scheme + "://" + request.getServerName()
+                + (request.getServerPort() == 80 || request.getServerPort() == 443 ? "" : ":" + request.getServerPort());
+
+        orderFlowService.vendorConfirmOrder(order, vendor, appBaseUrl);
+        ra.addFlashAttribute("flashOk", "Commande " + order.getTrackingNumber() + " confirmée ! Préparez-la maintenant.");
+        return "redirect:/vendor/orders";
+    }
+
+    @PostMapping("/orders/{id}/ready")
+    public String markReady(@PathVariable Long id,
+                            HttpSession session,
+                            HttpServletRequest request,
+                            RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+        if (!vendor.canManageOrders()) {
+            ra.addFlashAttribute("flashError", "Passez en PRO pour gérer vos commandes !");
+            return "redirect:/vendor/orders";
+        }
+
+        CustomerOrder order = orderRepository.findById(id).orElse(null);
+        if (order == null) {
+            ra.addFlashAttribute("flashError", "Commande introuvable.");
+            return "redirect:/vendor/orders";
+        }
+        if (!orderBelongsToVendor(order, vendor)) {
+            ra.addFlashAttribute("flashError", "Accès refusé à cette commande.");
+            return "redirect:/vendor/orders";
+        }
         if (order.getStatus() != OrderStatus.CONFIRMED) {
             ra.addFlashAttribute("flashError", "Cette commande ne peut pas être marquée prête.");
             return "redirect:/vendor/orders";
         }
 
-        String appBaseUrl = "https://bola-s-ecommerce.onrender.com";
+        String scheme = request.getHeader("X-Forwarded-Proto") != null
+                ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
+        String appBaseUrl = scheme + "://" + request.getServerName()
+                + (request.getServerPort() == 80 || request.getServerPort() == 443 ? "" : ":" + request.getServerPort());
+
         String waAdminLink = orderFlowService.markReady(order, appBaseUrl);
-        ra.addFlashAttribute("flashOk", "Commande marquée comme prête !");
+        ra.addFlashAttribute("flashOk", "Commande marquée comme prête ! Le livreur sera bientôt assigné.");
         ra.addFlashAttribute("waAdminLink", waAdminLink);
         return "redirect:/vendor/orders";
     }

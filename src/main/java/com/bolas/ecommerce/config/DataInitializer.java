@@ -22,6 +22,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.UUID;
 
+import com.bolas.ecommerce.model.Country;
+import com.bolas.ecommerce.repository.CountryRepository;
+
 @Configuration
 public class DataInitializer {
 
@@ -34,6 +37,7 @@ public class DataInitializer {
             ProductRepository productRepository,
             CustomerOrderRepository customerOrderRepository,
             LoginAttemptRepository loginAttemptRepository,
+            CountryRepository countryRepository,
             Environment environment,
             @Value("${bolas.admin.username:admin}") String adminUsername,
             @Value("${bolas.admin.password:}") String adminPassword) {
@@ -63,6 +67,25 @@ public class DataInitializer {
                         adminUserRepository.save(admin);
                     }
                 });
+            }
+            // ── Pays par défaut (TG, CI, GA) ─────────────────────────────────
+            if (countryRepository.findByCode("TG").isEmpty()) {
+                Country tg = new Country();
+                tg.setCode("TG"); tg.setName("Togo"); tg.setFlag("🇹🇬");
+                tg.setCustomsTaxPercent(0); tg.setActive(true);
+                countryRepository.save(tg);
+            }
+            if (countryRepository.findByCode("CI").isEmpty()) {
+                Country ci = new Country();
+                ci.setCode("CI"); ci.setName("Côte d'Ivoire"); ci.setFlag("🇨🇮");
+                ci.setCustomsTaxPercent(0); ci.setActive(true);
+                countryRepository.save(ci);
+            }
+            if (countryRepository.findByCode("GA").isEmpty()) {
+                Country ga = new Country();
+                ga.setCode("GA"); ga.setName("Gabon"); ga.setFlag("🇬🇦");
+                ga.setCustomsTaxPercent(0); ga.setActive(true);
+                countryRepository.save(ga);
             }
 
             if (categoryRepository.count() > 0) {

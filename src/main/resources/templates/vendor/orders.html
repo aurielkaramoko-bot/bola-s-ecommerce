@@ -20,6 +20,11 @@
       <p class="text-muted small mb-0"
          th:text="'Boutique : ' + ${vendor.displayName}">Boutique</p>
     </div>
+    <span th:if="!${readOnlyMode}" class="badge ms-auto"
+          style="background:linear-gradient(135deg,var(--bolas-accent),var(--bolas-accent-dark));font-size:.75rem;">
+      <i class="bi bi-star-fill me-1"></i>
+      <span th:text="${vendor.plan?.name() ?: 'GRATUIT'}">PRO</span>
+    </span>
   </div>
 
   <div th:if="${flashOk}" class="alert alert-success" th:text="${flashOk}"></div>
@@ -44,15 +49,81 @@
   <div th:if="${waAdminLink}" class="alert alert-info d-flex align-items-center gap-3">
     <i class="bi bi-whatsapp fs-4 text-success"></i>
     <div>
-      Commande marquée prête. Notifiez BOLA pour la livraison :
+      Commande marquée prête. L'admin BOLA a été notifié automatiquement.
       <a th:href="${waAdminLink}" target="_blank" rel="noopener noreferrer"
          class="btn btn-sm btn-success ms-2">
-        <i class="bi bi-whatsapp me-1"></i>Notifier BOLA
+        <i class="bi bi-whatsapp me-1"></i>Notifier aussi via WhatsApp
       </a>
     </div>
   </div>
 
-  <!-- Commandes à préparer -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1 : Commandes PENDING (nouvelles — à confirmer) PRO/PREMIUM -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div th:if="!${readOnlyMode}">
+    <h2 class="h5 fw-semibold mb-3" style="color:#e67e22;">
+      <i class="bi bi-bell me-2"></i>Nouvelles commandes
+      <span class="badge ms-1" style="background:#e67e22;font-size:.8rem;"
+            th:text="${pendingOrders != null ? pendingOrders.size() : 0}">0</span>
+    </h2>
+
+    <div th:if="${pendingOrders == null or pendingOrders.isEmpty()}" class="admin-card p-4 text-center text-muted mb-4">
+      <i class="bi bi-inbox" style="font-size:2rem;opacity:.4;"></i>
+      <p class="mt-2 mb-0">Aucune nouvelle commande en attente.</p>
+    </div>
+
+    <div class="row g-3 mb-4" th:if="${pendingOrders != null and !pendingOrders.isEmpty()}">
+      <div class="col-12 col-md-6" th:each="o : ${pendingOrders}">
+        <div class="admin-card p-3 border-start border-warning border-3">
+          <div class="d-flex align-items-start justify-content-between mb-2">
+            <div>
+              <span class="fw-bold small" th:text="'#' + ${o.trackingNumber}">—</span>
+              <span class="badge bg-warning text-dark ms-1">⏳ EN ATTENTE</span>
+            </div>
+            <span class="small text-muted"
+                  th:text="${#temporals.format(o.createdAt,'dd/MM HH:mm')}">—</span>
+          </div>
+          <div class="small mb-1">
+            <i class="bi bi-person me-1"></i>
+            <span th:text="${o.customerName}">—</span>
+          </div>
+          <div class="small text-muted mb-1">
+            <i class="bi bi-telephone me-1"></i>
+            <span th:text="${o.customerPhone}">—</span>
+          </div>
+          <div class="small text-muted mb-1" th:if="${o.customerAddress != null}">
+            <i class="bi bi-geo-alt me-1"></i>
+            <span th:text="${o.customerAddress}">—</span>
+          </div>
+          <div class="small text-muted mb-1">
+            <span th:text="${o.deliveryOption.name() == 'HOME' ? '🚚 Livraison domicile' : '🏪 Retrait boutique'}">—</span>
+          </div>
+          <div class="fw-bold small mb-1" style="color:var(--bolas-accent);"
+               th:text="${#numbers.formatInteger(o.totalAmountCfa,1,'COMMA')} + ' FCFA'">—</div>
+
+          <!-- Lignes commande -->
+          <ul class="list-unstyled small mb-3" th:if="${!o.lines.isEmpty()}">
+            <li th:each="l : ${o.lines}" class="d-flex justify-content-between text-muted mb-1">
+              <span th:text="${l.quantity} + ' × ' + ${l.product?.name}">—</span>
+              <span th:text="${#numbers.formatInteger(l.unitPriceCfa,1,'COMMA')} + ' F'">—</span>
+            </li>
+          </ul>
+
+          <!-- Bouton Confirmer la commande -->
+          <form th:action="@{/vendor/orders/{id}/confirm(id=${o.id})}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="btn btn-success btn-sm w-100">
+              <i class="bi bi-check-circle me-1"></i>Confirmer la commande
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 2 : Commandes CONFIRMED (à préparer) -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
   <h2 class="h5 fw-semibold mb-3" style="color:var(--bolas-accent);">
     <i class="bi bi-clock me-2"></i>À préparer
     <span class="badge ms-1" style="background:var(--bolas-accent);font-size:.8rem;"
@@ -70,7 +141,7 @@
         <div class="d-flex align-items-start justify-content-between mb-2">
           <div>
             <span class="fw-bold small" th:text="'#' + ${o.trackingNumber}">—</span>
-            <span class="badge bg-warning text-dark ms-1" th:text="${o.status.name()}">Statut</span>
+            <span class="badge bg-primary ms-1">📦 CONFIRMÉE</span>
           </div>
           <span class="small text-muted"
                 th:text="${#temporals.format(o.createdAt,'dd/MM HH:mm')}">—</span>
@@ -143,24 +214,29 @@
     </div>
   </div>
 
-  <!-- Commandes prêtes -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 3 : Commandes terminées (READY, IN_DELIVERY, DELIVERED) -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
   <h2 class="h5 fw-semibold mb-3" style="color:var(--bolas-accent);">
-    <i class="bi bi-bag-check me-2"></i>Prêtes / Livrées
+    <i class="bi bi-bag-check me-2"></i>Prêtes / En livraison / Livrées
     <span class="badge bg-success ms-1" style="font-size:.8rem;"
           th:text="${done.size()}">0</span>
   </h2>
 
   <div th:if="${done.isEmpty()}" class="admin-card p-4 text-center text-muted">
     <i class="bi bi-bag" style="font-size:2rem;opacity:.4;"></i>
-    <p class="mt-2 mb-0">Aucune commande prête en attente de livraison.</p>
+    <p class="mt-2 mb-0">Aucune commande à afficher.</p>
   </div>
 
   <div class="row g-3" th:if="${!done.isEmpty()}">
     <div class="col-12 col-md-6" th:each="o : ${done}">
-      <div class="admin-card p-3 border-start border-success border-3">
+      <div class="admin-card p-3 border-start border-3"
+           th:classappend="${o.status.name() == 'DELIVERED'} ? 'border-success' : (${o.status.name() == 'IN_DELIVERY'} ? 'border-primary' : 'border-info')">
         <div class="d-flex justify-content-between mb-1">
           <span class="fw-bold small" th:text="'#' + ${o.trackingNumber}">—</span>
-          <span class="badge bg-success" th:text="${o.status.name()}">Prête</span>
+          <span class="badge"
+                th:classappend="${o.status.name() == 'DELIVERED'} ? 'bg-success' : (${o.status.name() == 'IN_DELIVERY'} ? 'bg-primary' : 'bg-info')"
+                th:text="${o.status.name() == 'DELIVERED' ? '✅ LIVRÉE' : (o.status.name() == 'IN_DELIVERY' ? '🚚 EN LIVRAISON' : '📦 PRÊTE')}">Statut</span>
         </div>
         <div class="small" th:text="${o.customerName}">—</div>
         <div class="small text-muted" th:text="${o.customerPhone}">—</div>

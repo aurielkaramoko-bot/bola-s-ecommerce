@@ -70,6 +70,10 @@ public class HomeController {
                 countryName = "La Marketplace du Togo";
                 countryFlag = "\uD83C\uDDF9\uD83C\uDDEC"; // 🇹🇬
                 break;
+            case "GA":
+                countryName = "La Marketplace du Gabon";
+                countryFlag = "\uD83C\uDDEC\uD83C\uDDE6"; // 🇬🇦
+                break;
             default:
                 countryName = "La Marketplace d'Afrique de l'Ouest";
                 countryFlag = "\uD83C\uDF0D"; // 🌍
@@ -182,14 +186,14 @@ public class HomeController {
         // 1. Paramètre URL
         if (param != null && !param.isBlank()) {
             String p = param.trim().toUpperCase();
-            if ("TG".equals(p) || "CI".equals(p)) return p;
+            if ("TG".equals(p) || "CI".equals(p) || "GA".equals(p)) return p;
         }
         // 2. Cookie
         if (request.getCookies() != null) {
             for (Cookie c : request.getCookies()) {
                 if ("bolas_country".equals(c.getName())) {
                     String v = c.getValue().toUpperCase();
-                    if ("TG".equals(v) || "CI".equals(v)) return v;
+                    if ("TG".equals(v) || "CI".equals(v) || "GA".equals(v)) return v;
                 }
             }
         }
