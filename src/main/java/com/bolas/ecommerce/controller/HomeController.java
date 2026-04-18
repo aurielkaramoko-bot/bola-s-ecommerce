@@ -170,7 +170,7 @@ public class HomeController {
     @GetMapping("/products/{id}")
     @Transactional(readOnly = true)
     public String productDetail(@PathVariable Long id, Model model) {
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByIdWithDetails(id)
                 .filter(p -> p.isAvailable()
                         && (p.getVendor() == null
                             || (p.getVendor().isActive()

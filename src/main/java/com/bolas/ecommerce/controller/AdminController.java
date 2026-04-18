@@ -46,6 +46,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -399,24 +401,24 @@ public class AdminController {
             log.info("📋 Début chargement page commandes...");
             model.addAttribute("pageTitle", "Commandes — Admin Bola's");
             
-            // Séparer par statut pour l'affichage priorisé
+            // Séparer par statut pour l'affichage priorisé — bornés à 100 pour éviter les timeouts
             log.info("   → Recherche commandes PENDING...");
-            var pending = customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.PENDING);
+            var pending = customerOrderRepository.findTop100ByStatusWithLinesAsc(OrderStatus.PENDING);
             model.addAttribute("pendingOrders", pending);
             log.info("      ✓ {} commandes PENDING trouvées", pending.size());
             
             log.info("   → Recherche commandes CONFIRMED...");
-            var confirmed = customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.CONFIRMED);
+            var confirmed = customerOrderRepository.findTop100ByStatusWithLinesAsc(OrderStatus.CONFIRMED);
             model.addAttribute("confirmedOrders", confirmed);
             log.info("      ✓ {} commandes CONFIRMED trouvées", confirmed.size());
             
             log.info("   → Recherche commandes READY...");
-            var ready = customerOrderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.READY);
+            var ready = customerOrderRepository.findTop100ByStatusWithLinesAsc(OrderStatus.READY);
             model.addAttribute("readyOrders", ready);
             log.info("      ✓ {} commandes READY trouvées", ready.size());
             
             log.info("   → Recherche commandes IN_DELIVERY...");
-            var delivery = customerOrderRepository.findByStatusOrderByCreatedAtDesc(OrderStatus.IN_DELIVERY);
+            var delivery = customerOrderRepository.findTop100ByStatusWithLinesDesc(OrderStatus.IN_DELIVERY);
             model.addAttribute("activeOrders", delivery);
             log.info("      ✓ {} commandes IN_DELIVERY trouvées", delivery.size());
             
@@ -567,8 +569,12 @@ public class AdminController {
             model.addAttribute("pageTitle", "Vendeurs — Admin BOLA");
             
             log.info("   → Recherche tous les vendeurs...");
-            List<VendorUser> allVendors = vendorUserRepository.findAll();
+            // Pageable : max 200 vendeurs par page pour éviter les timeouts
+            var vendorPage = vendorUserRepository.findAll(
+                    PageRequest.of(0, 200, Sort.by(Sort.Direction.DESC, "id")));
+            List<VendorUser> allVendors = vendorPage.getContent();
             model.addAttribute("vendors", allVendors);
+            model.addAttribute("vendorTotalCount", vendorPage.getTotalElements());
             log.info("      ✓ {} vendeurs total trouvés", allVendors.size());
             
             log.info("   → Recherche vendeurs PENDING...");

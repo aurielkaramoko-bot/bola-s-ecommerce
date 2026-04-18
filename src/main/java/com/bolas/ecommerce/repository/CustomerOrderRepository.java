@@ -99,5 +99,63 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
 
     /** Top 50 commandes récentes — pour la page livraison admin (évite de charger tout) */
     List<CustomerOrder> findTop50ByOrderByCreatedAtDesc();
+
+    /** Commandes actives bornées par statut — évite de charger tout en mémoire */
+    List<CustomerOrder> findTop100ByStatusOrderByCreatedAtAsc(OrderStatus status);
+    List<CustomerOrder> findTop100ByStatusOrderByCreatedAtDesc(OrderStatus status);
+
+    /** Commandes avec lignes eager-fetched — pour l'admin orders page */
+    @Query("""
+        SELECT DISTINCT o FROM CustomerOrder o
+        LEFT JOIN FETCH o.lines l
+        LEFT JOIN FETCH l.product p
+        LEFT JOIN FETCH p.vendor
+        WHERE o.status = :status
+        ORDER BY o.createdAt ASC
+        """)
+    List<CustomerOrder> findTop100ByStatusWithLinesAsc(@Param("status") OrderStatus status);
+
+    @Query("""
+        SELECT DISTINCT o FROM CustomerOrder o
+        LEFT JOIN FETCH o.lines l
+        LEFT JOIN FETCH l.product p
+        LEFT JOIN FETCH p.vendor
+        WHERE o.status = :status
+        ORDER BY o.createdAt DESC
+        """)
+    List<CustomerOrder> findTop100ByStatusWithLinesDesc(@Param("status") OrderStatus status);
+
+    /** Commandes vendeur avec lignes eager-fetched */
+    @Query("""
+        SELECT DISTINCT o FROM CustomerOrder o
+        LEFT JOIN FETCH o.lines l
+        LEFT JOIN FETCH l.product p
+        WHERE o.vendor = :vendor
+        AND o.status IN :statuses
+        ORDER BY o.createdAt DESC
+        """)
+    List<CustomerOrder> findByVendorAndStatusInWithLines(
+            @Param("vendor") VendorUser vendor,
+            @Param("statuses") Collection<OrderStatus> statuses);
+
+    /** Toutes les commandes d'un vendeur avec lignes eager-fetched */
+    @Query("""
+        SELECT DISTINCT o FROM CustomerOrder o
+        LEFT JOIN FETCH o.lines l
+        LEFT JOIN FETCH l.product p
+        WHERE o.vendor = :vendor
+        ORDER BY o.createdAt DESC
+        """)
+    List<CustomerOrder> findByVendorWithLines(@Param("vendor") VendorUser vendor);
+
+    /** Commande par ID avec lignes eager-fetched */
+    @Query("""
+        SELECT o FROM CustomerOrder o
+        LEFT JOIN FETCH o.lines l
+        LEFT JOIN FETCH l.product p
+        LEFT JOIN FETCH p.vendor
+        WHERE o.id = :id
+        """)
+    java.util.Optional<CustomerOrder> findByIdWithLines(@Param("id") Long id);
 }
 

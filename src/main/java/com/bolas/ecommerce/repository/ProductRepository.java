@@ -101,6 +101,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category LEFT JOIN FETCH p.vendor ORDER BY p.id DESC")
     List<Product> findAllWithCategoryAndVendor();
 
+    /** Fiche produit publique — eager fetch category + vendor pour éviter LazyInitializationException */
+    @Query("""
+        SELECT p FROM Product p
+        LEFT JOIN FETCH p.category
+        LEFT JOIN FETCH p.vendor
+        WHERE p.id = :id
+        """)
+    java.util.Optional<Product> findByIdWithDetails(@Param("id") Long id);
+
     @Query("SELECT COUNT(p) FROM Product p WHERE p.category = :category AND (p.vendor IS NULL OR p.vendor.active = true)")
     long countActiveByCategory(@Param("category") Category category);
     

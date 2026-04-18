@@ -294,6 +294,16 @@ public class DatabaseMigrationConfig {
                     log.warn("Migration products.promo_label: {}", e.getMessage());
                 }
 
+                // Migration 19 : assigned_courier_id sur vendor_users (livreur assigné par admin)
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE vendor_users ADD COLUMN IF NOT EXISTS assigned_courier_id BIGINT"
+                    );
+                    log.info("Migration: colonne assigned_courier_id ajoutée sur vendor_users");
+                } catch (SQLException e) {
+                    log.warn("Migration vendor_users.assigned_courier_id: {}", e.getMessage());
+                }
+
             } catch (Exception e) {
                 log.error("Migration échouée: {}", e.getMessage());
             }

@@ -418,7 +418,7 @@ public class VendorController {
         // GRATUIT : voit les commandes mais boutons grisés avec message upgrade
         if (vendor.getPlan() == VendorPlan.GRATUIT) {
             // Montrer les commandes en lecture seule pour frustrer gentiment
-            var allVendorOrders = orderRepository.findByVendorOrderByCreatedAtDesc(vendor);
+            var allVendorOrders = orderRepository.findByVendorWithLines(vendor);
             model.addAttribute("pageTitle", "Mes commandes — BOLA Vendeur");
             model.addAttribute("vendor", vendor);
             model.addAttribute("readOnlyMode", true);
@@ -437,13 +437,13 @@ public class VendorController {
 
         // PRO / PREMIUM : gère ses commandes (PENDING + CONFIRMED)
         List<CustomerOrder> pendingOrders =
-                orderRepository.findByVendorAndStatusInOrderByCreatedAtDesc(vendor,
+                orderRepository.findByVendorAndStatusInWithLines(vendor,
                         List.of(OrderStatus.PENDING));
         List<CustomerOrder> toProcess =
-                orderRepository.findByVendorAndStatusInOrderByCreatedAtDesc(vendor,
+                orderRepository.findByVendorAndStatusInWithLines(vendor,
                         List.of(OrderStatus.CONFIRMED));
         List<CustomerOrder> done =
-                orderRepository.findByVendorAndStatusInOrderByCreatedAtDesc(vendor,
+                orderRepository.findByVendorAndStatusInWithLines(vendor,
                         List.of(OrderStatus.READY, OrderStatus.IN_DELIVERY, OrderStatus.DELIVERED));
 
         // Livreurs approuvés proposés par ce vendeur + livreur assigné par admin
@@ -538,7 +538,7 @@ public class VendorController {
             return "redirect:/vendor/orders";
         }
 
-        CustomerOrder order = orderRepository.findById(id).orElse(null);
+        CustomerOrder order = orderRepository.findByIdWithLines(id).orElse(null);
         if (order == null) {
             ra.addFlashAttribute("flashError", "Commande introuvable.");
             return "redirect:/vendor/orders";
