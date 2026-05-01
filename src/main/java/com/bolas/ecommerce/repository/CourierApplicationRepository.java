@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface CourierApplicationRepository extends JpaRepository<CourierApplication, Long> {
     List<CourierApplication> findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus status);
+    List<CourierApplication> findByStatusInOrderBySubmittedAtDesc(List<CourierApplicationStatus> statuses);
     List<CourierApplication> findByVendorOrderBySubmittedAtDesc(VendorUser vendor);
     long countByStatus(CourierApplicationStatus status);
     void deleteByVendor(VendorUser vendor);

@@ -432,11 +432,7 @@ public class VendorController {
             }
         }
 
-        // Livreur assigné
-        if (vendor.getAssignedCourierId() != null) {
-            courierApplicationRepository.findById(vendor.getAssignedCourierId())
-                    .ifPresent(c -> model.addAttribute("assignedCourier", c));
-        }
+
 
         // Messages non lus
         long unreadMessages = chatMessageRepository.countByVendorAndReadByVendorFalseAndSenderType(vendor, "CUSTOMER");
@@ -480,18 +476,11 @@ public class VendorController {
                 orderRepository.findByVendorAndStatusInWithLines(vendor,
                         List.of(OrderStatus.READY, OrderStatus.IN_DELIVERY, OrderStatus.DELIVERED));
 
-        // Livreurs approuvés proposés par ce vendeur + livreur assigné par admin
+        // Livreurs approuvés proposés par ce vendeur (exclusifs)
         var approvedCouriers = courierApplicationRepository.findByVendorOrderBySubmittedAtDesc(vendor)
                 .stream()
                 .filter(a -> a.getStatus() == CourierApplicationStatus.APPROVED)
                 .collect(Collectors.toList());
-        // Ajouter le livreur assigné par admin s'il n'est pas déjà dans la liste
-        if (vendor.getAssignedCourierId() != null) {
-            courierApplicationRepository.findById(vendor.getAssignedCourierId())
-                    .filter(c -> c.getStatus() == CourierApplicationStatus.APPROVED)
-                    .filter(c -> approvedCouriers.stream().noneMatch(a -> a.getId().equals(c.getId())))
-                    .ifPresent(approvedCouriers::add);
-        }
 
         model.addAttribute("pageTitle", "Mes commandes — BOLA Vendeur");
         model.addAttribute("vendor",    vendor);
@@ -600,13 +589,29 @@ public class VendorController {
 
         VendorUser vendor = currentVendor(session);
 
-        courierApplicationRepository.findById(courierId).ifPresent(courier -> {
-            orderRepository.findById(id).ifPresent(order -> {
+        // Vérifier que le livreur appartient bien à ce vendeur (exclusivité)
+        var courierOpt = courierApplicationRepository.findById(courierId);
+        if (courierOpt.isEmpty()) {
+            ra.addFlashAttribute("flashError", "Livreur introuvable.");
+            return "redirect:/vendor/orders";
+        }
+        var courier = courierOpt.get();
+        if (courier.getVendor() == null || !courier.getVendor().getId().equals(vendor.getId())) {
+            ra.addFlashAttribute("flashError", "Ce livreur ne vous appartient pas.");
+            return "redirect:/vendor/orders";
+        }
+        if (courier.getStatus() != CourierApplicationStatus.APPROVED) {
+            ra.addFlashAttribute("flashError", "Ce livreur n'est pas encore approuvé.");
+            return "redirect:/vendor/orders";
+        }
+
+        orderRepository.findById(id).ifPresent(order -> {
+            if (orderBelongsToVendor(order, vendor)) {
                 order.setAssignedCourierName(courier.getCourierName());
                 order.setAssignedCourierPhone(courier.getCourierPhone());
                 orderRepository.save(order);
                 log.info("✅ Livreur {} assigné à commande {} par vendeur {}", courier.getCourierName(), id, vendor.getDisplayName());
-            });
+            }
         });
         ra.addFlashAttribute("flashOk", "Livreur assigné à la commande.");
         return "redirect:/vendor/orders";

@@ -23,13 +23,15 @@ body.bolas-body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  font-size: 1rem;
-  line-height: 1.6;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  letter-spacing: .01em;
 }
 
-/* Headings use Cormorant Garamond for elegance */
-h1, h2, h3, .h1, .h2, .h3, .site-logo, .hero-artisal h1 {
-  font-family: "Cormorant Garamond", Georgia, serif;
+/* Headings use Playfair Display for elegance */
+h1, h2, h3, h4, .h1, .h2, .h3, .h4, .site-logo, .hero-artisal h1 {
+  font-family: "Playfair Display", Georgia, serif;
+  letter-spacing: .01em;
 }
 
 /* ============================================================
@@ -47,20 +49,20 @@ h1, h2, h3, .h1, .h2, .h3, .site-logo, .hero-artisal h1 {
 
 .site-logo {
   color: var(--bolas-accent) !important;
-  font-size: 1.85rem;
+  font-size: 2rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   text-decoration: none;
 }
 
 .site-header .nav-link {
   color: var(--bolas-text) !important;
   font-weight: 500;
-  font-size: 1.05rem;
-  padding: 0.5rem 1rem !important;
+  font-size: 1.1rem;
+  padding: 0.55rem 1.1rem !important;
   position: relative;
   transition: color .2s;
-  letter-spacing: .01em;
+  letter-spacing: .015em;
 }
 
 .site-header .nav-link::after {
@@ -1266,64 +1268,111 @@ h1, h2, h3, .h1, .h2, .h3, .site-logo, .hero-artisal h1 {
 }
 
 /* ============================================================
-   TYPOGRAPHY ENHANCEMENTS — Meilleure lisibilité globale
+   TYPOGRAPHY ENHANCEMENTS — Lisibilité & Élégance globale
    ============================================================ */
 
 /* Le .small Bootstrap par défaut fait 80% = trop petit. On le remonte. */
 .small, small {
-  font-size: 0.9rem !important;
+  font-size: 0.93rem !important;
+}
+
+/* Paragraphes plus aérés */
+p {
+  font-size: 1.05rem;
+  line-height: 1.7;
 }
 
 /* Tables plus lisibles */
 .table {
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 .table th {
   font-weight: 600;
   letter-spacing: .02em;
+  font-size: 1rem;
+}
+.table td {
+  font-size: 0.98rem;
 }
 
 /* Formulaires plus lisibles */
 .form-label {
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: .01em;
 }
 .form-control, .form-select {
-  font-size: 0.95rem;
+  font-size: 1rem;
+  padding: .55rem .85rem;
 }
 .form-text {
-  font-size: 0.85rem;
+  font-size: 0.88rem;
 }
 
 /* Badges plus lisibles */
 .badge {
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   font-weight: 600;
   letter-spacing: .02em;
+  padding: .35em .65em;
 }
 
 /* Alertes plus lisibles */
 .alert {
-  font-size: 0.95rem;
-  line-height: 1.5;
+  font-size: 1rem;
+  line-height: 1.55;
+  font-weight: 500;
 }
 
 /* Boutons avec meilleure taille de police */
 .btn {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 500;
+  letter-spacing: .01em;
 }
 .btn-sm {
-  font-size: 0.88rem;
+  font-size: 0.92rem;
+}
+.btn-lg {
+  font-size: 1.1rem;
 }
 
 /* Cards admin — texte plus grand */
 .admin-card {
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
-/* Texte muted un peu plus foncé pour être lisible */
+/* Texte muted plus foncé et lisible */
 .text-muted {
-  color: #6b5a4f !important;
+  color: #5e4d42 !important;
+}
+
+/* Titres de sections dans les pages */
+.h3, h3 { font-size: 1.5rem; }
+.h4, h4 { font-size: 1.25rem; }
+.h5, h5 { font-size: 1.12rem; }
+.h6, h6 { font-size: 1rem; font-weight: 700; }
+
+/* Breadcrumb / sous-titres plus lisibles */
+.fw-semibold { letter-spacing: .01em; }
+.fw-bold { letter-spacing: .015em; }
+
+/* Listes — espacement et taille */
+ul, ol {
+  font-size: 1.02rem;
+}
+.list-unstyled li {
+  margin-bottom: .35rem;
+}
+
+/* Dropdown et select */
+.form-select option {
+  font-size: 1rem;
+}
+
+/* Modal / Dialog text */
+.modal-body {
+  font-size: 1.02rem;
+  line-height: 1.6;
 }
 

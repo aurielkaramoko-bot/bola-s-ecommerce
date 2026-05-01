@@ -107,9 +107,7 @@ public class VendorUser {
     @Column(name = "subscription_expires_at")
     private java.time.LocalDate subscriptionExpiresAt;
 
-    /** ID du livreur (CourierApplication) assigné par l'admin à l'activation PRO/PREMIUM */
-    @Column(name = "assigned_courier_id")
-    private Long assignedCourierId;
+
 
     /** Latitude GPS de la boutique physique */
     @Column(name = "shop_latitude")
@@ -183,8 +181,7 @@ public class VendorUser {
     public java.time.LocalDate getSubscriptionExpiresAt() { return subscriptionExpiresAt; }
     public void setSubscriptionExpiresAt(java.time.LocalDate subscriptionExpiresAt) { this.subscriptionExpiresAt = subscriptionExpiresAt; }
 
-    public Long getAssignedCourierId() { return assignedCourierId; }
-    public void setAssignedCourierId(Long assignedCourierId) { this.assignedCourierId = assignedCourierId; }
+
 
     public Double getShopLatitude() { return shopLatitude; }
     public void setShopLatitude(Double shopLatitude) { this.shopLatitude = shopLatitude; }

@@ -157,5 +157,14 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
         WHERE o.id = :id
         """)
     java.util.Optional<CustomerOrder> findByIdWithLines(@Param("id") Long id);
+
+    /** Nombre de livraisons effectuées par un livreur (par nom) */
+    long countByAssignedCourierName(String assignedCourierName);
+
+    /** Nombre de livraisons effectuées par un livreur dans un statut donné */
+    long countByAssignedCourierNameAndStatus(String assignedCourierName, OrderStatus status);
+
+    /** Dernières commandes assignées à un livreur */
+    List<CustomerOrder> findTop10ByAssignedCourierNameOrderByCreatedAtDesc(String assignedCourierName);
 }
 

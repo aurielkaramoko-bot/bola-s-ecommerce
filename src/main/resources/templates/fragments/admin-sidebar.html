@@ -25,6 +25,9 @@
     <a class="nav-link" th:href="@{/admin/vendors}" th:classappend="${active == 'vendors' ? 'active' : ''}">
       <i class="bi bi-person-badge me-2"></i><span>Vendeurs</span>
     </a>
+    <a class="nav-link" th:href="@{/admin/courier-activity}" th:classappend="${active == 'courier-activity' ? 'active' : ''}">
+      <i class="bi bi-bicycle me-2"></i><span>Activité livreurs</span>
+    </a>
     <a class="nav-link" th:href="@{/admin/countries}" th:classappend="${active == 'countries' ? 'active' : ''}">
       <i class="bi bi-globe2 me-2"></i><span>Pays</span>
     </a>

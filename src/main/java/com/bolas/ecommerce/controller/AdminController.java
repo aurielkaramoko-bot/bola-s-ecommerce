@@ -600,13 +600,7 @@ public class AdminController {
             log.info("   → Recherche livreurs approuvés...");
             var allCouriers = courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.APPROVED);
             model.addAttribute("allCouriers", allCouriers);
-            log.info("      ✓ {} livreurs approuvés trouvés", allCouriers.size());
-
-            log.info("   → Recherche commandes actives pour assignation livreur...");
-            var assignableOrders = customerOrderRepository.findTop20ByStatusInOrderByCreatedAtDesc(
-                    List.of(OrderStatus.CONFIRMED, OrderStatus.READY, OrderStatus.IN_DELIVERY));
-            model.addAttribute("readyOrders", assignableOrders);
-            log.info("      ✓ {} commandes assignables trouvées", assignableOrders.size());
+            log.info(\"      ✓ {} livreurs approuvés trouvés\", allCouriers.size());
             
             // Prix des packs pour le formulaire de tarification
             model.addAttribute("gratuitPrice", packPricingService.getGratuitPrice());
@@ -943,30 +937,39 @@ public class AdminController {
         return "redirect:/admin/vendors";
     }
 
-    @PostMapping("/admin/couriers/{id}/assign")
-    @Transactional
-    public String assignCourier(@PathVariable Long id,
-                                @RequestParam(required = false) Long orderId,
-                                RedirectAttributes ra) {
-        if (orderId == null || orderId <= 0) {
-            ra.addFlashAttribute("flashError", "Veuillez sélectionner une commande dans la liste.");
-            return "redirect:/admin/vendors";
+    // ─── Activité des livreurs (monitoring admin) ──────────────────────────────
+
+    @GetMapping("/admin/courier-activity")
+    @Transactional(readOnly = true)
+    public String courierActivity(Model model) {
+        model.addAttribute("pageTitle", "Activité des livreurs — Admin BOLA");
+
+        // Tous les livreurs approuvés et suspendus
+        var couriers = courierApplicationRepository.findByStatusInOrderBySubmittedAtDesc(
+                List.of(CourierApplicationStatus.APPROVED,
+                        CourierApplicationStatus.SUSPENDED_SOFT,
+                        CourierApplicationStatus.SUSPENDED_TOTAL));
+
+        // Construire les stats par livreur
+        var courierStats = new java.util.ArrayList<java.util.Map<String, Object>>();
+        for (var courier : couriers) {
+            var stat = new java.util.HashMap<String, Object>();
+            stat.put("courier", courier);
+            stat.put("totalDeliveries", customerOrderRepository.countByAssignedCourierName(courier.getCourierName()));
+            stat.put("deliveredCount", customerOrderRepository.countByAssignedCourierNameAndStatus(
+                    courier.getCourierName(), OrderStatus.DELIVERED));
+            stat.put("inDeliveryCount", customerOrderRepository.countByAssignedCourierNameAndStatus(
+                    courier.getCourierName(), OrderStatus.IN_DELIVERY));
+            stat.put("recentOrders", customerOrderRepository.findTop10ByAssignedCourierNameOrderByCreatedAtDesc(
+                    courier.getCourierName()));
+            courierStats.add(stat);
         }
-        try {
-            courierApplicationRepository.findById(id).ifPresent(courier -> {
-                customerOrderRepository.findById(orderId).ifPresent(order -> {
-                    order.setAssignedCourierName(courier.getCourierName());
-                    order.setAssignedCourierPhone(courier.getCourierPhone());
-                    customerOrderRepository.save(order);
-                    log.info("✅ Livreur {} assigné à commande {}", courier.getCourierName(), orderId);
-                    ra.addFlashAttribute("flashOk", "Livreur \"" + courier.getCourierName() + "\" assigné à la commande.");
-                });
-            });
-        } catch (Exception e) {
-            log.error("❌ Erreur assignation livreur", e);
-            ra.addFlashAttribute("flashError", "Erreur: " + e.getMessage());
-        }
-        return "redirect:/admin/vendors";
+
+        model.addAttribute("courierStats", courierStats);
+        model.addAttribute("totalCouriers", couriers.size());
+        model.addAttribute("activeCouriers", couriers.stream()
+                .filter(c -> c.getStatus() == CourierApplicationStatus.APPROVED).count());
+        return "admin/courier-activity";
     }
 
     // ─── Activité des boutiques ───────────────────────────────────────────────

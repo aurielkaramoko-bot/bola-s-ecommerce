@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Activité des livreurs — Admin BOLA</title>
+</head>
+<body class="bolas-body">
+<nav th:replace="~{fragments/header :: navbar}"></nav>
+<div class="container-fluid">
+  <div class="row">
+    <div th:replace="~{fragments/admin-sidebar :: sidebar(active='courier-activity')}"></div>
+    <main class="col-12 col-md-9 col-lg-10 ms-sm-auto px-4 py-4">
+
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <div>
+          <h1 class="h3 fw-bold mb-0" style="color:var(--bolas-accent);">
+            <i class="bi bi-bicycle me-2"></i>Activité des livreurs
+          </h1>
+          <p class="text-muted mb-0">Surveillance de l'activité de tous les livreurs de la plateforme</p>
+        </div>
+      </div>
+
+      <!-- Stats globales -->
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+          <div class="admin-card p-3 text-center">
+            <div class="fw-bold" style="font-size:1.8rem;color:var(--bolas-accent);"
+                 th:text="${totalCouriers}">0</div>
+            <div class="text-muted">Total livreurs</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="admin-card p-3 text-center">
+            <div class="fw-bold" style="font-size:1.8rem;color:#198754;"
+                 th:text="${activeCouriers}">0</div>
+            <div class="text-muted">Actifs</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="admin-card p-3 text-center">
+            <div class="fw-bold" style="font-size:1.8rem;color:#e67e22;"
+                 th:text="${totalCouriers - activeCouriers}">0</div>
+            <div class="text-muted">Suspendus</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Liste des livreurs avec activité -->
+      <div th:if="${courierStats.isEmpty()}" class="admin-card p-5 text-center text-muted">
+        <i class="bi bi-bicycle" style="font-size:3rem;opacity:.3;"></i>
+        <p class="mt-3 mb-0" style="font-size:1.1rem;">Aucun livreur approuvé sur la plateforme pour l'instant.</p>
+      </div>
+
+      <div th:if="${!courierStats.isEmpty()}" class="row g-3">
+        <div class="col-12 col-lg-6" th:each="entry : ${courierStats}">
+          <div class="admin-card p-0 h-100" 
+               th:classappend="${entry['courier'].status.name() != 'APPROVED'} ? 'border-warning border-2' : ''">
+            
+            <!-- En-tête livreur -->
+            <div class="p-3 d-flex align-items-center gap-3 border-bottom">
+              <div th:if="${entry['courier'].photoUrl != null}">
+                <img th:src="${entry['courier'].photoUrl}" alt="Photo livreur"
+                     style="height:56px;width:56px;object-fit:cover;border-radius:50%;border:2px solid var(--bolas-accent);"/>
+              </div>
+              <div th:if="${entry['courier'].photoUrl == null}" 
+                   style="height:56px;width:56px;border-radius:50%;background:var(--bolas-light);display:flex;align-items:center;justify-content:center;">
+                <i class="bi bi-person" style="font-size:1.5rem;color:var(--bolas-accent);"></i>
+              </div>
+              <div class="flex-grow-1">
+                <div class="fw-bold" style="font-size:1.1rem;" th:text="${entry['courier'].courierName}">—</div>
+                <div class="text-muted" style="font-size:.95rem;">
+                  <a th:href="${'https://wa.me/' + entry['courier'].courierPhone}" target="_blank"
+                     class="text-decoration-none">
+                    <i class="bi bi-whatsapp text-success me-1"></i>
+                    <span th:text="${entry['courier'].courierPhone}">—</span>
+                  </a>
+                </div>
+                <div th:if="${entry['courier'].zone != null}" class="text-muted" style="font-size:.9rem;">
+                  <i class="bi bi-geo-alt me-1"></i><span th:text="${entry['courier'].zone}">—</span>
+                </div>
+              </div>
+              <div class="text-end">
+                <span th:if="${entry['courier'].status.name() == 'APPROVED'}" class="badge bg-success">Actif</span>
+                <span th:if="${entry['courier'].status.name() == 'SUSPENDED_SOFT'}" class="badge bg-warning text-dark">Suspendu (doux)</span>
+                <span th:if="${entry['courier'].status.name() == 'SUSPENDED_TOTAL'}" class="badge bg-danger">Suspendu (total)</span>
+              </div>
+            </div>
+
+            <!-- Vendeur propriétaire -->
+            <div class="px-3 py-2 border-bottom" style="background:#faf8f6;">
+              <span class="text-muted" style="font-size:.9rem;">
+                <i class="bi bi-shop me-1"></i>Vendeur :
+              </span>
+              <span class="fw-semibold" style="font-size:.95rem;"
+                    th:text="${entry['courier'].vendor?.shopName ?: entry['courier'].vendor?.username ?: '—'}">—</span>
+            </div>
+
+            <!-- Stats de livraison -->
+            <div class="p-3">
+              <div class="row g-2 text-center mb-3">
+                <div class="col-4">
+                  <div class="fw-bold" style="font-size:1.3rem;color:var(--bolas-accent);"
+                       th:text="${entry['totalDeliveries']}">0</div>
+                  <div class="text-muted" style="font-size:.85rem;">Total</div>
+                </div>
+                <div class="col-4">
+                  <div class="fw-bold" style="font-size:1.3rem;color:#198754;"
+                       th:text="${entry['deliveredCount']}">0</div>
+                  <div class="text-muted" style="font-size:.85rem;">Livrées</div>
+                </div>
+                <div class="col-4">
+                  <div class="fw-bold" style="font-size:1.3rem;color:#0d6efd;"
+                       th:text="${entry['inDeliveryCount']}">0</div>
+                  <div class="text-muted" style="font-size:.85rem;">En cours</div>
+                </div>
+              </div>
+
+              <!-- Dernières commandes -->
+              <div th:if="${entry['recentOrders'] != null and !entry['recentOrders'].isEmpty()}">
+                <div class="fw-semibold mb-2" style="font-size:.9rem;color:var(--bolas-accent);">
+                  <i class="bi bi-clock-history me-1"></i>Dernières livraisons
+                </div>
+                <div th:each="o : ${entry['recentOrders']}" 
+                     class="d-flex justify-content-between align-items-center py-1 border-bottom"
+                     style="font-size:.9rem;">
+                  <div>
+                    <span class="fw-semibold" th:text="'#' + ${o.trackingNumber}">—</span>
+                    <span class="text-muted ms-1" th:text="${o.customerName}">—</span>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <span th:if="${o.status.name() == 'DELIVERED'}" class="badge bg-success" style="font-size:.75rem;">Livrée</span>
+                    <span th:if="${o.status.name() == 'IN_DELIVERY'}" class="badge bg-primary" style="font-size:.75rem;">En cours</span>
+                    <span th:if="${o.status.name() == 'READY'}" class="badge bg-info" style="font-size:.75rem;">Prête</span>
+                    <span th:if="${o.status.name() == 'CONFIRMED'}" class="badge bg-warning text-dark" style="font-size:.75rem;">Confirmée</span>
+                    <span class="text-muted" style="font-size:.8rem;"
+                          th:text="${#temporals.format(o.createdAt, 'dd/MM HH:mm')}">—</span>
+                  </div>
+                </div>
+              </div>
+              <div th:if="${entry['recentOrders'] == null or entry['recentOrders'].isEmpty()}"
+                   class="text-muted text-center py-2" style="font-size:.9rem;">
+                <i class="bi bi-inbox me-1"></i>Aucune livraison pour l'instant
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+</body>
+</html>
