@@ -237,14 +237,43 @@
       </div>
 
       <div class="admin-card p-3 mb-3" th:if="${isOwner}">
+        <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);"><i class="bi bi-percent me-2"></i>Réduction boutique</h2>
+        <div th:if="${vendor.shopDiscountActive}" class="alert alert-success py-2 mb-2" style="font-size:.9rem;">
+          🔥 Réduction de <strong th:text="${vendor.shopDiscountPercent + '%'}">0%</strong> active sur toute la boutique
+          <span th:if="${vendor.shopDiscountEndsAt != null}">
+            — jusqu'au <span th:text="${vendor.shopDiscountEndsAt}">—</span>
+          </span>
+        </div>
+        <form th:action="@{/vendor/settings/discount}" method="post" class="row g-2 align-items-end">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="col-5">
+            <label class="form-label small fw-semibold">Réduction (%)</label>
+            <input type="number" class="form-control form-control-sm" name="discountPercent"
+                   min="0" max="90" th:value="${vendor.shopDiscountPercent ?: 0}" placeholder="ex. 15"/>
+          </div>
+          <div class="col-5">
+            <label class="form-label small fw-semibold">Date de fin</label>
+            <input type="date" class="form-control form-control-sm" name="discountEndsAt"
+                   th:value="${vendor.shopDiscountEndsAt}"/>
+          </div>
+          <div class="col-2">
+            <button type="submit" class="btn btn-sm btn-hero-solid w-100" title="Enregistrer">
+              <i class="bi bi-check-lg"></i>
+            </button>
+          </div>
+        </form>
+        <div class="form-text">Mettez 0% pour désactiver. S'applique à tous vos produits (sauf ceux déjà en promo).</div>
+      </div>
+
+      <div class="admin-card p-3 mb-3" th:if="${isOwner}">
         <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);"><i class="bi bi-geo-alt me-2"></i>Localisation boutique</h2>
         <form th:action="@{/vendor/settings/location}" method="post" class="row g-2">
           <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
           <input type="hidden" name="latitude"  id="loc-lat"  th:value="${vendor.shopLatitude}"/>
           <input type="hidden" name="longitude" id="loc-lng"  th:value="${vendor.shopLongitude}"/>
           <div class="col-12">
-            <label class="form-label small fw-semibold">Adresse</label>
-            <input type="text" class="form-control form-control-sm" name="address" maxlength="500"
+            <label class="form-label small fw-semibold">Adresse de votre boutique</label>
+            <input type="text" class="form-control form-control-sm" name="address" id="loc-address" maxlength="500"
                    th:value="${vendor.shopAddress}" placeholder="ex. Av. de la Libération, Lomé"/>
           </div>
           <!-- Carte cliquable pour choisir la position -->
@@ -254,7 +283,7 @@
             </label>
             <div id="vendor-location-map"
                  th:attr="data-lat=${vendor.shopLatitude}, data-lng=${vendor.shopLongitude}"
-                 style="height:220px;border-radius:10px;border:1px solid #ddd;background:#f0ede8;"></div>
+                 style="height:250px;border-radius:10px;border:1px solid #ddd;background:#f0ede8;"></div>
             <div id="loc-selected" class="small text-muted mt-1"
                  th:if="${vendor.hasLocation()}"
                  th:text="'📍 Position enregistrée'">
@@ -303,7 +332,7 @@ function copyShopLink() {
 
 <!-- Carte localisation boutique -->
 <th:block th:if="${googleMapsApiKey != null and !googleMapsApiKey.isEmpty()}">
-  <script th:src="|https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&callback=initVendorLocationMap|" async defer></script>
+  <script th:src="|https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places&callback=initVendorLocationMap|" async defer></script>
   <script th:inline="javascript">
     /*<![CDATA[*/
     function initVendorLocationMap() {
@@ -330,29 +359,57 @@ function copyShopLink() {
         marker = new google.maps.Marker({ position: center, map: map, draggable: true });
       }
 
+      // Places Autocomplete sur le champ d'adresse
+      var addressInput = document.getElementById('loc-address');
+      if (addressInput && google.maps.places) {
+        var autocomplete = new google.maps.places.Autocomplete(addressInput, {
+          types: ['geocode', 'establishment'],
+          componentRestrictions: { country: ['tg', 'ci', 'ga', 'sn', 'bj', 'bf', 'cm', 'gn'] }
+        });
+        autocomplete.bindTo('bounds', map);
+        autocomplete.addListener('place_changed', function() {
+          var place = autocomplete.getPlace();
+          if (!place.geometry || !place.geometry.location) return;
+          var lat = place.geometry.location.lat();
+          var lng = place.geometry.location.lng();
+          document.getElementById('loc-lat').value = lat;
+          document.getElementById('loc-lng').value = lng;
+          map.setCenter(place.geometry.location);
+          map.setZoom(16);
+          if (marker) {
+            marker.setPosition(place.geometry.location);
+          } else {
+            marker = new google.maps.Marker({ position: place.geometry.location, map: map, draggable: true });
+            attachDragListener(marker);
+          }
+          document.getElementById('loc-selected').textContent = '📍 Position sélectionnée';
+        });
+      }
+
+      function attachDragListener(m) {
+        m.addListener('dragend', function(ev) {
+          document.getElementById('loc-lat').value = ev.latLng.lat();
+          document.getElementById('loc-lng').value = ev.latLng.lng();
+          document.getElementById('loc-selected').textContent = '📍 Position mise à jour';
+        });
+      }
+
       map.addListener('click', function(e) {
         var lat = e.latLng.lat();
         var lng = e.latLng.lng();
         document.getElementById('loc-lat').value = lat;
         document.getElementById('loc-lng').value = lng;
-        document.getElementById('loc-selected').textContent = '📍 Position sélectionnée : ' + lat.toFixed(5) + ', ' + lng.toFixed(5);
+        document.getElementById('loc-selected').textContent = '📍 Position sélectionnée';
         if (marker) {
           marker.setPosition(e.latLng);
         } else {
           marker = new google.maps.Marker({ position: e.latLng, map: map, draggable: true });
-          marker.addListener('dragend', function(ev) {
-            document.getElementById('loc-lat').value = ev.latLng.lat();
-            document.getElementById('loc-lng').value = ev.latLng.lng();
-          });
+          attachDragListener(marker);
         }
       });
 
       if (marker) {
-        marker.addListener('dragend', function(ev) {
-          document.getElementById('loc-lat').value = ev.latLng.lat();
-          document.getElementById('loc-lng').value = ev.latLng.lng();
-          document.getElementById('loc-selected').textContent = '📍 Position : ' + ev.latLng.lat().toFixed(5) + ', ' + ev.latLng.lng().toFixed(5);
-        });
+        attachDragListener(marker);
       }
     }
     window.initVendorLocationMap = initVendorLocationMap;
@@ -376,7 +433,7 @@ function copyShopLink() {
       navigator.geolocation.getCurrentPosition(function(pos) {
         document.getElementById('loc-lat').value = pos.coords.latitude;
         document.getElementById('loc-lng').value = pos.coords.longitude;
-        document.getElementById('loc-selected').textContent = '📍 Position : ' + pos.coords.latitude.toFixed(5) + ', ' + pos.coords.longitude.toFixed(5);
+        document.getElementById('loc-selected').textContent = '📍 Position capturée !';
         document.getElementById('geo-status').textContent = '✅ Position capturée !';
       }, function() {
         document.getElementById('geo-status').textContent = '❌ Impossible d\'obtenir la position.';

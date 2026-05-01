@@ -122,6 +122,14 @@ public class VendorUser {
     @Column(name = "shop_address", length = 500)
     private String shopAddress;
 
+    /** Réduction globale sur toute la boutique (0 ou null = pas de réduction) */
+    @Column(name = "shop_discount_percent")
+    private Integer shopDiscountPercent;
+
+    /** Date de fin de la réduction boutique (null = pas de date de fin) */
+    @Column(name = "shop_discount_ends_at")
+    private java.time.LocalDate shopDiscountEndsAt;
+
     // ─── Getters / Setters ────────────────────────────────────────────────────
 
     public Long getId() { return id; }
@@ -249,4 +257,19 @@ public class VendorUser {
 
     /** Le vendeur peut gérer des sous-vendeurs */
     public boolean canManageSellers() { return isPaidPlan(); }
+
+    // ─── Réduction boutique ─────────────────────────────────────────────────
+
+    public Integer getShopDiscountPercent() { return shopDiscountPercent; }
+    public void setShopDiscountPercent(Integer shopDiscountPercent) { this.shopDiscountPercent = shopDiscountPercent; }
+
+    public java.time.LocalDate getShopDiscountEndsAt() { return shopDiscountEndsAt; }
+    public void setShopDiscountEndsAt(java.time.LocalDate shopDiscountEndsAt) { this.shopDiscountEndsAt = shopDiscountEndsAt; }
+
+    /** La réduction boutique est-elle active ? (% > 0 et date non dépassée) */
+    public boolean isShopDiscountActive() {
+        if (shopDiscountPercent == null || shopDiscountPercent <= 0) return false;
+        if (shopDiscountEndsAt != null && shopDiscountEndsAt.isBefore(java.time.LocalDate.now())) return false;
+        return true;
+    }
 }

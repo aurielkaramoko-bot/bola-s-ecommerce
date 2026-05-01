@@ -144,29 +144,21 @@
           </span>
         </div>
 
-        <!-- Assigner un livreur -->
-        <div th:if="${approvedCouriers != null and !approvedCouriers.isEmpty()}" class="mb-2">
-          <form th:action="@{/vendor/orders/{id}/assign-courier(id=${o.id})}" method="post" class="d-flex gap-2">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-            <select name="courierId" class="form-select form-select-sm flex-grow-1">
+        <!-- Formulaire unique : choisir livreur + envoyer en livraison -->
+        <form th:action="@{/vendor/orders/{id}/dispatch(id=${o.id})}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div th:if="${approvedCouriers != null and !approvedCouriers.isEmpty()}" class="mb-2">
+            <select name="courierId" class="form-select form-select-sm">
               <option value="">— Choisir un livreur —</option>
               <option th:each="c : ${approvedCouriers}" th:value="${c.id}"
                       th:text="${c.courierName} + (${c.zone != null} ? ' (' + ${c.zone} + ')' : '')"
                       th:selected="${o.assignedCourierName != null and o.assignedCourierName == c.courierName}">—</option>
             </select>
-            <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">
-              <i class="bi bi-truck me-1"></i>Assigner
-            </button>
-          </form>
-        </div>
-        <div th:if="${approvedCouriers == null or approvedCouriers.isEmpty()}" class="text-muted small mb-2">
-          <i class="bi bi-info-circle me-1"></i>
-          <a th:href="@{/vendor/couriers}">Proposez un livreur</a> pour pouvoir expédier.
-        </div>
-
-        <!-- Envoyer en livraison -->
-        <form th:action="@{/vendor/orders/{id}/start-delivery(id=${o.id})}" method="post">
-          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          </div>
+          <div th:if="${approvedCouriers == null or approvedCouriers.isEmpty()}" class="text-muted small mb-2">
+            <i class="bi bi-info-circle me-1"></i>
+            <a th:href="@{/vendor/couriers}">Proposez un livreur</a> pour pouvoir expédier.
+          </div>
           <button type="submit" class="btn btn-primary w-100" style="font-size:1rem;">
             <i class="bi bi-truck me-1"></i>Envoyer en livraison
           </button>

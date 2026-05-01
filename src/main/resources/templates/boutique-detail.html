@@ -54,6 +54,18 @@
     </div>
   </div>
 
+  <!-- Bandeau réduction boutique -->
+  <div th:if="${vendor.shopDiscountActive}" class="alert mb-4 py-3 d-flex align-items-center gap-3"
+       style="background:linear-gradient(135deg,#ff6b35,#f7931e);color:#fff;border:none;border-radius:12px;font-size:1.1rem;">
+    <i class="bi bi-fire" style="font-size:1.8rem;"></i>
+    <div>
+      <strong th:text="'🔥 -' + ${vendor.shopDiscountPercent} + '% sur toute la boutique !'">Réduction</strong>
+      <span th:if="${vendor.shopDiscountEndsAt != null}" class="d-block" style="font-size:.85rem;opacity:.9;">
+        Offre valable jusqu'au <span th:text="${vendor.shopDiscountEndsAt}">—</span>
+      </span>
+    </div>
+  </div>
+
   <!-- Produits de la boutique -->
   <h2 class="h5 fw-bold mb-3" style="color:var(--bolas-accent);">
     <i class="bi bi-box-seam me-2"></i>Produits

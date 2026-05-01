@@ -546,51 +546,13 @@ public class VendorController {
         return "redirect:/vendor/orders";
     }
 
-    @PostMapping("/orders/{id}/assign-courier")
-    @org.springframework.transaction.annotation.Transactional
-    public String assignCourierToOrder(@PathVariable Long id,
-                                       @RequestParam Long courierId,
-                                       HttpSession session,
-                                       RedirectAttributes ra) {
-        String redirect = requireVendor(session);
-        if (redirect != null) return redirect;
-
-        VendorUser vendor = currentVendor(session);
-
-        // Vérifier que le livreur appartient bien à ce vendeur (exclusivité)
-        var courierOpt = courierApplicationRepository.findById(courierId);
-        if (courierOpt.isEmpty()) {
-            ra.addFlashAttribute("flashError", "Livreur introuvable.");
-            return "redirect:/vendor/orders";
-        }
-        var courier = courierOpt.get();
-        if (courier.getVendor() == null || !courier.getVendor().getId().equals(vendor.getId())) {
-            ra.addFlashAttribute("flashError", "Ce livreur ne vous appartient pas.");
-            return "redirect:/vendor/orders";
-        }
-        if (courier.getStatus() != CourierApplicationStatus.APPROVED) {
-            ra.addFlashAttribute("flashError", "Ce livreur n'est pas encore approuvé.");
-            return "redirect:/vendor/orders";
-        }
-
-        orderRepository.findById(id).ifPresent(order -> {
-            if (orderBelongsToVendor(order, vendor)) {
-                order.setAssignedCourierName(courier.getCourierName());
-                order.setAssignedCourierPhone(courier.getCourierPhone());
-                orderRepository.save(order);
-                log.info("✅ Livreur {} assigné à commande {} par vendeur {}", courier.getCourierName(), id, vendor.getDisplayName());
-            }
-        });
-        ra.addFlashAttribute("flashOk", "Livreur assigné à la commande.");
-        return "redirect:/vendor/orders";
-    }
-
     /**
-     * Vendeur envoie en livraison (READY → IN_DELIVERY).
+     * Vendeur assigne un livreur ET envoie en livraison en 1 action (READY → IN_DELIVERY).
      */
-    @PostMapping("/orders/{id}/start-delivery")
+    @PostMapping("/orders/{id}/dispatch")
     @Transactional
-    public String startDelivery(@PathVariable Long id,
+    public String dispatchOrder(@PathVariable Long id,
+                                @RequestParam(required = false) Long courierId,
                                 HttpSession session,
                                 HttpServletRequest request,
                                 RedirectAttributes ra) {
@@ -612,14 +574,46 @@ public class VendorController {
             return "redirect:/vendor/orders";
         }
 
+        // Assigner le livreur si sélectionné
+        if (courierId != null && courierId > 0) {
+            var courierOpt = courierApplicationRepository.findById(courierId);
+            if (courierOpt.isEmpty()) {
+                ra.addFlashAttribute("flashError", "Livreur introuvable.");
+                return "redirect:/vendor/orders";
+            }
+            var courier = courierOpt.get();
+            if (courier.getVendor() == null || !courier.getVendor().getId().equals(vendor.getId())) {
+                ra.addFlashAttribute("flashError", "Ce livreur ne vous appartient pas.");
+                return "redirect:/vendor/orders";
+            }
+            if (courier.getStatus() != CourierApplicationStatus.APPROVED) {
+                ra.addFlashAttribute("flashError", "Ce livreur n'est pas encore approuvé.");
+                return "redirect:/vendor/orders";
+            }
+            // Vérifier que le livreur n'est pas déjà sur une autre livraison active
+            long busyCount = orderRepository.countByAssignedCourierNameAndStatus(
+                    courier.getCourierName(), OrderStatus.IN_DELIVERY);
+            if (busyCount > 0) {
+                ra.addFlashAttribute("flashError",
+                        "Le livreur " + courier.getCourierName() + " est déjà en livraison sur une autre commande.");
+                return "redirect:/vendor/orders";
+            }
+            order.setAssignedCourierName(courier.getCourierName());
+            order.setAssignedCourierPhone(courier.getCourierPhone());
+            orderRepository.save(order);
+            log.info("✅ Livreur {} assigné à commande {} par vendeur {}",
+                    courier.getCourierName(), id, vendor.getDisplayName());
+        }
+
         String scheme = request.getHeader("X-Forwarded-Proto") != null
                 ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
         String appBaseUrl = scheme + "://" + request.getServerName()
                 + (request.getServerPort() == 80 || request.getServerPort() == 443 ? "" : ":" + request.getServerPort());
 
         orderFlowService.vendorStartDelivery(order, vendor, appBaseUrl);
+        String courierName = order.getAssignedCourierName() != null ? order.getAssignedCourierName() : "—";
         ra.addFlashAttribute("flashOk",
-                "Commande " + order.getTrackingNumber() + " envoyée en livraison ! Le client a été notifié.");
+                "Commande " + order.getTrackingNumber() + " envoyée en livraison — livreur : " + courierName + " 🚚");
         return "redirect:/vendor/orders";
     }
 
@@ -1553,6 +1547,53 @@ public class VendorController {
         session.setAttribute(SESSION_KEY, vendor);
 
         ra.addFlashAttribute("flashOk", "Localisation de la boutique mise à jour !");
+        return "redirect:/vendor/dashboard";
+    }
+
+    // ─── Réduction boutique ──────────────────────────────────────────────────
+
+    @PostMapping("/settings/discount")
+    @Transactional
+    public String saveShopDiscount(@RequestParam(required = false, defaultValue = "0") int discountPercent,
+                                   @RequestParam(required = false) String discountEndsAt,
+                                   HttpSession session,
+                                   RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+        if (!isOwner(session)) {
+            ra.addFlashAttribute("flashError", "Seul le propriétaire peut gérer la réduction.");
+            return "redirect:/vendor/dashboard";
+        }
+
+        vendor = vendorUserRepository.findById(vendor.getId()).orElseThrow();
+
+        if (discountPercent < 0 || discountPercent > 90) {
+            ra.addFlashAttribute("flashError", "La réduction doit être entre 0 et 90%.");
+            return "redirect:/vendor/dashboard";
+        }
+
+        vendor.setShopDiscountPercent(discountPercent > 0 ? discountPercent : null);
+        if (discountEndsAt != null && !discountEndsAt.isBlank()) {
+            try {
+                vendor.setShopDiscountEndsAt(java.time.LocalDate.parse(discountEndsAt));
+            } catch (Exception e) {
+                vendor.setShopDiscountEndsAt(null);
+            }
+        } else {
+            vendor.setShopDiscountEndsAt(null);
+        }
+
+        vendorUserRepository.save(vendor);
+        session.setAttribute(SESSION_KEY, vendor);
+
+        if (discountPercent > 0) {
+            ra.addFlashAttribute("flashOk",
+                    "🔥 Réduction de " + discountPercent + "% activée sur toute votre boutique !");
+        } else {
+            ra.addFlashAttribute("flashOk", "Réduction boutique désactivée.");
+        }
         return "redirect:/vendor/dashboard";
     }
 }
