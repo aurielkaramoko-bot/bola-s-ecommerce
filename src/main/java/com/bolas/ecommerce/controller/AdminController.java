@@ -857,23 +857,6 @@ public class AdminController {
         return "redirect:/admin/vendors";
     }
 
-    @PostMapping("/admin/vendors/{id}/categories")
-    @Transactional
-    public String assignCategories(@PathVariable Long id,
-                                   @RequestParam(value = "categoryIds", required = false) List<Long> categoryIds,
-                                   RedirectAttributes ra) {
-        VendorUser v = vendorUserRepository.findById(id).orElseThrow();
-        vendorCategoryRepository.deleteByVendor(v);
-        if (categoryIds != null) {
-            for (Long catId : categoryIds) {
-                categoryRepository.findById(catId).ifPresent(cat ->
-                        vendorCategoryRepository.save(new com.bolas.ecommerce.model.VendorCategory(v, cat)));
-            }
-        }
-        ra.addFlashAttribute("flashOk", "Catégories assignées.");
-        return "redirect:/admin/vendors/" + id + "/manage";
-    }
-
     @PostMapping("/admin/vendors/{id}/delete")
     @Transactional
     public String deleteVendor(@PathVariable Long id, RedirectAttributes ra) {
