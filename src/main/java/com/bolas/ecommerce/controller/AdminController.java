@@ -584,6 +584,24 @@ public class AdminController {
                     .toList();
             model.addAttribute("activeVendors", active);
             log.info("      ✓ {} vendeurs ACTIVE trouvés", active.size());
+
+            // Vendeurs suspendus
+            List<VendorUser> suspended = allVendors.stream()
+                    .filter(v -> v.getVendorStatus() == VendorStatus.SUSPENDED)
+                    .toList();
+            model.addAttribute("suspendedVendors", suspended);
+
+            // Catégories pour les modals d'assignation
+            model.addAttribute("allCategories", categoryRepository.findAll());
+
+            // Map vendorId → Set<categoryId> pour pré-cocher les cases
+            java.util.Map<Long, java.util.Set<Long>> vendorCategoryMap = new java.util.HashMap<>();
+            for (VendorUser v : active) {
+                java.util.Set<Long> catIds = vendorCategoryRepository.findCategoriesByVendor(v)
+                        .stream().map(c -> c.getId()).collect(java.util.stream.Collectors.toSet());
+                vendorCategoryMap.put(v.getId(), catIds);
+            }
+            model.addAttribute("vendorCategoryMap", vendorCategoryMap);
             
             log.info("   → Recherche demandes livreurs PENDING...");
             var pendingCouriers = courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.PENDING);
@@ -676,9 +694,25 @@ public class AdminController {
         return "redirect:/admin/vendors";
     }
 
+    @PostMapping("/admin/vendors/{id}/categories")
+    @Transactional
+    public String saveVendorCategories(@PathVariable Long id,
+                                       @RequestParam(required = false) List<Long> categoryIds,
+                                       RedirectAttributes ra) {
+        VendorUser v = vendorUserRepository.findById(id).orElseThrow();
+        vendorCategoryRepository.deleteByVendor(v);
+        if (categoryIds != null) {
+            for (Long catId : categoryIds) {
+                categoryRepository.findById(catId).ifPresent(cat ->
+                        vendorCategoryRepository.save(new com.bolas.ecommerce.model.VendorCategory(v, cat)));
+            }
+        }
+        ra.addFlashAttribute("flashOk", "Catégories mises à jour pour " + v.getDisplayName());
+        return "redirect:/admin/vendors";
+    }
+
     @PostMapping("/admin/vendors/{id}/suspend")
     public String suspendVendor(@PathVariable Long id,
-                                @RequestParam(required = false, defaultValue = "true") boolean soft,
                                 @RequestParam(required = false, defaultValue = "") String reason,
                                 RedirectAttributes ra) {
         VendorUser v = vendorUserRepository.findById(id).orElseThrow();
