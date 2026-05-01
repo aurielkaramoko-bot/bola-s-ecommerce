@@ -17,12 +17,19 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 body.bolas-body {
-  font-family: "Cormorant Garamond", "Georgia", serif;
+  font-family: "Outfit", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   background: var(--bolas-white);
   color: var(--bolas-text);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Headings use Cormorant Garamond for elegance */
+h1, h2, h3, .h1, .h2, .h3, .site-logo, .hero-artisal h1 {
+  font-family: "Cormorant Garamond", Georgia, serif;
 }
 
 /* ============================================================
@@ -50,9 +57,10 @@ body.bolas-body {
   color: var(--bolas-text) !important;
   font-weight: 500;
   font-size: 1.05rem;
-  padding: 0.45rem 1rem !important;
+  padding: 0.5rem 1rem !important;
   position: relative;
   transition: color .2s;
+  letter-spacing: .01em;
 }
 
 .site-header .nav-link::after {
@@ -559,7 +567,7 @@ body.bolas-body {
 .site-footer ul li a {
   color: rgba(255,255,255,.7);
   text-decoration: none;
-  font-size: .95rem;
+  font-size: 1rem;
   transition: color .2s;
 }
 .site-footer ul li a:hover { color: #fff; }
@@ -597,8 +605,9 @@ body.bolas-body {
 .admin-sidebar .nav-link {
   color: var(--bolas-text);
   border-radius: 8px;
-  padding: .55rem .85rem;
-  font-size: .97rem;
+  padding: .6rem .9rem;
+  font-size: 1rem;
+  font-weight: 500;
   transition: background .15s, color .15s;
 }
 .admin-sidebar .nav-link:hover,
@@ -1255,3 +1264,66 @@ body.bolas-body {
   height: 1px;
   background: var(--bolas-border);
 }
+
+/* ============================================================
+   TYPOGRAPHY ENHANCEMENTS — Meilleure lisibilité globale
+   ============================================================ */
+
+/* Le .small Bootstrap par défaut fait 80% = trop petit. On le remonte. */
+.small, small {
+  font-size: 0.9rem !important;
+}
+
+/* Tables plus lisibles */
+.table {
+  font-size: 0.95rem;
+}
+.table th {
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
+/* Formulaires plus lisibles */
+.form-label {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+.form-control, .form-select {
+  font-size: 0.95rem;
+}
+.form-text {
+  font-size: 0.85rem;
+}
+
+/* Badges plus lisibles */
+.badge {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
+/* Alertes plus lisibles */
+.alert {
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* Boutons avec meilleure taille de police */
+.btn {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+.btn-sm {
+  font-size: 0.88rem;
+}
+
+/* Cards admin — texte plus grand */
+.admin-card {
+  font-size: 0.95rem;
+}
+
+/* Texte muted un peu plus foncé pour être lisible */
+.text-muted {
+  color: #6b5a4f !important;
+}
+

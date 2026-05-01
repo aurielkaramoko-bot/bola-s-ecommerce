@@ -153,14 +153,14 @@ public class OrderFlowService {
         orderRepository.save(order);
         auditLogService.orderStatusChanged(order.getId(), order.getTrackingNumber(), "READY");
 
-        // Notification WhatsApp Meta à l'admin
+        // Notification WhatsApp Meta à l'admin (info seulement, le vendeur gère)
         try {
-            String adminMsg = "✅ Commande prête !\n\n"
-                    + "📦 N° : " + order.getTrackingNumber() + "\n"
+            String adminMsg = "📦 Commande prête !\n\n"
                     + "🏪 Vendeur : " + (order.getVendor() != null ? order.getVendor().getDisplayName() : shopName) + "\n"
+                    + "📦 N° : " + order.getTrackingNumber() + "\n"
                     + "👤 Client : " + order.getCustomerName() + "\n"
                     + "📍 Option : " + deliveryLabel(order) + "\n\n"
-                    + "→ Assignez un livreur depuis l'admin BOLA";
+                    + "ℹ️ Le vendeur gère la livraison de cette commande.";
             metaWhatsApp.sendText(shopWhatsapp, adminMsg);
             log.info("✅ WhatsApp auto admin : commande {} prête", order.getTrackingNumber());
         } catch (Exception e) {
@@ -181,18 +181,19 @@ public class OrderFlowService {
         }
 
         // Fallback wa.me link
-        String msg = "✅ Commande prête !\n\n"
+        String msg = "📦 Commande prête !\n\n"
                 + "N° : " + order.getTrackingNumber() + "\n"
                 + "Client : " + order.getCustomerName() + "\n"
                 + "Option : " + deliveryLabel(order) + "\n\n"
-                + "Voir dans l'admin : " + appBaseUrl + "/admin/orders";
+                + "→ Gérez la livraison depuis votre espace vendeur";
         return waLink(shopWhatsapp, msg);
     }
 
-    // ─── Admin envoie en livraison READY → IN_DELIVERY ───────────────────────
+    // ─── Admin OU Vendeur envoie en livraison READY → IN_DELIVERY ─────────────
 
     /**
-     * Admin informe le client que sa commande est prête / en livraison.
+     * Passe la commande en livraison (READY → IN_DELIVERY).
+     * Peut être appelé par l'admin OU par le vendeur.
      * Envoie une notification WhatsApp automatique au client.
      */
     @Transactional
@@ -224,20 +225,18 @@ public class OrderFlowService {
             log.warn("⚠️ WhatsApp client (livraison) échoué : {}", e.getMessage());
         }
 
-        // Notifier le vendeur PRO/PREMIUM que la commande est en livraison
-        VendorUser vendor = order.getVendor();
-        if (vendor != null && vendor.canManageOrders()
-                && vendor.getPhone() != null && !vendor.getPhone().isBlank()) {
-            try {
-                String vendorMsg = "🚚 Commande " + order.getTrackingNumber() + " en livraison !\n\n"
-                        + "👤 Client : " + order.getCustomerName() + "\n"
-                        + (order.getAssignedCourierName() != null
-                                ? "📱 Livreur : " + order.getAssignedCourierName() + "\n" : "")
-                        + "\n→ Suivi en temps réel depuis votre dashboard vendeur.";
-                metaWhatsApp.sendText(vendor.getPhone(), vendorMsg);
-            } catch (Exception e) {
-                log.warn("⚠️ WhatsApp vendeur (livraison) échoué : {}", e.getMessage());
-            }
+        // Notifier l'admin (backstage info)
+        try {
+            VendorUser vendor = order.getVendor();
+            String adminMsg = "🚚 Commande en livraison\n\n"
+                    + "📦 N° : " + order.getTrackingNumber() + "\n"
+                    + "🏪 Vendeur : " + (vendor != null ? vendor.getDisplayName() : "—") + "\n"
+                    + "👤 Client : " + order.getCustomerName() + "\n"
+                    + (order.getAssignedCourierName() != null ? "🚴 Livreur : " + order.getAssignedCourierName() + "\n" : "")
+                    + "\nℹ️ Livraison gérée par le vendeur.";
+            metaWhatsApp.sendText(shopWhatsapp, adminMsg);
+        } catch (Exception e) {
+            log.warn("⚠️ WhatsApp admin (livraison) échoué : {}", e.getMessage());
         }
 
         // Fallback wa.me link
@@ -247,6 +246,32 @@ public class OrderFlowService {
                 + "📦 N° de suivi : " + order.getTrackingNumber() + "\n"
                 + "🔍 Suivre votre commande : " + trackUrl;
         return waLink(order.getCustomerPhone(), msg);
+    }
+
+    // ─── Vendeur marque READY → IN_DELIVERY ──────────────────────────────────
+
+    /**
+     * Le vendeur envoie en livraison sa commande READY.
+     */
+    @Transactional
+    public void vendorStartDelivery(CustomerOrder order, VendorUser vendor, String appBaseUrl) {
+        notifyClientReady(order, appBaseUrl);
+        log.info("✅ Vendeur {} a lancé la livraison de commande {}", vendor.getDisplayName(), order.getTrackingNumber());
+    }
+
+    // ─── Vendeur marque IN_DELIVERY → DELIVERED ──────────────────────────────
+
+    /**
+     * Le vendeur marque la commande comme livrée.
+     */
+    @Transactional
+    public void vendorMarkDelivered(CustomerOrder order, VendorUser vendor) {
+        order.setStatus(OrderStatus.DELIVERED);
+        orderRepository.save(order);
+        auditLogService.orderStatusChanged(order.getId(), order.getTrackingNumber(), "DELIVERED (vendeur)");
+
+        notifyOrderDelivered(order);
+        log.info("✅ Vendeur {} a marqué commande {} comme livrée", vendor.getDisplayName(), order.getTrackingNumber());
     }
 
     // ─── Notification commande annulée ───────────────────────────────────────

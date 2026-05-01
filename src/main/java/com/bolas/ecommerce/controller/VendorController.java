@@ -612,6 +612,76 @@ public class VendorController {
         return "redirect:/vendor/orders";
     }
 
+    /**
+     * Vendeur envoie en livraison (READY → IN_DELIVERY).
+     */
+    @PostMapping("/orders/{id}/start-delivery")
+    @Transactional
+    public String startDelivery(@PathVariable Long id,
+                                HttpSession session,
+                                HttpServletRequest request,
+                                RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+        CustomerOrder order = orderRepository.findByIdWithLines(id).orElse(null);
+        if (order == null) {
+            ra.addFlashAttribute("flashError", "Commande introuvable.");
+            return "redirect:/vendor/orders";
+        }
+        if (!orderBelongsToVendor(order, vendor)) {
+            ra.addFlashAttribute("flashError", "Accès refusé à cette commande.");
+            return "redirect:/vendor/orders";
+        }
+        if (order.getStatus() != OrderStatus.READY) {
+            ra.addFlashAttribute("flashError", "Seules les commandes prêtes peuvent être envoyées en livraison.");
+            return "redirect:/vendor/orders";
+        }
+
+        String scheme = request.getHeader("X-Forwarded-Proto") != null
+                ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
+        String appBaseUrl = scheme + "://" + request.getServerName()
+                + (request.getServerPort() == 80 || request.getServerPort() == 443 ? "" : ":" + request.getServerPort());
+
+        orderFlowService.vendorStartDelivery(order, vendor, appBaseUrl);
+        ra.addFlashAttribute("flashOk",
+                "Commande " + order.getTrackingNumber() + " envoyée en livraison ! Le client a été notifié.");
+        return "redirect:/vendor/orders";
+    }
+
+    /**
+     * Vendeur marque comme livrée (IN_DELIVERY → DELIVERED).
+     */
+    @PostMapping("/orders/{id}/mark-delivered")
+    @Transactional
+    public String markDelivered(@PathVariable Long id,
+                                HttpSession session,
+                                RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+        CustomerOrder order = orderRepository.findByIdWithLines(id).orElse(null);
+        if (order == null) {
+            ra.addFlashAttribute("flashError", "Commande introuvable.");
+            return "redirect:/vendor/orders";
+        }
+        if (!orderBelongsToVendor(order, vendor)) {
+            ra.addFlashAttribute("flashError", "Accès refusé à cette commande.");
+            return "redirect:/vendor/orders";
+        }
+        if (order.getStatus() != OrderStatus.IN_DELIVERY) {
+            ra.addFlashAttribute("flashError", "Seules les commandes en livraison peuvent être marquées livrées.");
+            return "redirect:/vendor/orders";
+        }
+
+        orderFlowService.vendorMarkDelivered(order, vendor);
+        ra.addFlashAttribute("flashOk",
+                "Commande " + order.getTrackingNumber() + " marquée comme livrée ! 🎉");
+        return "redirect:/vendor/orders";
+    }
+
     // ─── Produits vendeur ─────────────────────────────────────────────────────
 
     @GetMapping("/products")
