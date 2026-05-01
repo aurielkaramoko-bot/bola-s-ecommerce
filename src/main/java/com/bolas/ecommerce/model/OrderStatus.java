@@ -1,11 +1,9 @@
 package com.bolas.ecommerce.model;
 
 public enum OrderStatus {
-    /** Commande reçue — en attente de validation admin */
+    /** Commande reçue — en attente de traitement vendeur */
     PENDING,
-    /** Admin a validé — tracking généré, vendeur notifié */
-    CONFIRMED,
-    /** Vendeur a préparé la commande — en attente de livraison */
+    /** Vendeur a confirmé ET préparé — prête pour livraison */
     READY,
     /** En cours de livraison */
     IN_DELIVERY,

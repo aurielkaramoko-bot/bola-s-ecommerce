@@ -31,18 +31,15 @@
     <th:block th:if="${tracking.status.name() != 'CANCELLED'}">
       <th:block th:with="
         step1=${tracking.status.name() == 'PENDING' ? 'active' : 'done'},
-        step2=${tracking.status.name() == 'CONFIRMED' ? 'active' :
-               (tracking.status.name() == 'READY' or tracking.status.name() == 'IN_DELIVERY' or tracking.status.name() == 'DELIVERED') ? 'done' : ''},
-        step3=${tracking.status.name() == 'READY' ? 'active' :
-               (tracking.status.name() == 'IN_DELIVERY' or tracking.status.name() == 'DELIVERED') ? 'done' :
-               tracking.status.name() == 'CONFIRMED' ? 'active' : ''},
-        step4=${tracking.status.name() == 'DELIVERED' ? 'done' :
-               tracking.status.name() == 'IN_DELIVERY' ? 'active' : ''},
+        step2=${tracking.status.name() == 'READY' ? 'active' :
+               (tracking.status.name() == 'IN_DELIVERY' or tracking.status.name() == 'DELIVERED') ? 'done' : ''},
+        step3=${tracking.status.name() == 'IN_DELIVERY' ? 'active' :
+               tracking.status.name() == 'DELIVERED' ? 'done' : ''},
+        step4=${tracking.status.name() == 'DELIVERED' ? 'done' : ''},
         fillPct=${tracking.status.name() == 'PENDING' ? '0%' :
-                  tracking.status.name() == 'CONFIRMED' ? '27%' :
-                  tracking.status.name() == 'READY' ? '53%' :
-                  tracking.status.name() == 'IN_DELIVERY' ? '53%' :
-                  tracking.status.name() == 'DELIVERED' ? '80%' : '0%'}
+                  tracking.status.name() == 'READY' ? '33%' :
+                  tracking.status.name() == 'IN_DELIVERY' ? '66%' :
+                  tracking.status.name() == 'DELIVERED' ? '100%' : '0%'}
       ">
         <div class="tracking-progress">
           <div class="tracking-progress-fill" th:style="'width:' + ${fillPct}"></div>
@@ -96,7 +93,6 @@
     <!-- Statut texte -->
     <p class="text-center mt-2 mb-0">
       <span th:if="${tracking.status.name() == 'PENDING'}" class="badge rounded-pill" style="background:#8B5E3C;color:#fff;">En attente de validation</span>
-      <span th:if="${tracking.status.name() == 'CONFIRMED'}" class="badge rounded-pill" style="background:#f0a500;color:#fff;">Commande validée — en préparation</span>
       <span th:if="${tracking.status.name() == 'READY'}" class="badge rounded-pill" style="background:#0d6efd;color:#fff;">Prête — en attente de livraison</span>
       <span th:if="${tracking.status.name() == 'IN_DELIVERY'}" class="badge rounded-pill" style="background:#6f4a30;color:#fff;">En cours de livraison</span>
       <span th:if="${tracking.status.name() == 'DELIVERED'}" class="badge rounded-pill bg-success">Livrée ✓</span>

@@ -31,7 +31,7 @@
   <div th:if="${flashError}" class="alert alert-danger" th:text="${flashError}"></div>
 
   <!-- ═══════════════════════════════════════════════════════════════════ -->
-  <!-- SECTION 1 : Commandes PENDING (nouvelles — à confirmer) -->
+  <!-- SECTION 1 : Nouvelles commandes (PENDING) -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <h2 class="h4 fw-semibold mb-3" style="color:#e67e22;">
     <i class="bi bi-bell me-2"></i>Nouvelles commandes
@@ -41,7 +41,7 @@
 
   <div th:if="${pendingOrders == null or pendingOrders.isEmpty()}" class="admin-card p-4 text-center text-muted mb-4">
     <i class="bi bi-inbox" style="font-size:2.5rem;opacity:.4;"></i>
-    <p class="mt-2 mb-0" style="font-size:1rem;">Aucune nouvelle commande en attente.</p>
+    <p class="mt-2 mb-0">Aucune nouvelle commande en attente.</p>
   </div>
 
   <div class="row g-3 mb-4" th:if="${pendingOrders != null and !pendingOrders.isEmpty()}">
@@ -56,24 +56,20 @@
                 th:text="${#temporals.format(o.createdAt,'dd/MM HH:mm')}">—</span>
         </div>
         <div class="mb-1" style="font-size:.95rem;">
-          <i class="bi bi-person me-1"></i>
-          <span th:text="${o.customerName}">—</span>
+          <i class="bi bi-person me-1"></i><span th:text="${o.customerName}">—</span>
         </div>
         <div class="text-muted mb-1" style="font-size:.9rem;">
-          <i class="bi bi-telephone me-1"></i>
-          <span th:text="${o.customerPhone}">—</span>
+          <i class="bi bi-telephone me-1"></i><span th:text="${o.customerPhone}">—</span>
         </div>
         <div class="text-muted mb-1" th:if="${o.customerAddress != null}" style="font-size:.9rem;">
-          <i class="bi bi-geo-alt me-1"></i>
-          <span th:text="${o.customerAddress}">—</span>
+          <i class="bi bi-geo-alt me-1"></i><span th:text="${o.customerAddress}">—</span>
         </div>
         <div class="text-muted mb-1" style="font-size:.9rem;">
           <span th:text="${o.deliveryOption.name() == 'HOME' ? '🚚 Livraison domicile' : '🏪 Retrait boutique'}">—</span>
         </div>
-        <div class="fw-bold mb-1" style="color:var(--bolas-accent);font-size:1.05rem;"
+        <div class="fw-bold mb-2" style="color:var(--bolas-accent);font-size:1.05rem;"
              th:text="${#numbers.formatInteger(o.totalAmountCfa,1,'COMMA')} + ' FCFA'">—</div>
 
-        <!-- Lignes commande -->
         <ul class="list-unstyled mb-3" th:if="${!o.lines.isEmpty()}" style="font-size:.9rem;">
           <li th:each="l : ${o.lines}" class="d-flex justify-content-between text-muted mb-1">
             <span th:text="${l.quantity} + ' × ' + ${l.product?.name}">—</span>
@@ -81,11 +77,11 @@
           </li>
         </ul>
 
-        <!-- Bouton Confirmer la commande -->
+        <!-- 1 seul bouton : Confirmer + Préparer -->
         <form th:action="@{/vendor/orders/{id}/confirm(id=${o.id})}" method="post">
           <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
           <button type="submit" class="btn btn-success w-100" style="font-size:1rem;">
-            <i class="bi bi-check-circle me-1"></i>Confirmer la commande
+            <i class="bi bi-check-circle me-1"></i>Confirmer &amp; Préparer
           </button>
         </form>
       </div>
@@ -93,49 +89,45 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════ -->
-  <!-- SECTION 2 : Commandes CONFIRMED (à préparer) -->
+  <!-- SECTION 2 : Prêtes — assigner livreur + envoyer en livraison (READY) -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <h2 class="h4 fw-semibold mb-3" style="color:var(--bolas-accent);">
-    <i class="bi bi-clock me-2"></i>À préparer
+    <i class="bi bi-bicycle me-2"></i>Prêtes — à expédier
     <span class="badge ms-1" style="background:var(--bolas-accent);font-size:.85rem;"
-          th:text="${toProcess.size()}">0</span>
+          th:text="${readyOrders != null ? readyOrders.size() : 0}">0</span>
   </h2>
 
-  <div th:if="${toProcess.isEmpty()}" class="admin-card p-4 text-center text-muted mb-4">
+  <div th:if="${readyOrders == null or readyOrders.isEmpty()}" class="admin-card p-4 text-center text-muted mb-4">
     <i class="bi bi-check2-all" style="font-size:2.5rem;opacity:.4;"></i>
-    <p class="mt-2 mb-0" style="font-size:1rem;">Aucune commande à préparer pour le moment.</p>
+    <p class="mt-2 mb-0">Aucune commande prête pour l'instant.</p>
   </div>
 
-  <div class="row g-3 mb-4" th:if="${!toProcess.isEmpty()}">
-    <div class="col-12 col-md-6" th:each="o : ${toProcess}">
-      <div class="admin-card p-3">
+  <div class="row g-3 mb-4" th:if="${readyOrders != null and !readyOrders.isEmpty()}">
+    <div class="col-12 col-md-6" th:each="o : ${readyOrders}">
+      <div class="admin-card p-3 border-start border-info border-3">
         <div class="d-flex align-items-start justify-content-between mb-2">
           <div>
             <span class="fw-bold" style="font-size:.95rem;" th:text="'#' + ${o.trackingNumber}">—</span>
-            <span class="badge bg-primary ms-1">📦 CONFIRMÉE</span>
+            <span class="badge bg-info text-dark ms-1">📦 PRÊTE</span>
           </div>
           <span class="text-muted" style="font-size:.85rem;"
                 th:text="${#temporals.format(o.createdAt,'dd/MM HH:mm')}">—</span>
         </div>
         <div class="mb-1" style="font-size:.95rem;">
-          <i class="bi bi-person me-1"></i>
-          <span th:text="${o.customerName}">—</span>
+          <i class="bi bi-person me-1"></i><span th:text="${o.customerName}">—</span>
         </div>
         <div class="text-muted mb-1" style="font-size:.9rem;">
-          <i class="bi bi-telephone me-1"></i>
-          <span th:text="${o.customerPhone}">—</span>
+          <i class="bi bi-telephone me-1"></i><span th:text="${o.customerPhone}">—</span>
         </div>
         <div class="text-muted mb-1" th:if="${o.customerAddress != null}" style="font-size:.9rem;">
-          <i class="bi bi-geo-alt me-1"></i>
-          <span th:text="${o.customerAddress}">—</span>
+          <i class="bi bi-geo-alt me-1"></i><span th:text="${o.customerAddress}">—</span>
         </div>
         <div class="text-muted mb-1" style="font-size:.9rem;">
           <span th:text="${o.deliveryOption.name() == 'HOME' ? '🚚 Livraison domicile' : '🏪 Retrait boutique'}">—</span>
         </div>
-        <div class="fw-bold mb-1" style="color:var(--bolas-accent);font-size:1.05rem;"
+        <div class="fw-bold mb-2" style="color:var(--bolas-accent);font-size:1.05rem;"
              th:text="${#numbers.formatInteger(o.totalAmountCfa,1,'COMMA')} + ' FCFA'">—</div>
 
-        <!-- Lignes commande -->
         <ul class="list-unstyled mb-3" th:if="${!o.lines.isEmpty()}" style="font-size:.9rem;">
           <li th:each="l : ${o.lines}" class="d-flex justify-content-between text-muted mb-1">
             <span th:text="${l.quantity} + ' × ' + ${l.product?.name}">—</span>
@@ -143,62 +135,72 @@
           </li>
         </ul>
 
-        <!-- Action : Marquer comme prête -->
-        <form th:action="@{/vendor/orders/{id}/ready(id=${o.id})}" method="post" class="mb-2">
-          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-          <button type="submit" class="btn btn-hero-solid w-100" style="font-size:1rem;">
-            <i class="bi bi-check-circle me-1"></i>Marquer comme prête
-          </button>
-        </form>
+        <!-- Livreur déjà assigné -->
+        <div th:if="${o.assignedCourierName != null}" class="alert alert-success py-2 mb-2" style="font-size:.9rem;">
+          <i class="bi bi-bicycle me-1"></i>
+          <span th:text="${o.assignedCourierName}">—</span>
+          <span th:if="${o.assignedCourierPhone != null}">
+            — <a th:href="${'https://wa.me/' + o.assignedCourierPhone}" target="_blank" class="text-decoration-none"><i class="bi bi-whatsapp text-success"></i></a>
+          </span>
+        </div>
 
-        <!-- Assigner un livreur (peut le faire dès la préparation) -->
-        <div th:if="${approvedCouriers != null and !approvedCouriers.isEmpty()}" class="mt-2">
-          <div th:if="${o.assignedCourierName != null}" class="text-success mb-1" style="font-size:.9rem;">
-            <i class="bi bi-bicycle me-1"></i>Livreur : <span th:text="${o.assignedCourierName}">—</span>
-          </div>
+        <!-- Assigner un livreur -->
+        <div th:if="${approvedCouriers != null and !approvedCouriers.isEmpty()}" class="mb-2">
           <form th:action="@{/vendor/orders/{id}/assign-courier(id=${o.id})}" method="post" class="d-flex gap-2">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
             <select name="courierId" class="form-select form-select-sm flex-grow-1">
-              <option value="">— Assigner un livreur —</option>
+              <option value="">— Choisir un livreur —</option>
               <option th:each="c : ${approvedCouriers}" th:value="${c.id}"
-                      th:text="${c.courierName} + (${c.zone != null} ? ' (' + ${c.zone} + ')' : '')">—</option>
+                      th:text="${c.courierName} + (${c.zone != null} ? ' (' + ${c.zone} + ')' : '')"
+                      th:selected="${o.assignedCourierName != null and o.assignedCourierName == c.courierName}">—</option>
             </select>
             <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">
               <i class="bi bi-truck me-1"></i>Assigner
             </button>
           </form>
         </div>
+        <div th:if="${approvedCouriers == null or approvedCouriers.isEmpty()}" class="text-muted small mb-2">
+          <i class="bi bi-info-circle me-1"></i>
+          <a th:href="@{/vendor/couriers}">Proposez un livreur</a> pour pouvoir expédier.
+        </div>
+
+        <!-- Envoyer en livraison -->
+        <form th:action="@{/vendor/orders/{id}/start-delivery(id=${o.id})}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <button type="submit" class="btn btn-primary w-100" style="font-size:1rem;">
+            <i class="bi bi-truck me-1"></i>Envoyer en livraison
+          </button>
+        </form>
       </div>
     </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════ -->
-  <!-- SECTION 3 : Commandes terminées (READY, IN_DELIVERY, DELIVERED) -->
+  <!-- SECTION 3 : En livraison / Livrées -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <h2 class="h4 fw-semibold mb-3" style="color:var(--bolas-accent);">
-    <i class="bi bi-bag-check me-2"></i>Prêtes / En livraison / Livrées
+    <i class="bi bi-bag-check me-2"></i>En livraison / Livrées
     <span class="badge bg-success ms-1" style="font-size:.85rem;"
-          th:text="${done.size()}">0</span>
+          th:text="${done != null ? done.size() : 0}">0</span>
   </h2>
 
-  <div th:if="${done.isEmpty()}" class="admin-card p-4 text-center text-muted">
+  <div th:if="${done == null or done.isEmpty()}" class="admin-card p-4 text-center text-muted">
     <i class="bi bi-bag" style="font-size:2.5rem;opacity:.4;"></i>
-    <p class="mt-2 mb-0" style="font-size:1rem;">Aucune commande à afficher.</p>
+    <p class="mt-2 mb-0">Aucune commande à afficher.</p>
   </div>
 
-  <div class="row g-3" th:if="${!done.isEmpty()}">
+  <div class="row g-3" th:if="${done != null and !done.isEmpty()}">
     <div class="col-12 col-md-6" th:each="o : ${done}">
       <div class="admin-card p-3 border-start border-3"
-           th:classappend="${o.status.name() == 'DELIVERED'} ? 'border-success' : (${o.status.name() == 'IN_DELIVERY'} ? 'border-primary' : 'border-info')">
+           th:classappend="${o.status.name() == 'DELIVERED'} ? 'border-success' : 'border-primary'">
         <div class="d-flex justify-content-between mb-1">
           <span class="fw-bold" style="font-size:.95rem;" th:text="'#' + ${o.trackingNumber}">—</span>
           <span class="badge"
-                th:classappend="${o.status.name() == 'DELIVERED'} ? 'bg-success' : (${o.status.name() == 'IN_DELIVERY'} ? 'bg-primary' : 'bg-info')"
-                th:text="${o.status.name() == 'DELIVERED' ? '✅ LIVRÉE' : (o.status.name() == 'IN_DELIVERY' ? '🚚 EN LIVRAISON' : '📦 PRÊTE')}">Statut</span>
+                th:classappend="${o.status.name() == 'DELIVERED'} ? 'bg-success' : 'bg-primary'"
+                th:text="${o.status.name() == 'DELIVERED' ? '✅ LIVRÉE' : '🚚 EN LIVRAISON'}">Statut</span>
         </div>
         <div style="font-size:.95rem;" th:text="${o.customerName}">—</div>
         <div class="text-muted" style="font-size:.9rem;" th:text="${o.customerPhone}">—</div>
-        <div class="text-muted" style="font-size:.9rem;" th:if="${o.customerAddress != null}" th:text="${o.customerAddress}">—</div>
         <div class="text-muted mb-1" style="font-size:.9rem;">
           <span th:text="${o.deliveryOption.name() == 'HOME' ? '🚚 Livraison domicile' : '🏪 Retrait boutique'}">—</span>
         </div>
@@ -218,32 +220,7 @@
           </span>
         </div>
 
-        <!-- Actions vendeur pour les commandes READY → start delivery -->
-        <div th:if="${o.status.name() == 'READY'}" class="mt-3">
-          <!-- Assigner un livreur si pas encore fait -->
-          <div th:if="${approvedCouriers != null and !approvedCouriers.isEmpty() and o.assignedCourierName == null}" class="mb-2">
-            <form th:action="@{/vendor/orders/{id}/assign-courier(id=${o.id})}" method="post" class="d-flex gap-2">
-              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-              <select name="courierId" class="form-select form-select-sm flex-grow-1">
-                <option value="">— Choisir un livreur —</option>
-                <option th:each="c : ${approvedCouriers}" th:value="${c.id}"
-                        th:text="${c.courierName} + (${c.zone != null} ? ' (' + ${c.zone} + ')' : '')">—</option>
-              </select>
-              <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">
-                <i class="bi bi-truck me-1"></i>Assigner
-              </button>
-            </form>
-          </div>
-          <!-- Bouton envoyer en livraison -->
-          <form th:action="@{/vendor/orders/{id}/start-delivery(id=${o.id})}" method="post">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-            <button type="submit" class="btn btn-primary w-100" style="font-size:1rem;">
-              <i class="bi bi-truck me-1"></i>Envoyer en livraison
-            </button>
-          </form>
-        </div>
-
-        <!-- Action vendeur pour les commandes IN_DELIVERY → mark delivered -->
+        <!-- Marquer comme livrée -->
         <div th:if="${o.status.name() == 'IN_DELIVERY'}" class="mt-3">
           <form th:action="@{/vendor/orders/{id}/mark-delivered(id=${o.id})}" method="post">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>

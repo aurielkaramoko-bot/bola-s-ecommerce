@@ -410,11 +410,6 @@ public class AdminController {
             model.addAttribute("pendingOrders", pending);
             log.info("      ✓ {} commandes PENDING trouvées", pending.size());
             
-            log.info("   → Recherche commandes CONFIRMED...");
-            var confirmed = customerOrderRepository.findTop100ByStatusWithLinesAsc(OrderStatus.CONFIRMED);
-            model.addAttribute("confirmedOrders", confirmed);
-            log.info("      ✓ {} commandes CONFIRMED trouvées", confirmed.size());
-            
             log.info("   → Recherche commandes READY...");
             var ready = customerOrderRepository.findTop100ByStatusWithLinesAsc(OrderStatus.READY);
             model.addAttribute("readyOrders", ready);
@@ -455,7 +450,6 @@ public class AdminController {
             e.printStackTrace();
             model.addAttribute("flashError", "Erreur serveur : " + e.getClass().getSimpleName() + " - " + e.getMessage());
             model.addAttribute("pendingOrders", List.of());
-            model.addAttribute("confirmedOrders", List.of());
             model.addAttribute("readyOrders", List.of());
             model.addAttribute("activeOrders", List.of());
             model.addAttribute("closedOrders", List.of());

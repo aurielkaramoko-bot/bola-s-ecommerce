@@ -39,6 +39,9 @@ public class VendorController {
     private static final String SESSION_SELLER_KEY = "BOLAS_SHOP_SELLER";
     private static final int    GRATUIT_LIMIT = 10;
 
+    @org.springframework.beans.factory.annotation.Value("${google.maps.api.key:}")
+    private String googleMapsApiKey;
+
     private final CustomerOrderRepository   orderRepository;
     private final VendorUserRepository       vendorUserRepository;
     private final ProductRepository          productRepository;
@@ -404,7 +407,7 @@ public class VendorController {
         long productCount   = productRepository.countByVendor(vendor);
         // Compter uniquement les commandes de CE vendeur
         long pendingOrders  = orderRepository.countByVendorAndStatus(vendor, OrderStatus.PENDING);
-        long confirmedOrders = orderRepository.countByVendorAndStatus(vendor, OrderStatus.CONFIRMED);
+        long confirmedOrders = orderRepository.countByVendorAndStatus(vendor, OrderStatus.READY);
 
         String scheme = request.getHeader("X-Forwarded-Proto") != null
                 ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
@@ -419,6 +422,7 @@ public class VendorController {
         model.addAttribute("gratuitLimit",    GRATUIT_LIMIT);
         model.addAttribute("allowedCategories", allowedCategories(vendor));
         model.addAttribute("shopBaseUrl", shopBaseUrl);
+        model.addAttribute("googleMapsApiKey", googleMapsApiKey);
         model.addAttribute("products",
                 productRepository.findByVendor(vendor).stream()
                         .limit(5).toList());
@@ -465,18 +469,18 @@ public class VendorController {
 
         VendorUser vendor = currentVendor(session);
 
-        // TOUS les vendeurs gèrent leurs commandes (PENDING + CONFIRMED + ...)
         List<CustomerOrder> pendingOrders =
                 orderRepository.findByVendorAndStatusInWithLines(vendor,
                         List.of(OrderStatus.PENDING));
-        List<CustomerOrder> toProcess =
+        // READY = prêtes à expédier (livreur à assigner + bouton livraison)
+        List<CustomerOrder> readyOrders =
                 orderRepository.findByVendorAndStatusInWithLines(vendor,
-                        List.of(OrderStatus.CONFIRMED));
+                        List.of(OrderStatus.READY));
         List<CustomerOrder> done =
                 orderRepository.findByVendorAndStatusInWithLines(vendor,
-                        List.of(OrderStatus.READY, OrderStatus.IN_DELIVERY, OrderStatus.DELIVERED));
+                        List.of(OrderStatus.IN_DELIVERY, OrderStatus.DELIVERED));
 
-        // Livreurs approuvés proposés par ce vendeur (exclusifs)
+        // Livreurs approuvés de ce vendeur (exclusifs)
         var approvedCouriers = courierApplicationRepository.findByVendorOrderBySubmittedAtDesc(vendor)
                 .stream()
                 .filter(a -> a.getStatus() == CourierApplicationStatus.APPROVED)
@@ -486,8 +490,8 @@ public class VendorController {
         model.addAttribute("vendor",    vendor);
         model.addAttribute("readOnlyMode", false);
         model.addAttribute("pendingOrders", pendingOrders);
-        model.addAttribute("toProcess", toProcess);
-        model.addAttribute("done",      done);
+        model.addAttribute("readyOrders",   readyOrders);
+        model.addAttribute("done",          done);
         model.addAttribute("approvedCouriers", approvedCouriers);
         return "vendor/orders";
     }
@@ -505,8 +509,7 @@ public class VendorController {
     }
 
     /**
-     * Vendeur PRO/PREMIUM confirme une commande PENDING → CONFIRMED.
-     * C'est le vendeur qui gère sa propre commande, pas l'admin.
+     * Vendeur confirme ET prépare la commande en 1 clic : PENDING → READY.
      */
     @PostMapping("/orders/{id}/confirm")
     @Transactional
@@ -539,42 +542,7 @@ public class VendorController {
                 + (request.getServerPort() == 80 || request.getServerPort() == 443 ? "" : ":" + request.getServerPort());
 
         orderFlowService.vendorConfirmOrder(order, vendor, appBaseUrl);
-        ra.addFlashAttribute("flashOk", "Commande " + order.getTrackingNumber() + " confirmée ! Préparez-la maintenant.");
-        return "redirect:/vendor/orders";
-    }
-
-    @PostMapping("/orders/{id}/ready")
-    public String markReady(@PathVariable Long id,
-                            HttpSession session,
-                            HttpServletRequest request,
-                            RedirectAttributes ra) {
-        String redirect = requireVendor(session);
-        if (redirect != null) return redirect;
-
-        VendorUser vendor = currentVendor(session);
-
-        CustomerOrder order = orderRepository.findByIdWithLines(id).orElse(null);
-        if (order == null) {
-            ra.addFlashAttribute("flashError", "Commande introuvable.");
-            return "redirect:/vendor/orders";
-        }
-        if (!orderBelongsToVendor(order, vendor)) {
-            ra.addFlashAttribute("flashError", "Accès refusé à cette commande.");
-            return "redirect:/vendor/orders";
-        }
-        if (order.getStatus() != OrderStatus.CONFIRMED) {
-            ra.addFlashAttribute("flashError", "Cette commande ne peut pas être marquée prête.");
-            return "redirect:/vendor/orders";
-        }
-
-        String scheme = request.getHeader("X-Forwarded-Proto") != null
-                ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
-        String appBaseUrl = scheme + "://" + request.getServerName()
-                + (request.getServerPort() == 80 || request.getServerPort() == 443 ? "" : ":" + request.getServerPort());
-
-        String waAdminLink = orderFlowService.markReady(order, appBaseUrl);
-        ra.addFlashAttribute("flashOk", "Commande marquée comme prête ! Le livreur sera bientôt assigné.");
-        ra.addFlashAttribute("waAdminLink", waAdminLink);
+        ra.addFlashAttribute("flashOk", "Commande " + order.getTrackingNumber() + " confirmée et prête ! Assignez un livreur.");
         return "redirect:/vendor/orders";
     }
 
