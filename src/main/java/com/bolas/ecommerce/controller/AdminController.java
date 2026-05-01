@@ -84,8 +84,7 @@ public class AdminController {
     private final PackPricingService packPricingService;
     private final com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository;
 
-    // --- ICI : RÉCUPÉRATION DE TA CLÉ API DEPUIS TON PC ---
-    @Value("${google.maps.api.key}")
+    @Value("${google.maps.api.key:}")
     private String googleMapsApiKey;
 
     @Value("${bolas.shop.latitude:5.3600}")

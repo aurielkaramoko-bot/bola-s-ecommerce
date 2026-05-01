@@ -12,13 +12,13 @@ public class TrackingController {
 
     private final CustomerOrderRepository customerOrderRepository;
 
-    @Value("${google.maps.api.key}")
+    @Value("${google.maps.api.key:}")
     private String googleMapsApiKey;
 
-    @Value("${bolas.shop.latitude}")
+    @Value("${bolas.shop.latitude:5.3600}")
     private double shopLatitude;
 
-    @Value("${bolas.shop.longitude}")
+    @Value("${bolas.shop.longitude:-3.9903}")
     private double shopLongitude;
 
     public TrackingController(CustomerOrderRepository customerOrderRepository) {
