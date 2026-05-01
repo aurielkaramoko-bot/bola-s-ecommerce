@@ -600,7 +600,7 @@ public class AdminController {
             log.info("   → Recherche livreurs approuvés...");
             var allCouriers = courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.APPROVED);
             model.addAttribute("allCouriers", allCouriers);
-            log.info(\"      ✓ {} livreurs approuvés trouvés\", allCouriers.size());
+            log.info("      ✓ {} livreurs approuvés trouvés", allCouriers.size());
             
             // Prix des packs pour le formulaire de tarification
             model.addAttribute("gratuitPrice", packPricingService.getGratuitPrice());
