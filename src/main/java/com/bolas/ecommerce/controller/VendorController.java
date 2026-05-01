@@ -35,7 +35,8 @@ import java.util.stream.Collectors;
 public class VendorController {
 
     private static final Logger log = LoggerFactory.getLogger(VendorController.class);
-    private static final String SESSION_KEY   = "BOLAS_VENDOR";
+    private static final String SESSION_KEY        = "BOLAS_VENDOR";
+    private static final String SESSION_SELLER_KEY = "BOLAS_SHOP_SELLER";
     private static final int    GRATUIT_LIMIT = 10;
 
     private final CustomerOrderRepository   orderRepository;
@@ -57,6 +58,7 @@ public class VendorController {
     private final com.bolas.ecommerce.service.OrderFlowService   orderFlowService;
     private final VendorStatsService          vendorStatsService;
     private final ReviewRepository            reviewRepository;
+    private final com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository;
 
     public VendorController(CustomerOrderRepository orderRepository,
                             VendorUserRepository vendorUserRepository,
@@ -76,7 +78,8 @@ public class VendorController {
                             com.bolas.ecommerce.service.PackPricingService packPricingService,
                             com.bolas.ecommerce.service.OrderFlowService orderFlowService,
                             VendorStatsService vendorStatsService,
-                            ReviewRepository reviewRepository) {
+                            ReviewRepository reviewRepository,
+                            com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository) {
         this.orderRepository               = orderRepository;
         this.vendorUserRepository          = vendorUserRepository;
         this.productRepository             = productRepository;
@@ -96,6 +99,7 @@ public class VendorController {
         this.orderFlowService              = orderFlowService;
         this.vendorStatsService            = vendorStatsService;
         this.reviewRepository              = reviewRepository;
+        this.shopSellerRepository          = shopSellerRepository;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -138,34 +142,79 @@ public class VendorController {
                                HttpSession session,
                                jakarta.servlet.http.HttpServletRequest request,
                                RedirectAttributes ra) {
-        Optional<VendorUser> opt = vendorUserRepository.findByUsername(username.trim());
-        if (opt.isEmpty() || !passwordEncoder.matches(password, opt.get().getPasswordHash())) {
-            ra.addFlashAttribute("flashError", "Identifiant ou mot de passe incorrect.");
-            return "redirect:/vendor/login";
-        }
-        VendorUser v = opt.get();
-        if (!v.isActive()) {
-            if (v.getVendorStatus() == VendorStatus.PENDING) {
-                ra.addFlashAttribute("flashError",
-                        "Votre demande d'ouverture de boutique est en cours de validation. Nous vous contacterons sous 24h.");
-            } else {
-                ra.addFlashAttribute("flashError",
-                        "Votre compte vendeur a été suspendu. Contactez l'administration.");
+        String trimmedUsername = username.trim();
+
+        // 1. Essayer en tant que vendeur principal
+        Optional<VendorUser> opt = vendorUserRepository.findByUsername(trimmedUsername);
+        if (opt.isPresent() && passwordEncoder.matches(password, opt.get().getPasswordHash())) {
+            VendorUser v = opt.get();
+            if (!v.isActive()) {
+                if (v.getVendorStatus() == VendorStatus.PENDING) {
+                    ra.addFlashAttribute("flashError",
+                            "Votre demande d'ouverture de boutique est en cours de validation. Nous vous contacterons sous 24h.");
+                } else {
+                    ra.addFlashAttribute("flashError",
+                            "Votre compte vendeur a été suspendu. Contactez l'administration.");
+                }
+                return "redirect:/vendor/login";
             }
-            return "redirect:/vendor/login";
+            request.changeSessionId();
+            session.setAttribute(SESSION_KEY, v);
+            session.removeAttribute(SESSION_SELLER_KEY);
+            sessionCounter.markVendorSession(session);
+            return "redirect:/vendor/dashboard";
         }
-        // Sécurité session fixation : régénère l'ID de session sans perdre les données
-        request.changeSessionId();
-        session.setAttribute(SESSION_KEY, v);
-        sessionCounter.markVendorSession(session); // compteur de vendeurs connectés
-        return "redirect:/vendor/dashboard";
+
+        // 2. Essayer en tant que sous-vendeur (ShopSeller)
+        var sellerOpt = shopSellerRepository.findByUsername(trimmedUsername);
+        if (sellerOpt.isPresent() && passwordEncoder.matches(password, sellerOpt.get().getPasswordHash())) {
+            var seller = sellerOpt.get();
+            if (!seller.isActive()) {
+                ra.addFlashAttribute("flashError",
+                        "Votre compte a été désactivé par le propriétaire de la boutique.");
+                return "redirect:/vendor/login";
+            }
+            VendorUser parentVendor = seller.getVendor();
+            // Revalider que le vendeur parent est toujours actif
+            parentVendor = vendorUserRepository.findById(parentVendor.getId())
+                    .filter(pv -> pv.isActive() && pv.getVendorStatus() == VendorStatus.ACTIVE)
+                    .orElse(null);
+            if (parentVendor == null) {
+                ra.addFlashAttribute("flashError",
+                        "La boutique à laquelle vous êtes rattaché(e) a été suspendue.");
+                return "redirect:/vendor/login";
+            }
+            // Mettre à jour la dernière connexion
+            seller.setLastLoginAt(java.time.Instant.now());
+            shopSellerRepository.save(seller);
+            request.changeSessionId();
+            session.setAttribute(SESSION_KEY, parentVendor);
+            session.setAttribute(SESSION_SELLER_KEY, seller);
+            sessionCounter.markVendorSession(session);
+            return "redirect:/vendor/dashboard";
+        }
+
+        ra.addFlashAttribute("flashError", "Identifiant ou mot de passe incorrect.");
+        return "redirect:/vendor/login";
     }
 
     @GetMapping("/logout")
     public String logout(HttpSession session) {
         sessionCounter.unmarkVendorSession(session);
         session.removeAttribute(SESSION_KEY);
+        session.removeAttribute(SESSION_SELLER_KEY);
         return "redirect:/vendor/login";
+    }
+
+    /** Retourne le sous-vendeur connecté (null si c'est le propriétaire) */
+    private com.bolas.ecommerce.model.ShopSeller currentSeller(HttpSession session) {
+        Object obj = session.getAttribute(SESSION_SELLER_KEY);
+        return (obj instanceof com.bolas.ecommerce.model.ShopSeller s) ? s : null;
+    }
+
+    /** Vérifie si c'est le propriétaire (pas un sous-vendeur) */
+    private boolean isOwner(HttpSession session) {
+        return currentSeller(session) == null;
     }
 
     // ─── Inscription publique ─────────────────────────────────────────────────
@@ -402,6 +451,11 @@ public class VendorController {
             model.addAttribute("reviewCount", 0L);
         }
 
+        // Sous-vendeurs info
+        model.addAttribute("isOwner", isOwner(session));
+        model.addAttribute("currentSeller", currentSeller(session));
+        model.addAttribute("sellerCount", shopSellerRepository.countByVendor(vendor));
+
         return "vendor/dashboard";
     }
 
@@ -415,27 +469,7 @@ public class VendorController {
 
         VendorUser vendor = currentVendor(session);
 
-        // GRATUIT : voit les commandes mais boutons grisés avec message upgrade
-        if (vendor.getPlan() == VendorPlan.GRATUIT) {
-            // Montrer les commandes en lecture seule pour frustrer gentiment
-            var allVendorOrders = orderRepository.findByVendorWithLines(vendor);
-            model.addAttribute("pageTitle", "Mes commandes — BOLA Vendeur");
-            model.addAttribute("vendor", vendor);
-            model.addAttribute("readOnlyMode", true);
-            model.addAttribute("upgradeMessage",
-                    "Passez en PRO pour gérer vos commandes vous-même ! " +
-                    "Actuellement, c'est l'admin BOLA qui gère vos commandes.");
-            model.addAttribute("toProcess", allVendorOrders.stream()
-                    .filter(o -> o.getStatus() == OrderStatus.PENDING || o.getStatus() == OrderStatus.CONFIRMED)
-                    .toList());
-            model.addAttribute("done", allVendorOrders.stream()
-                    .filter(o -> o.getStatus() == OrderStatus.READY || o.getStatus() == OrderStatus.DELIVERED)
-                    .toList());
-            model.addAttribute("approvedCouriers", List.of());
-            return "vendor/orders";
-        }
-
-        // PRO / PREMIUM : gère ses commandes (PENDING + CONFIRMED)
+        // TOUS les vendeurs gèrent leurs commandes (PENDING + CONFIRMED + ...)
         List<CustomerOrder> pendingOrders =
                 orderRepository.findByVendorAndStatusInWithLines(vendor,
                         List.of(OrderStatus.PENDING));
@@ -495,10 +529,6 @@ public class VendorController {
         if (redirect != null) return redirect;
 
         VendorUser vendor = currentVendor(session);
-        if (!vendor.canManageOrders()) {
-            ra.addFlashAttribute("flashError", "Passez en PRO pour gérer vos commandes !");
-            return "redirect:/vendor/orders";
-        }
 
         CustomerOrder order = orderRepository.findById(id).orElse(null);
         if (order == null) {
@@ -533,10 +563,6 @@ public class VendorController {
         if (redirect != null) return redirect;
 
         VendorUser vendor = currentVendor(session);
-        if (!vendor.canManageOrders()) {
-            ra.addFlashAttribute("flashError", "Passez en PRO pour gérer vos commandes !");
-            return "redirect:/vendor/orders";
-        }
 
         CustomerOrder order = orderRepository.findByIdWithLines(id).orElse(null);
         if (order == null) {
@@ -573,10 +599,6 @@ public class VendorController {
         if (redirect != null) return redirect;
 
         VendorUser vendor = currentVendor(session);
-        if (vendor.getPlan() == VendorPlan.GRATUIT) {
-            ra.addFlashAttribute("flashError", "Fonctionnalité réservée aux packs payants.");
-            return "redirect:/vendor/orders";
-        }
 
         courierApplicationRepository.findById(courierId).ifPresent(courier -> {
             orderRepository.findById(id).ifPresent(order -> {
@@ -1300,5 +1322,194 @@ public class VendorController {
             return map;
         }).toList();
         return ResponseEntity.ok(result);
+    }
+
+    // ─── Gestion des sous-vendeurs (ShopSeller) ─────────────────────────────
+
+    @GetMapping("/sellers")
+    @Transactional(readOnly = true)
+    public String sellersPage(HttpSession session, Model model, RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+
+        // Seul le propriétaire peut gérer les sous-vendeurs
+        if (!isOwner(session)) {
+            ra.addFlashAttribute("flashError", "Seul le propriétaire de la boutique peut gérer les vendeurs.");
+            return "redirect:/vendor/dashboard";
+        }
+
+        if (!vendor.canManageSellers()) {
+            model.addAttribute("pageTitle", "Mes vendeurs — BOLA");
+            model.addAttribute("vendor", vendor);
+            model.addAttribute("sellers", List.of());
+            model.addAttribute("flashError",
+                    "Les vendeurs de confiance sont disponibles à partir du Pack Pro. Passez au niveau supérieur !");
+            return "vendor/sellers";
+        }
+
+        model.addAttribute("pageTitle", "Mes vendeurs — BOLA");
+        model.addAttribute("vendor", vendor);
+        model.addAttribute("sellers", shopSellerRepository.findByVendorOrderByCreatedAtDesc(vendor));
+        model.addAttribute("sellerCount", shopSellerRepository.countByVendor(vendor));
+        model.addAttribute("maxSellers", vendor.getMaxSellers());
+        return "vendor/sellers";
+    }
+
+    @PostMapping("/sellers/add")
+    @Transactional
+    public String addSeller(@RequestParam String fullName,
+                            @RequestParam String username,
+                            @RequestParam String password,
+                            @RequestParam(required = false) String phone,
+                            @RequestParam(required = false) String email,
+                            @RequestParam(value = "idDocFile", required = false) org.springframework.web.multipart.MultipartFile idDocFile,
+                            HttpSession session,
+                            RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+
+        if (!isOwner(session)) {
+            ra.addFlashAttribute("flashError", "Seul le propriétaire peut ajouter des vendeurs.");
+            return "redirect:/vendor/dashboard";
+        }
+        if (!vendor.canManageSellers()) {
+            ra.addFlashAttribute("flashError", "Fonctionnalité réservée aux packs payants.");
+            return "redirect:/vendor/sellers";
+        }
+
+        // Vérifier la limite
+        long currentCount = shopSellerRepository.countByVendor(vendor);
+        if (currentCount >= vendor.getMaxSellers()) {
+            ra.addFlashAttribute("flashError",
+                    "Limite atteinte (" + vendor.getMaxSellers() + " vendeurs max pour votre plan). Passez au plan supérieur.");
+            return "redirect:/vendor/sellers";
+        }
+
+        // Validations
+        String cleanName = sanitizer.sanitizeText(fullName);
+        String cleanUsername = sanitizer.sanitizeText(username);
+        if (cleanName == null || cleanName.isBlank()) {
+            ra.addFlashAttribute("flashError", "Le nom complet est obligatoire.");
+            return "redirect:/vendor/sellers";
+        }
+        if (cleanUsername == null || cleanUsername.isBlank() || !cleanUsername.matches("[a-zA-Z0-9._-]+")) {
+            ra.addFlashAttribute("flashError", "L'identifiant est invalide (lettres, chiffres, tirets, points).");
+            return "redirect:/vendor/sellers";
+        }
+        if (password == null || password.length() < 6) {
+            ra.addFlashAttribute("flashError", "Le mot de passe doit faire au moins 6 caractères.");
+            return "redirect:/vendor/sellers";
+        }
+
+        // Vérifier unicité username (dans VendorUser ET ShopSeller)
+        if (vendorUserRepository.findByUsername(cleanUsername).isPresent()
+                || shopSellerRepository.findByUsername(cleanUsername).isPresent()) {
+            ra.addFlashAttribute("flashError", "Ce nom d'utilisateur est déjà pris.");
+            return "redirect:/vendor/sellers";
+        }
+
+        // Upload pièce d'identité si fournie
+        String idDocUrl = null;
+        Boolean idVerified = null;
+        if (idDocFile != null && !idDocFile.isEmpty()) {
+            try {
+                idDocUrl = imageUploadService.store(idDocFile);
+                idVerified = idVerificationService.verify(idDocFile);
+            } catch (IllegalArgumentException | java.io.IOException e) {
+                ra.addFlashAttribute("flashError", "Pièce d'identité invalide : " + e.getMessage());
+                return "redirect:/vendor/sellers";
+            }
+        }
+
+        com.bolas.ecommerce.model.ShopSeller seller = new com.bolas.ecommerce.model.ShopSeller();
+        seller.setFullName(cleanName);
+        seller.setUsername(cleanUsername);
+        seller.setPasswordHash(passwordEncoder.encode(password));
+        seller.setPhone(sanitizer.sanitizeText(phone));
+        seller.setEmail(sanitizer.sanitizeText(email));
+        seller.setVendor(vendor);
+        seller.setIdDocumentUrl(idDocUrl);
+        seller.setIdDocVerified(idVerified);
+        shopSellerRepository.save(seller);
+
+        log.info("✅ Sous-vendeur '{}' créé pour boutique '{}' par {}", cleanUsername, vendor.getDisplayName(), vendor.getUsername());
+        ra.addFlashAttribute("flashOk",
+                "Vendeur \"" + cleanName + "\" ajouté ! Il peut se connecter avec l'identifiant : " + cleanUsername);
+        return "redirect:/vendor/sellers";
+    }
+
+    @PostMapping("/sellers/{id}/toggle")
+    @Transactional
+    public String toggleSeller(@PathVariable Long id, HttpSession session, RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        VendorUser vendor = currentVendor(session);
+        if (!isOwner(session)) {
+            ra.addFlashAttribute("flashError", "Action réservée au propriétaire.");
+            return "redirect:/vendor/dashboard";
+        }
+        shopSellerRepository.findById(id).ifPresent(seller -> {
+            if (seller.getVendor().getId().equals(vendor.getId())) {
+                seller.setActive(!seller.isActive());
+                shopSellerRepository.save(seller);
+                ra.addFlashAttribute("flashOk",
+                        seller.isActive() ? "Vendeur activé." : "Vendeur désactivé.");
+            }
+        });
+        return "redirect:/vendor/sellers";
+    }
+
+    @PostMapping("/sellers/{id}/delete")
+    @Transactional
+    public String deleteSeller(@PathVariable Long id, HttpSession session, RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        VendorUser vendor = currentVendor(session);
+        if (!isOwner(session)) {
+            ra.addFlashAttribute("flashError", "Action réservée au propriétaire.");
+            return "redirect:/vendor/dashboard";
+        }
+        shopSellerRepository.findById(id).ifPresent(seller -> {
+            if (seller.getVendor().getId().equals(vendor.getId())) {
+                String name = seller.getFullName();
+                shopSellerRepository.delete(seller);
+                ra.addFlashAttribute("flashOk", "Vendeur \"" + name + "\" supprimé.");
+            }
+        });
+        return "redirect:/vendor/sellers";
+    }
+
+    // ─── Localisation boutique ───────────────────────────────────────────────
+
+    @PostMapping("/settings/location")
+    @Transactional
+    public String saveLocation(@RequestParam(required = false) Double latitude,
+                               @RequestParam(required = false) Double longitude,
+                               @RequestParam(required = false) String address,
+                               HttpSession session,
+                               RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+        // Seul le propriétaire peut modifier la localisation
+        if (!isOwner(session)) {
+            ra.addFlashAttribute("flashError", "Seul le propriétaire peut modifier la localisation.");
+            return "redirect:/vendor/dashboard";
+        }
+
+        vendor = vendorUserRepository.findById(vendor.getId()).orElseThrow();
+        vendor.setShopLatitude(latitude);
+        vendor.setShopLongitude(longitude);
+        vendor.setShopAddress(sanitizer.sanitizeText(address));
+        vendorUserRepository.save(vendor);
+        session.setAttribute(SESSION_KEY, vendor);
+
+        ra.addFlashAttribute("flashOk", "Localisation de la boutique mise à jour !");
+        return "redirect:/vendor/dashboard";
     }
 }

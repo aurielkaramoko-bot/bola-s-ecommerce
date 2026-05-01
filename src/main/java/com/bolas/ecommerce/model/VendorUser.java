@@ -111,6 +111,19 @@ public class VendorUser {
     @Column(name = "assigned_courier_id")
     private Long assignedCourierId;
 
+    /** Latitude GPS de la boutique physique */
+    @Column(name = "shop_latitude")
+    private Double shopLatitude;
+
+    /** Longitude GPS de la boutique physique */
+    @Column(name = "shop_longitude")
+    private Double shopLongitude;
+
+    /** Adresse textuelle de la boutique */
+    @jakarta.validation.constraints.Size(max = 500)
+    @Column(name = "shop_address", length = 500)
+    private String shopAddress;
+
     // ─── Getters / Setters ────────────────────────────────────────────────────
 
     public Long getId() { return id; }
@@ -173,6 +186,20 @@ public class VendorUser {
     public Long getAssignedCourierId() { return assignedCourierId; }
     public void setAssignedCourierId(Long assignedCourierId) { this.assignedCourierId = assignedCourierId; }
 
+    public Double getShopLatitude() { return shopLatitude; }
+    public void setShopLatitude(Double shopLatitude) { this.shopLatitude = shopLatitude; }
+
+    public Double getShopLongitude() { return shopLongitude; }
+    public void setShopLongitude(Double shopLongitude) { this.shopLongitude = shopLongitude; }
+
+    public String getShopAddress() { return shopAddress; }
+    public void setShopAddress(String shopAddress) { this.shopAddress = shopAddress; }
+
+    /** La boutique a une localisation GPS renseignée */
+    public boolean hasLocation() {
+        return shopLatitude != null && shopLongitude != null;
+    }
+
     /** Jours restants avant expiration (négatif = expiré) */
     public long getDaysUntilExpiry() {
         if (subscriptionExpiresAt == null) return Long.MAX_VALUE;
@@ -190,8 +217,8 @@ public class VendorUser {
         return plan == VendorPlan.PRO_LOCAL || plan == VendorPlan.PRO || plan == VendorPlan.PREMIUM;
     }
 
-    /** Le vendeur peut gérer ses commandes lui-même (confirmer, préparer, expédier) */
-    public boolean canManageOrders() { return isPaidPlan(); }
+    /** Le vendeur peut gérer ses commandes lui-même (confirmer, préparer, expédier) — TOUS les vendeurs */
+    public boolean canManageOrders() { return true; }
 
     /** Le vendeur peut chatter avec ses clients */
     public boolean canChat() { return isPaidPlan(); }
@@ -213,4 +240,16 @@ public class VendorUser {
 
     /** Nombre maximum de produits autorisés */
     public int getMaxProducts() { return plan == VendorPlan.GRATUIT ? 10 : Integer.MAX_VALUE; }
+
+    /** Nombre maximum de sous-vendeurs autorisés par plan */
+    public int getMaxSellers() {
+        return switch (plan) {
+            case GRATUIT -> 0;
+            case PRO_LOCAL, PRO -> 2;
+            case PREMIUM -> 5;
+        };
+    }
+
+    /** Le vendeur peut gérer des sous-vendeurs */
+    public boolean canManageSellers() { return isPaidPlan(); }
 }

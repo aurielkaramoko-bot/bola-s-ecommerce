@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Vendeurs d'une boutique — Admin BOLA</title>
+</head>
+<body class="bolas-body">
+<nav th:replace="~{fragments/header :: navbar}"></nav>
+<div class="container-fluid">
+  <div class="row">
+    <div th:replace="~{fragments/admin-sidebar :: sidebar(active='vendors')}"></div>
+    <main class="col-12 col-md-9 col-lg-10 ms-sm-auto px-4 py-4">
+
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <a href="/admin/shop-activity" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+          <h1 class="h3 fw-semibold mb-0" style="color:#8B5E3C;">
+            <i class="bi bi-people me-2"></i>Vendeurs de
+            <span th:text="${vendor.displayName}">Boutique</span>
+          </h1>
+          <p class="small text-muted mb-0">
+            Vue backstage (lecture seule) — Plan :
+            <span class="badge"
+                  th:classappend="${vendor.plan?.name() == 'PREMIUM'} ? 'text-bg-warning' :
+                                   (${vendor.plan?.name() == 'PRO' or vendor.plan?.name() == 'PRO_LOCAL'} ? 'bg-info' : 'bg-secondary')"
+                  th:text="${vendor.plan?.name()}">—</span>
+            | Max : <span th:text="${vendor.maxSellers}">0</span> vendeurs
+          </p>
+        </div>
+      </div>
+
+      <div class="admin-card">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>Nom complet</th>
+                <th>Identifiant</th>
+                <th>Téléphone</th>
+                <th>Email</th>
+                <th>CNI</th>
+                <th>Statut</th>
+                <th>Créé le</th>
+                <th>Dernière connexion</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="s, iter : ${sellers}">
+                <td class="text-muted" th:text="${iter.index + 1}">1</td>
+                <td class="fw-semibold" th:text="${s.fullName}">—</td>
+                <td><code th:text="${s.username}">—</code></td>
+                <td>
+                  <a th:if="${s.phone != null}" th:href="${'https://wa.me/' + s.phone}" target="_blank"
+                     class="text-decoration-none">
+                    <i class="bi bi-whatsapp text-success me-1"></i>
+                    <span th:text="${s.phone}">—</span>
+                  </a>
+                  <span th:if="${s.phone == null}" class="text-muted">—</span>
+                </td>
+                <td th:text="${s.email ?: '—'}">—</td>
+                <td>
+                  <div th:if="${s.idDocumentUrl != null}">
+                    <a th:href="${s.idDocumentUrl}" target="_blank">
+                      <img th:src="${s.idDocumentUrl}" alt="CNI"
+                           style="height:40px;width:64px;object-fit:cover;border-radius:4px;border:1px solid #ddd;"/>
+                    </a>
+                    <span th:if="${s.idDocVerified == true}" class="badge bg-success ms-1"><i class="bi bi-shield-check"></i></span>
+                    <span th:if="${s.idDocVerified == false}" class="badge bg-danger ms-1"><i class="bi bi-shield-x"></i></span>
+                  </div>
+                  <span th:if="${s.idDocumentUrl == null}" class="text-muted">—</span>
+                </td>
+                <td>
+                  <span th:if="${s.active}" class="badge bg-success">Actif</span>
+                  <span th:if="${!s.active}" class="badge bg-secondary">Désactivé</span>
+                </td>
+                <td>
+                  <span th:text="${#temporals.format(s.createdAt, 'dd/MM/yy')}">—</span>
+                </td>
+                <td>
+                  <span th:if="${s.lastLoginAt != null}" th:text="${#temporals.format(s.lastLoginAt, 'dd/MM/yy HH:mm')}">—</span>
+                  <span th:if="${s.lastLoginAt == null}" class="text-muted">Jamais</span>
+                </td>
+              </tr>
+              <tr th:if="${sellers.isEmpty()}">
+                <td colspan="9" class="text-muted text-center p-4">Aucun sous-vendeur pour cette boutique.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+</body>
+</html>

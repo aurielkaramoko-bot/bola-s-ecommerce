@@ -35,6 +35,9 @@
           <p class="small text-muted mb-2" th:if="${v.shopDescription != null}"
              th:text="${#strings.abbreviate(v.shopDescription, 60)}">Description</p>
           <span class="badge bg-success small">Actif</span>
+          <span th:if="${v.hasLocation()}" class="badge bg-light text-dark small ms-1">
+            <i class="bi bi-geo-alt-fill text-danger"></i> Localisé
+          </span>
         </div>
       </a>
     </div>

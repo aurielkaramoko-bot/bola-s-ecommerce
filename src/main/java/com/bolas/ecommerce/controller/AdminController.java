@@ -82,6 +82,7 @@ public class AdminController {
     private final ReportRepository reportRepository;
     private final SessionCounterService sessionCounter;
     private final PackPricingService packPricingService;
+    private final com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository;
 
     // --- ICI : RÉCUPÉRATION DE TA CLÉ API DEPUIS TON PC ---
     @Value("${google.maps.api.key}")
@@ -112,7 +113,8 @@ public class AdminController {
                            VendorCategoryRepository vendorCategoryRepository,
                            ReportRepository reportRepository,
                            SessionCounterService sessionCounter,
-                           PackPricingService packPricingService) {
+                           PackPricingService packPricingService,
+                           com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.chatMessageRepository = chatMessageRepository;
@@ -133,6 +135,7 @@ public class AdminController {
         this.reportRepository = reportRepository;
         this.sessionCounter = sessionCounter;
         this.packPricingService = packPricingService;
+        this.shopSellerRepository = shopSellerRepository;
     }
 
     @InitBinder
@@ -986,12 +989,30 @@ public class AdminController {
                     .mapToLong(p -> orderLineRepository.countByProduct_Id(p.getId()))
                     .sum();
             row.put("orderLineCount", orderCount);
+            // Sous-vendeurs
+            row.put("sellerCount", shopSellerRepository.countByVendor(v));
+            // Localisation
+            row.put("hasLocation", v.hasLocation());
             stats.add(row);
         }
         // Trier par nb de commandes décroissant
         stats.sort((a, b) -> Long.compare((Long) b.get("orderLineCount"), (Long) a.get("orderLineCount")));
         model.addAttribute("shopStats", stats);
         return "admin/shop-activity";
+    }
+
+    // ─── Backstage : sous-vendeurs d'une boutique ────────────────────────────
+
+    @GetMapping("/admin/vendors/{id}/sellers")
+    @Transactional(readOnly = true)
+    public String vendorSellersBackstage(@PathVariable Long id, Model model) {
+        VendorUser vendor = vendorUserRepository.findById(id)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Vendeur introuvable"));
+        model.addAttribute("pageTitle", "Vendeurs de " + vendor.getDisplayName() + " — Admin BOLA");
+        model.addAttribute("vendor", vendor);
+        model.addAttribute("sellers", shopSellerRepository.findByVendorOrderByCreatedAtDesc(vendor));
+        return "admin/vendor-sellers";
     }
 
     // ─── Gestion des pays ─────────────────────────────────────────────────────

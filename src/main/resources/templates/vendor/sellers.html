@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Mes vendeurs — BOLA</title>
+</head>
+<body class="bolas-body">
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container py-4 flex-grow-1" style="max-width:820px;">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a th:href="@{/vendor/dashboard}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <div>
+      <h1 class="h4 fw-bold mb-0" style="color:var(--bolas-accent);">
+        <i class="bi bi-people me-2"></i>Mes vendeurs de confiance
+      </h1>
+      <p class="text-muted small mb-0">
+        Ajoutez des collaborateurs pour gérer votre boutique.
+        <span th:if="${maxSellers != null}">
+          (<span th:text="${sellerCount}">0</span> / <span th:text="${maxSellers}">2</span> max)
+        </span>
+      </p>
+    </div>
+  </div>
+
+  <!-- Alertes -->
+  <div th:if="${flashError}" class="alert alert-danger" th:text="${flashError}"></div>
+  <div th:if="${flashOk}"    class="alert alert-success" th:text="${flashOk}"></div>
+
+  <!-- Upgrade si GRATUIT -->
+  <div th:if="${!vendor.canManageSellers()}" class="admin-card p-4 mb-4 text-center" style="border-left: 4px solid #f39c12;">
+    <i class="bi bi-lock" style="font-size:2.5rem;color:#C49A6C;opacity:.5;"></i>
+    <h5 class="fw-bold mt-3" style="color:var(--bolas-accent);">Fonctionnalité Pack Pro</h5>
+    <p class="text-muted small mb-3">
+      Avec le Pack Pro ou Premium, vous pouvez ajouter des vendeurs de confiance
+      qui peuvent se connecter à votre espace et gérer vos produits et commandes.
+    </p>
+    <div class="small text-muted mb-3">
+      <span class="badge bg-info me-1">Pro Local</span> 2 vendeurs max
+      <span class="mx-2">|</span>
+      <span class="badge text-bg-warning me-1">⭐ Premium</span> 5 vendeurs max
+    </div>
+    <a th:href="@{/contact}" class="btn btn-hero-solid">
+      <i class="bi bi-whatsapp me-1"></i>Passer au Pack Pro
+    </a>
+  </div>
+
+  <!-- Formulaire d'ajout (si plan le permet et pas au max) -->
+  <div th:if="${vendor.canManageSellers() and (sellerCount == null or sellerCount < maxSellers)}"
+       class="admin-card p-4 mb-4">
+    <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);">
+      <i class="bi bi-person-plus me-1"></i>Ajouter un vendeur
+    </h2>
+    <form th:action="@{/vendor/sellers/add}" method="post" enctype="multipart/form-data" class="row g-3">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+      <div class="col-md-6">
+        <label class="form-label fw-semibold small">Nom complet <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" name="fullName" required maxlength="150"
+               placeholder="ex. Kofi Mensah"/>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label fw-semibold small">Identifiant de connexion <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" name="username" required maxlength="100"
+               placeholder="ex. kofi.mensah" pattern="[a-zA-Z0-9._-]+"/>
+        <div class="form-text">Lettres, chiffres, tirets et points uniquement.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label fw-semibold small">Mot de passe <span class="text-danger">*</span></label>
+        <input type="password" class="form-control" name="password" required minlength="6"
+               placeholder="Min. 6 caractères"/>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label fw-semibold small">Téléphone WhatsApp</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-whatsapp text-success"></i></span>
+          <input type="tel" class="form-control" name="phone" maxlength="40"
+                 placeholder="ex. 22890123456"/>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label fw-semibold small">Email</label>
+        <input type="email" class="form-control" name="email" maxlength="200"
+               placeholder="ex. kofi@email.com"/>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label fw-semibold small">
+          <i class="bi bi-card-image me-1"></i>Pièce d'identité
+        </label>
+        <input type="file" class="form-control" name="idDocFile"
+               accept="image/jpeg,image/png,image/webp"/>
+        <div class="form-text">CNI, passeport ou permis — JPEG/PNG/WebP, max 5 Mo.</div>
+      </div>
+
+      <div class="col-12">
+        <button type="submit" class="btn btn-hero-solid">
+          <i class="bi bi-person-plus me-1"></i>Ajouter le vendeur
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Limite atteinte -->
+  <div th:if="${vendor.canManageSellers() and sellerCount != null and sellerCount >= maxSellers}"
+       class="alert alert-warning mb-4">
+    <i class="bi bi-exclamation-triangle me-1"></i>
+    Limite de vendeurs atteinte (<span th:text="${maxSellers}">2</span> max pour votre plan).
+    <a th:href="@{/contact}" class="fw-bold" style="color:var(--bolas-accent);">Passez au plan supérieur →</a>
+  </div>
+
+  <!-- Liste des vendeurs -->
+  <div th:if="${vendor.canManageSellers()}" class="admin-card">
+    <div class="p-3 border-bottom">
+      <h2 class="h6 fw-bold mb-0" style="color:var(--bolas-accent);">
+        <i class="bi bi-people me-1"></i>Mes vendeurs
+      </h2>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 small">
+        <thead class="table-light">
+          <tr>
+            <th>Vendeur</th>
+            <th>Identifiant</th>
+            <th>Téléphone</th>
+            <th>CNI</th>
+            <th>Statut</th>
+            <th>Dernière connexion</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="s : ${sellers}">
+            <td>
+              <div class="fw-semibold" th:text="${s.fullName}">—</div>
+              <div class="text-muted" style="font-size:.75rem;" th:if="${s.email != null}"
+                   th:text="${s.email}">—</div>
+            </td>
+            <td><code th:text="${s.username}">—</code></td>
+            <td>
+              <a th:if="${s.phone != null}" th:href="${'https://wa.me/' + s.phone}" target="_blank"
+                 class="text-decoration-none">
+                <i class="bi bi-whatsapp text-success me-1"></i>
+                <span th:text="${s.phone}">—</span>
+              </a>
+              <span th:if="${s.phone == null}" class="text-muted">—</span>
+            </td>
+            <td>
+              <span th:if="${s.idDocVerified == true}" class="badge bg-success">
+                <i class="bi bi-shield-check"></i> Vérifié
+              </span>
+              <span th:if="${s.idDocVerified == false}" class="badge bg-danger">
+                <i class="bi bi-shield-x"></i> Suspect
+              </span>
+              <span th:if="${s.idDocVerified == null and s.idDocumentUrl != null}" class="badge bg-secondary">
+                <i class="bi bi-eye-slash"></i> Manuel
+              </span>
+              <span th:if="${s.idDocumentUrl == null}" class="text-muted small">—</span>
+            </td>
+            <td>
+              <span th:if="${s.active}" class="badge bg-success">Actif</span>
+              <span th:if="${!s.active}" class="badge bg-secondary">Désactivé</span>
+            </td>
+            <td>
+              <span th:if="${s.lastLoginAt != null}" class="small text-muted"
+                    th:text="${#temporals.format(s.lastLoginAt, 'dd/MM/yy HH:mm')}">—</span>
+              <span th:if="${s.lastLoginAt == null}" class="small text-muted">Jamais</span>
+            </td>
+            <td>
+              <div class="d-flex gap-1">
+                <!-- Activer/Désactiver -->
+                <form th:action="@{/vendor/sellers/{id}/toggle(id=${s.id})}" method="post" class="m-0">
+                  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                  <button type="submit" class="btn btn-sm"
+                          th:classappend="${s.active} ? 'btn-outline-warning' : 'btn-outline-success'"
+                          th:title="${s.active} ? 'Désactiver' : 'Activer'">
+                    <i th:classappend="${s.active} ? 'bi-pause-circle' : 'bi-play-circle'" class="bi"></i>
+                  </button>
+                </form>
+                <!-- Supprimer -->
+                <form th:action="@{/vendor/sellers/{id}/delete(id=${s.id})}" method="post" class="m-0"
+                      onsubmit="return confirm('Supprimer définitivement ce vendeur ?')">
+                  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                  <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          <tr th:if="${sellers.isEmpty()}">
+            <td colspan="7" class="text-muted text-center p-4">
+              <i class="bi bi-people" style="font-size:1.5rem;opacity:.3;"></i>
+              <div class="mt-1">Aucun vendeur ajouté.</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+</body>
+</html>

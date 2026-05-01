@@ -36,6 +36,11 @@
         <span class="small text-muted ms-1">(<span th:text="${reviewCount}">0</span> avis)</span>
       </div>
       <div class="mt-2 d-flex gap-2 flex-wrap">
+        <!-- Adresse si renseignée -->
+        <span th:if="${vendor.shopAddress != null}" class="badge bg-light text-dark">
+          <i class="bi bi-geo-alt-fill text-danger me-1"></i>
+          <span th:text="${vendor.shopAddress}">Adresse</span>
+        </span>
         <!-- Bouton chat si PRO/PREMIUM -->
         <a th:if="${vendor.canChat()}" th:href="@{/chat/{id}(id=${vendor.id})}"
            class="btn btn-sm btn-hero-solid">
@@ -101,6 +106,17 @@
     </div>
   </div>
 
+  <!-- Localisation de la boutique -->
+  <div th:if="${vendor.hasLocation()}" class="mt-5">
+    <h2 class="h5 fw-bold mb-3" style="color:var(--bolas-accent);">
+      <i class="bi bi-geo-alt-fill me-2"></i>Localisation de la boutique
+    </h2>
+    <div th:if="${vendor.shopAddress != null}" class="mb-2 small text-muted">
+      <i class="bi bi-pin-map me-1"></i><span th:text="${vendor.shopAddress}">Adresse</span>
+    </div>
+    <div id="shopMap" style="width:100%;height:350px;border-radius:12px;border:2px solid var(--bolas-accent);box-shadow:0 4px 20px rgba(139,94,60,0.15);"></div>
+  </div>
+
 </main>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
@@ -148,5 +164,43 @@
     </div>
   </div>
 </div>
+
+<!-- Google Maps pour localisation boutique -->
+<script th:if="${vendor.hasLocation() and googleMapsApiKey != null and !googleMapsApiKey.isEmpty()}"
+        th:src="${'https://maps.googleapis.com/maps/api/js?key=' + googleMapsApiKey + '&callback=initShopMap'}"
+        async defer></script>
+<script th:if="${vendor.hasLocation()}">
+function initShopMap() {
+  var lat = [[${vendor.shopLatitude}]];
+  var lng = [[${vendor.shopLongitude}]];
+  var shopName = '[[${vendor.displayName}]]';
+  var mapEl = document.getElementById('shopMap');
+  if (!mapEl) return;
+  var pos = { lat: lat, lng: lng };
+  var map = new google.maps.Map(mapEl, {
+    center: pos,
+    zoom: 15,
+    styles: [
+      { featureType: 'poi', stylers: [{ visibility: 'simplified' }] },
+      { featureType: 'transit', stylers: [{ visibility: 'off' }] }
+    ]
+  });
+  new google.maps.Marker({
+    position: pos,
+    map: map,
+    title: shopName,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 12,
+      fillColor: '#8B5E3C',
+      fillOpacity: 1,
+      strokeColor: '#fff',
+      strokeWeight: 3
+    }
+  });
+}
+// Fallback si l'API est déjà chargée
+if (typeof google !== 'undefined' && google.maps) initShopMap();
+</script>
 </body>
 </html>

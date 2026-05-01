@@ -31,6 +31,9 @@ public class HomeController {
     private final CountryRepository countryRepository;
     private final ReviewRepository reviewRepository;
 
+    @org.springframework.beans.factory.annotation.Value("${google.maps.api.key:}")
+    private String googleMapsApiKey;
+
     public HomeController(ProductRepository productRepository,
                           CategoryRepository categoryRepository,
                           VendorUserRepository vendorUserRepository,
@@ -157,6 +160,9 @@ public class HomeController {
             model.addAttribute("avgRating", 0.0);
             model.addAttribute("reviewCount", 0L);
         }
+
+        // Localisation
+        model.addAttribute("googleMapsApiKey", googleMapsApiKey);
 
         return "boutique-detail";
     }
