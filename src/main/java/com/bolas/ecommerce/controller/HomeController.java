@@ -47,6 +47,7 @@ public class HomeController {
     }
 
     @GetMapping("/")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public String home(@RequestParam(value = "country", required = false) String countryParam,
                        HttpServletRequest request,
                        HttpServletResponse response,

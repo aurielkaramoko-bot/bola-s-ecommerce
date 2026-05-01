@@ -14,12 +14,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     /** 1. Accueil : Produits mis en avant */
     @Query("""
         SELECT p FROM Product p
+        LEFT JOIN FETCH p.vendor v
         WHERE p.available = true
-        AND (p.vendor IS NULL OR p.vendor.active = true)
-        AND (p.vendor IS NULL OR p.featured = true OR p.vendor.plan = 'PREMIUM')
+        AND (v IS NULL OR v.active = true)
+        AND (v IS NULL OR p.featured = true OR v.plan = 'PREMIUM')
         ORDER BY
-          CASE WHEN p.vendor IS NULL THEN 0
-               WHEN p.vendor.plan = 'PREMIUM' THEN 1
+          CASE WHEN v IS NULL THEN 0
+               WHEN v.plan = 'PREMIUM' THEN 1
                ELSE 2 END ASC,
           p.id DESC
         """)
@@ -28,11 +29,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     /** 2. Accueil : Produits populaires */
     @Query("""
         SELECT p FROM Product p
+        LEFT JOIN FETCH p.vendor v
         WHERE p.available = true
-        AND (p.vendor IS NULL OR p.vendor.active = true)
+        AND (v IS NULL OR v.active = true)
         ORDER BY
-          CASE WHEN p.vendor IS NULL THEN 0
-               WHEN p.vendor.plan = 'PREMIUM' THEN 1
+          CASE WHEN v IS NULL THEN 0
+               WHEN v.plan = 'PREMIUM' THEN 1
                ELSE 2 END ASC,
           p.featured DESC,
           p.id DESC

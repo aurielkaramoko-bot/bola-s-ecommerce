@@ -137,16 +137,24 @@ public class Product {
     public long getEffectivePriceCfa() {
         // Priorité : promotion individuelle > réduction boutique > prix normal
         if (isOnPromotion()) return promoPriceCfa;
-        if (vendor != null && vendor.isShopDiscountActive()) {
-            int discount = vendor.getShopDiscountPercent();
-            return Math.max(0, priceCfa - (priceCfa * discount / 100));
+        try {
+            if (vendor != null && vendor.isShopDiscountActive()) {
+                int discount = vendor.getShopDiscountPercent();
+                return Math.max(0, priceCfa - (priceCfa * discount / 100));
+            }
+        } catch (Exception e) {
+            // vendor non chargé (lazy) — on retourne le prix normal
         }
         return priceCfa;
     }
 
     /** Vérifie si le produit bénéficie de la réduction boutique (pas de promo individuelle) */
     public boolean hasShopDiscount() {
-        return !isOnPromotion() && vendor != null && vendor.isShopDiscountActive();
+        try {
+            return !isOnPromotion() && vendor != null && vendor.isShopDiscountActive();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public Category getCategory() {
