@@ -688,10 +688,57 @@ public class AdminController {
         VendorUser v = vendorUserRepository.findById(id).orElseThrow();
         v.setActive(true);
         v.setVendorStatus(VendorStatus.ACTIVE);
+        v.setSuspensionReason(null);
         vendorUserRepository.save(v);
         ra.addFlashAttribute("flashOk",
                 "Boutique \"" + v.getDisplayName() + "\" approuvée et activée !");
+        // Rediriger vers la page d'origine si on vient des suspendus
         return "redirect:/admin/vendors";
+    }
+
+    @GetMapping("/admin/suspended-vendors")
+    @Transactional(readOnly = true)
+    public String suspendedVendors(Model model) {
+        model.addAttribute("pageTitle", "Boutiques suspendues — Admin BOLA");
+        List<VendorUser> suspended = vendorUserRepository.findByVendorStatus(VendorStatus.SUSPENDED);
+        model.addAttribute("suspendedVendors", suspended);
+        return "admin/suspended-vendors";
+    }
+
+    @PostMapping("/admin/vendors/{id}/renew-and-activate")
+    public String renewAndActivate(@PathVariable Long id,
+                                   @RequestParam String plan,
+                                   @RequestParam(required = false) String startsAt,
+                                   @RequestParam(required = false) String expiresAt,
+                                   RedirectAttributes ra) {
+        VendorUser v = vendorUserRepository.findById(id).orElseThrow();
+        v.setActive(true);
+        v.setVendorStatus(VendorStatus.ACTIVE);
+        v.setSuspensionReason(null);
+        try {
+            v.setPlan(com.bolas.ecommerce.model.VendorPlan.valueOf(plan));
+        } catch (Exception ignored) {}
+        if (startsAt != null && !startsAt.isBlank()) {
+            v.setSubscriptionStartsAt(java.time.LocalDate.parse(startsAt));
+        }
+        if (expiresAt != null && !expiresAt.isBlank()) {
+            v.setSubscriptionExpiresAt(java.time.LocalDate.parse(expiresAt));
+        }
+        vendorUserRepository.save(v);
+        ra.addFlashAttribute("flashOk",
+                "Boutique \"" + v.getDisplayName() + "\" réactivée avec plan " + plan + ".");
+        return "redirect:/admin/suspended-vendors";
+    }
+
+    @PostMapping("/admin/vendors/{id}/suspension-reason")
+    public String updateSuspensionReason(@PathVariable Long id,
+                                          @RequestParam(required = false, defaultValue = "") String reason,
+                                          RedirectAttributes ra) {
+        VendorUser v = vendorUserRepository.findById(id).orElseThrow();
+        v.setSuspensionReason(reason.isBlank() ? null : reason.trim());
+        vendorUserRepository.save(v);
+        ra.addFlashAttribute("flashOk", "Raison de suspension mise à jour.");
+        return "redirect:/admin/suspended-vendors";
     }
 
     @PostMapping("/admin/vendors/{id}/categories")
@@ -713,6 +760,7 @@ public class AdminController {
 
     @PostMapping("/admin/vendors/{id}/suspend")
     public String suspendVendor(@PathVariable Long id,
+                                @RequestParam(required = false, defaultValue = "true") boolean soft,
                                 @RequestParam(required = false, defaultValue = "") String reason,
                                 RedirectAttributes ra) {
         VendorUser v = vendorUserRepository.findById(id).orElseThrow();

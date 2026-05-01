@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Boutiques suspendues — Admin BOLA</title>
+</head>
+<body class="bolas-body">
+<nav th:replace="~{fragments/header :: navbar}"></nav>
+<div class="container-fluid">
+  <div class="row">
+    <div th:replace="~{fragments/admin-sidebar :: sidebar(active='suspended-vendors')}"></div>
+    <main class="col-12 col-md-9 col-lg-10 ms-sm-auto px-4 py-4">
+
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 fw-semibold mb-0" style="color:#dc3545;">
+          <i class="bi bi-slash-circle me-2"></i>Boutiques suspendues
+          <span class="badge bg-danger ms-2" th:text="${suspendedVendors?.size() ?: 0}">0</span>
+        </h1>
+        <a href="/admin/vendors" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Retour vendeurs
+        </a>
+      </div>
+
+      <div th:if="${flashOk}" class="alert alert-success alert-dismissible fade show" th:text="${flashOk}">
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      <div th:if="${flashError}" class="alert alert-danger alert-dismissible fade show" th:text="${flashError}">
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      <div th:if="${waSuspendLink}" class="alert alert-warning d-flex align-items-center gap-3">
+        <span>Notifier le vendeur :</span>
+        <a th:href="${waSuspendLink}" target="_blank" class="btn btn-sm text-white" style="background:#25D366;">
+          <i class="bi bi-whatsapp me-1"></i>Envoyer via WhatsApp
+        </a>
+      </div>
+
+      <!-- Aucune boutique suspendue -->
+      <div th:if="${suspendedVendors == null or suspendedVendors.isEmpty()}"
+           class="admin-card p-5 text-center text-muted">
+        <i class="bi bi-check-circle fs-1 text-success d-block mb-3"></i>
+        <p class="mb-0 fw-semibold">Aucune boutique suspendue pour l'instant.</p>
+      </div>
+
+      <!-- Table des boutiques suspendues -->
+      <div th:if="${suspendedVendors != null and !suspendedVendors.isEmpty()}" class="admin-card">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Boutique</th>
+                <th>Contact</th>
+                <th>Plan</th>
+                <th>Abonnement</th>
+                <th>Type</th>
+                <th>Raison</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr th:each="v : ${suspendedVendors}" style="background:#fff8f8;">
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <img th:if="${v.logoUrl != null}" th:src="${v.logoUrl}" alt="Logo"
+                         style="height:40px;width:40px;object-fit:cover;border-radius:8px;border:1px solid #ddd;"/>
+                    <div>
+                      <strong th:text="${v.shopName ?: v.username}">—</strong>
+                      <div class="small text-muted" th:text="${v.email}">—</div>
+                      <div class="small text-muted" th:text="${'@' + v.username}">—</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <a th:href="${'https://wa.me/' + v.phone}" target="_blank" class="text-decoration-none d-block">
+                    <i class="bi bi-whatsapp text-success me-1"></i>
+                    <span th:text="${v.phone}">—</span>
+                  </a>
+                  <span class="small text-muted" th:text="${v.email ?: ''}">—</span>
+                </td>
+                <td>
+                  <span class="badge"
+                        th:classappend="${v.plan?.name() == 'PREMIUM'} ? 'text-bg-warning' :
+                                         (${v.plan?.name() == 'PRO' or v.plan?.name() == 'PRO_LOCAL'} ? 'bg-warning text-dark' : 'bg-secondary')"
+                        th:text="${v.plan?.name() ?: 'GRATUIT'}">—</span>
+                </td>
+                <td>
+                  <div th:if="${v.subscriptionExpiresAt != null}">
+                    <span th:classappend="${v.subscriptionExpiresAt.isBefore(T(java.time.LocalDate).now())} ? 'text-danger fw-semibold' : 'text-muted'"
+                          class="small">
+                      <i class="bi bi-calendar me-1"></i>
+                      <span th:if="${v.subscriptionStartsAt != null}"
+                            th:text="${#temporals.format(v.subscriptionStartsAt,'dd/MM/yy')} + ' → '">—</span>
+                      <span th:text="${#temporals.format(v.subscriptionExpiresAt,'dd/MM/yy')}">—</span>
+                    </span>
+                    <div>
+                      <span th:if="${v.subscriptionExpiresAt.isBefore(T(java.time.LocalDate).now())}"
+                            class="badge bg-danger" style="font-size:.65rem;">⚠ Expiré</span>
+                      <span th:if="${!v.subscriptionExpiresAt.isBefore(T(java.time.LocalDate).now())}"
+                            class="badge bg-success" style="font-size:.65rem;">Valide</span>
+                    </div>
+                  </div>
+                  <span th:if="${v.subscriptionExpiresAt == null}" class="text-muted small">Pas d'abonnement</span>
+                </td>
+                <td>
+                  <span th:if="${v.softSuspend}" class="badge bg-warning text-dark">
+                    <i class="bi bi-pause-circle me-1"></i>Douce
+                  </span>
+                  <span th:if="${!v.softSuspend}" class="badge bg-danger">
+                    <i class="bi bi-slash-circle me-1"></i>Totale
+                  </span>
+                </td>
+                <td>
+                  <span class="small text-muted fst-italic"
+                        th:text="${v.suspensionReason ?: 'Aucune raison indiquée'}">—</span>
+                </td>
+                <td>
+                  <div class="d-flex flex-column gap-2">
+
+                    <!-- Réactiver -->
+                    <form th:action="@{/admin/vendors/{id}/approve(id=${v.id})}" method="post" class="m-0">
+                      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                      <button type="submit" class="btn btn-sm btn-success w-100">
+                        <i class="bi bi-check-circle me-1"></i>Réactiver
+                      </button>
+                    </form>
+
+                    <!-- Renouveler abonnement + réactiver -->
+                    <button type="button" class="btn btn-sm btn-outline-primary w-100"
+                            data-bs-toggle="modal"
+                            th:data-bs-target="${'#modalRenew' + v.id}">
+                      <i class="bi bi-arrow-repeat me-1"></i>Renouveler &amp; Réactiver
+                    </button>
+
+                    <!-- Modifier la raison de suspension -->
+                    <button type="button" class="btn btn-sm btn-outline-secondary w-100"
+                            data-bs-toggle="modal"
+                            th:data-bs-target="${'#modalReason' + v.id}">
+                      <i class="bi bi-pencil me-1"></i>Modifier raison
+                    </button>
+
+                    <!-- Supprimer définitivement -->
+                    <form th:action="@{/admin/vendors/{id}/delete(id=${v.id})}" method="post" class="m-0"
+                          onsubmit="return confirm('Supprimer définitivement cette boutique ?')">
+                      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                      <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                        <i class="bi bi-trash me-1"></i>Supprimer
+                      </button>
+                    </form>
+
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+<th:block th:each="v : ${suspendedVendors}">
+
+  <!-- Modal Renouveler abonnement + réactiver -->
+  <div class="modal fade" th:id="${'modalRenew' + v.id}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-arrow-repeat me-2"></i>Renouveler — <span th:text="${v.shopName ?: v.username}">Boutique</span>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form th:action="@{/admin/vendors/{id}/renew-and-activate(id=${v.id})}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="modal-body row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold small">Plan</label>
+              <select name="plan" class="form-select">
+                <option value="GRATUIT" th:selected="${v.plan?.name() == 'GRATUIT'}">Gratuit</option>
+                <option value="PRO_LOCAL" th:selected="${v.plan?.name() == 'PRO_LOCAL'}">Pro Local</option>
+                <option value="PRO" th:selected="${v.plan?.name() == 'PRO'}">Pro</option>
+                <option value="PREMIUM" th:selected="${v.plan?.name() == 'PREMIUM'}">Premium</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold small">Début abonnement</label>
+              <input type="date" name="startsAt" class="form-control"
+                     th:value="${v.subscriptionStartsAt != null ? #temporals.format(v.subscriptionStartsAt,'yyyy-MM-dd') : #temporals.format(T(java.time.LocalDate).now(),'yyyy-MM-dd')}"/>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold small">Fin abonnement</label>
+              <input type="date" name="expiresAt" class="form-control"
+                     th:value="${v.subscriptionExpiresAt != null ? #temporals.format(v.subscriptionExpiresAt,'yyyy-MM-dd') : ''}"/>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button type="submit" class="btn btn-sm btn-success">
+              <i class="bi bi-check-circle me-1"></i>Renouveler et réactiver
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Modifier raison -->
+  <div class="modal fade" th:id="${'modalReason' + v.id}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-pencil me-2"></i>Raison — <span th:text="${v.shopName ?: v.username}">Boutique</span>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form th:action="@{/admin/vendors/{id}/suspension-reason(id=${v.id})}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div class="modal-body">
+            <label class="form-label fw-semibold small">Raison de suspension</label>
+            <textarea name="reason" class="form-control" rows="3" maxlength="500"
+                      th:text="${v.suspensionReason ?: ''}"></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button type="submit" class="btn btn-sm btn-primary">
+              <i class="bi bi-check-circle me-1"></i>Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</th:block>
+
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+</body>
+</html>
