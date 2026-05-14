@@ -6,6 +6,7 @@ import com.bolas.ecommerce.service.IdDocumentVerificationService;
 import com.bolas.ecommerce.service.InputSanitizerService;
 import com.bolas.ecommerce.service.ImageUploadService;
 import com.bolas.ecommerce.service.MetaWhatsAppService;
+import com.bolas.ecommerce.service.ReferralService;
 import com.bolas.ecommerce.service.SessionCounterService;
 import com.bolas.ecommerce.service.WhatsAppNotificationService;
 import com.bolas.ecommerce.service.VendorStatsService;
@@ -62,6 +63,7 @@ public class VendorController {
     private final VendorStatsService          vendorStatsService;
     private final ReviewRepository            reviewRepository;
     private final com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository;
+    private final ReferralService             referralService;
 
     public VendorController(CustomerOrderRepository orderRepository,
                             VendorUserRepository vendorUserRepository,
@@ -82,7 +84,8 @@ public class VendorController {
                             com.bolas.ecommerce.service.OrderFlowService orderFlowService,
                             VendorStatsService vendorStatsService,
                             ReviewRepository reviewRepository,
-                            com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository) {
+                            com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository,
+                            ReferralService referralService) {
         this.orderRepository               = orderRepository;
         this.vendorUserRepository          = vendorUserRepository;
         this.productRepository             = productRepository;
@@ -103,6 +106,7 @@ public class VendorController {
         this.vendorStatsService            = vendorStatsService;
         this.reviewRepository              = reviewRepository;
         this.shopSellerRepository          = shopSellerRepository;
+        this.referralService               = referralService;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -1594,6 +1598,51 @@ public class VendorController {
         } else {
             ra.addFlashAttribute("flashOk", "Réduction boutique désactivée.");
         }
+        return "redirect:/vendor/dashboard";
+    }
+
+    // ─── Infos de confiance boutique (Prompt 6) ───────────────────────────
+
+    @PostMapping("/settings/trust")
+    @Transactional
+    public String saveShopTrust(@RequestParam(required = false) String deliveryZones,
+                                @RequestParam(required = false) String deliveryDelay,
+                                @RequestParam(required = false) String returnPolicy,
+                                @RequestParam(required = false) String languagesSpoken,
+                                HttpSession session,
+                                RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        if (!isOwner(session)) {
+            ra.addFlashAttribute("flashError", "Seul le propriétaire peut modifier ces infos.");
+            return "redirect:/vendor/dashboard";
+        }
+        VendorUser vendor = vendorUserRepository.findById(currentVendor(session).getId()).orElseThrow();
+        vendor.setDeliveryZones(sanitizer.sanitizeText(deliveryZones));
+        vendor.setDeliveryDelay(sanitizer.sanitizeText(deliveryDelay));
+        vendor.setReturnPolicy(sanitizer.sanitizeText(returnPolicy));
+        vendor.setLanguagesSpoken(sanitizer.sanitizeText(languagesSpoken));
+        vendorUserRepository.save(vendor);
+        session.setAttribute(SESSION_KEY, vendor);
+        ra.addFlashAttribute("flashOk", "✅ Infos de confiance boutique mises à jour !");
+        return "redirect:/vendor/dashboard";
+    }
+
+    // ─── Génération code parrainage (Prompt 5) ───────────────────────────
+
+    @PostMapping("/settings/generate-referral")
+    @Transactional
+    public String generateReferral(HttpSession session, RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        if (!isOwner(session)) {
+            ra.addFlashAttribute("flashError", "Seul le propriétaire peut générer un code.");
+            return "redirect:/vendor/dashboard";
+        }
+        VendorUser vendor = vendorUserRepository.findById(currentVendor(session).getId()).orElseThrow();
+        String code = referralService.generateAndSave(vendor);
+        session.setAttribute(SESSION_KEY, vendor);
+        ra.addFlashAttribute("flashOk", "🎉 Votre code de parrainage : " + code);
         return "redirect:/vendor/dashboard";
     }
 }

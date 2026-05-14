@@ -2,6 +2,7 @@ package com.bolas.ecommerce.controller;
 
 import com.bolas.ecommerce.model.*;
 import com.bolas.ecommerce.repository.*;
+import com.bolas.ecommerce.service.NotificationService;
 import com.bolas.ecommerce.service.WhatsAppNotificationService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
@@ -22,17 +23,20 @@ public class ReviewReportController {
     private final ProductRepository productRepository;
     private final VendorUserRepository vendorUserRepository;
     private final WhatsAppNotificationService whatsAppService;
+    private final NotificationService notificationService;
 
     public ReviewReportController(ReviewRepository reviewRepository,
                                    ReportRepository reportRepository,
                                    ProductRepository productRepository,
                                    VendorUserRepository vendorUserRepository,
-                                   WhatsAppNotificationService whatsAppService) {
+                                   WhatsAppNotificationService whatsAppService,
+                                   NotificationService notificationService) {
         this.reviewRepository = reviewRepository;
         this.reportRepository = reportRepository;
         this.productRepository = productRepository;
         this.vendorUserRepository = vendorUserRepository;
         this.whatsAppService = whatsAppService;
+        this.notificationService = notificationService;
     }
 
     /** Soumettre un avis sur un produit */
@@ -63,6 +67,18 @@ public class ReviewReportController {
         review.setCreatedAt(Instant.now());
         review.setApproved(false); // Modération admin
         reviewRepository.save(review);
+
+        // ← Notification in-app au vendeur si produit lié à un vendeur
+        if (product.getVendor() != null) {
+            notificationService.envoyer(
+                product.getVendor().getId(), NotificationDestinataire.VENDEUR,
+                NotificationType.AVIS,
+                "⭐ Nouvel avis sur votre produit",
+                "\"" + product.getName() + "\" — "
+                    + rating + "/5 par " + (reviewerName != null ? reviewerName.trim() : "Anonyme"),
+                "/vendor/reviews"
+            );
+        }
 
         ra.addFlashAttribute("flashOk", "Merci pour votre avis ! Il sera publié après modération.");
         return "redirect:/products/" + id;

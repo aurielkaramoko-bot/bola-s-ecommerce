@@ -17,7 +17,7 @@
          style="width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,#8B5E3C,#C49A6C);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
       <i class="bi bi-shop-window" style="font-size:2.5rem;color:#fff;"></i>
     </div>
-    <div>
+    <div class="flex-grow-1">
       <h1 class="h3 fw-bold mb-1" style="color:var(--bolas-accent);"
           th:text="${vendor.displayName}">Boutique</h1>
       <p class="text-muted mb-1" th:if="${vendor.shopDescription != null}"
@@ -36,7 +36,6 @@
         <span class="small text-muted ms-1">(<span th:text="${reviewCount}">0</span> avis)</span>
       </div>
       <div class="mt-2 d-flex gap-2 flex-wrap">
-        <!-- Adresse si renseignée -->
         <span th:if="${vendor.shopAddress != null}" class="badge bg-light text-dark">
           <i class="bi bi-geo-alt-fill text-danger me-1"></i>
           <span th:text="${vendor.shopAddress}">Adresse</span>
@@ -48,7 +47,7 @@
         </a>
         <button type="button" class="btn btn-outline-danger btn-sm"
                 data-bs-toggle="modal" data-bs-target="#reportVendorModal">
-          <i class="bi bi-flag me-1"></i>Signaler cette boutique
+          <i class="bi bi-flag me-1"></i>Signaler
         </button>
       </div>
     </div>
@@ -106,12 +105,80 @@
             <i class="bi bi-box-seam me-1"></i><span th:text="${review.product.name}">Produit</span>
           </div>
           <p th:if="${review.comment != null}" class="small mb-1" th:text="${review.comment}"></p>
-          <!-- Réponse vendeur -->
-          <div th:if="${review.vendorReply != null}" class="p-2 rounded small mt-1" style="background:rgba(139,94,60,0.05);border-left:3px solid var(--bolas-accent);">
+          <div th:if="${review.vendorReply != null}" class="p-2 rounded small mt-1"
+               style="background:rgba(139,94,60,0.05);border-left:3px solid var(--bolas-accent);">
             <span class="fw-semibold" style="color:var(--bolas-accent);">
               <i class="bi bi-reply me-1"></i>Réponse du vendeur :
             </span>
             <span th:text="${review.vendorReply}"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Accordéon infos boutique (confiance acheteur) — Prompt 6 -->
+  <div th:if="${vendor.hasShopInfos() or vendor.subscriptionStartsAt != null}" class="mt-5">
+    <div class="accordion" id="shopInfoAccordion">
+      <div class="accordion-item" style="border:1px solid var(--bolas-border);border-radius:12px;overflow:hidden;">
+        <h2 class="accordion-header" id="shopInfoHead">
+          <button class="accordion-button collapsed fw-semibold" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#shopInfoBody"
+                  aria-expanded="false" aria-controls="shopInfoBody"
+                  style="color:var(--bolas-accent);background:var(--bolas-light);">
+            <i class="bi bi-info-circle me-2"></i>En savoir plus sur cette boutique
+          </button>
+        </h2>
+        <div id="shopInfoBody" class="accordion-collapse collapse" aria-labelledby="shopInfoHead">
+          <div class="accordion-body">
+            <div class="row g-3">
+              <div class="col-12 col-md-6" th:if="${vendor.deliveryZones != null}">
+                <div class="d-flex align-items-start gap-2">
+                  <i class="bi bi-geo-alt-fill mt-1" style="color:var(--bolas-accent);"></i>
+                  <div>
+                    <div class="small fw-semibold mb-1">Zones de livraison</div>
+                    <div class="small text-muted" th:text="${vendor.deliveryZones}">—</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-md-6" th:if="${vendor.deliveryDelay != null}">
+                <div class="d-flex align-items-start gap-2">
+                  <i class="bi bi-clock mt-1" style="color:var(--bolas-accent);"></i>
+                  <div>
+                    <div class="small fw-semibold mb-1">Délai de livraison</div>
+                    <div class="small text-muted" th:text="${vendor.deliveryDelay}">—</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-md-6" th:if="${vendor.returnPolicy != null}">
+                <div class="d-flex align-items-start gap-2">
+                  <i class="bi bi-arrow-return-left mt-1" style="color:var(--bolas-accent);"></i>
+                  <div>
+                    <div class="small fw-semibold mb-1">Politique de retour</div>
+                    <div class="small text-muted" th:text="${vendor.returnPolicy}">—</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-md-6" th:if="${vendor.languagesSpoken != null}">
+                <div class="d-flex align-items-start gap-2">
+                  <i class="bi bi-translate mt-1" style="color:var(--bolas-accent);"></i>
+                  <div>
+                    <div class="small fw-semibold mb-1">Langues parlées</div>
+                    <div class="small text-muted" th:text="${vendor.languagesSpoken}">—</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-md-6" th:if="${vendor.subscriptionStartsAt != null}">
+                <div class="d-flex align-items-start gap-2">
+                  <i class="bi bi-calendar-check mt-1" style="color:var(--bolas-accent);"></i>
+                  <div>
+                    <div class="small fw-semibold mb-1">Membre depuis</div>
+                    <div class="small text-muted"
+                         th:text="${#temporals.format(vendor.subscriptionStartsAt, 'MMMM yyyy')}">—</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -190,28 +257,18 @@ function initShopMap() {
   if (!mapEl) return;
   var pos = { lat: lat, lng: lng };
   var map = new google.maps.Map(mapEl, {
-    center: pos,
-    zoom: 15,
+    center: pos, zoom: 15,
     styles: [
       { featureType: 'poi', stylers: [{ visibility: 'simplified' }] },
       { featureType: 'transit', stylers: [{ visibility: 'off' }] }
     ]
   });
   new google.maps.Marker({
-    position: pos,
-    map: map,
-    title: shopName,
-    icon: {
-      path: google.maps.SymbolPath.CIRCLE,
-      scale: 12,
-      fillColor: '#8B5E3C',
-      fillOpacity: 1,
-      strokeColor: '#fff',
-      strokeWeight: 3
-    }
+    position: pos, map: map, title: shopName,
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12,
+            fillColor: '#8B5E3C', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3 }
   });
 }
-// Fallback si l'API est déjà chargée
 if (typeof google !== 'undefined' && google.maps) initShopMap();
 </script>
 </body>

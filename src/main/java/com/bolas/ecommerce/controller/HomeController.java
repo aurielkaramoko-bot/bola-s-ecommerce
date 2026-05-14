@@ -1,21 +1,27 @@
 package com.bolas.ecommerce.controller;
 
+import com.bolas.ecommerce.dto.ProductFilterDto;
 import com.bolas.ecommerce.repository.CategoryRepository;
 import com.bolas.ecommerce.repository.CountryRepository;
 import com.bolas.ecommerce.repository.ProductRepository;
+import com.bolas.ecommerce.repository.ProductSpecification;
 import com.bolas.ecommerce.repository.ReviewRepository;
 import com.bolas.ecommerce.repository.VendorUserRepository;
 import com.bolas.ecommerce.model.Product;
 import com.bolas.ecommerce.model.VendorStatus;
 import com.bolas.ecommerce.model.VendorUser;
+import com.bolas.ecommerce.util.WhatsAppLinkBuilder;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
@@ -30,20 +36,29 @@ public class HomeController {
     private final VendorUserRepository vendorUserRepository;
     private final CountryRepository countryRepository;
     private final ReviewRepository reviewRepository;
+    private final WhatsAppLinkBuilder whatsAppLinkBuilder;
 
-    @org.springframework.beans.factory.annotation.Value("${google.maps.api.key:}")
+    @Value("${google.maps.api.key:}")
     private String googleMapsApiKey;
+
+    @Value("${whatsapp.number:}")
+    private String shopWhatsapp;
+
+    @Value("${app.base-url:https://bola-marketplace.onrender.com}")
+    private String appBaseUrl;
 
     public HomeController(ProductRepository productRepository,
                           CategoryRepository categoryRepository,
                           VendorUserRepository vendorUserRepository,
                           CountryRepository countryRepository,
-                          ReviewRepository reviewRepository) {
+                          ReviewRepository reviewRepository,
+                          WhatsAppLinkBuilder whatsAppLinkBuilder) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.vendorUserRepository = vendorUserRepository;
         this.countryRepository = countryRepository;
         this.reviewRepository = reviewRepository;
+        this.whatsAppLinkBuilder = whatsAppLinkBuilder;
     }
 
     @GetMapping("/")
@@ -100,30 +115,27 @@ public class HomeController {
 
     @GetMapping("/products")
     @Transactional(readOnly = true)
-    public String products(@RequestParam(required = false) String q,
-                           @RequestParam(required = false) Long categoryId,
-                           @RequestParam(required = false) Long priceMin,
-                           @RequestParam(required = false) Long priceMax,
-                           Model model) {
+    public String products(@ModelAttribute ProductFilterDto filter, Model model) {
         model.addAttribute("pageTitle", "Produits — BOLA");
         model.addAttribute("categories", categoryRepository.findAll());
-        model.addAttribute("q", q);
-        model.addAttribute("selectedCategoryId", categoryId);
-        model.addAttribute("priceMin", priceMin);
-        model.addAttribute("priceMax", priceMax);
+        model.addAttribute("filter", filter);
 
-        List<?> products;
-        if (q != null && !q.isBlank()) {
-            products = productRepository.searchByKeyword(q.trim(), categoryId);
-        } else if (categoryId != null && priceMin != null && priceMax != null) {
-            products = productRepository.findByAvailableTrueAndCategory_IdAndPriceCfaBetween(
-                    categoryId, priceMin, priceMax);
-        } else if (priceMin != null && priceMax != null) {
-            products = productRepository.findByAvailableTrueAndPriceCfaBetween(priceMin, priceMax);
+        // Tri
+        Sort sort = switch (filter.getSortBy() != null ? filter.getSortBy() : "") {
+            case "price_asc"  -> Sort.by(Sort.Direction.ASC,  "priceCfa");
+            case "price_desc" -> Sort.by(Sort.Direction.DESC, "priceCfa");
+            case "newest"    -> Sort.by(Sort.Direction.DESC, "id");
+            default          -> Sort.by(Sort.Direction.DESC, "id"); // newest par défaut
+        };
+
+        List<Product> products;
+        if (filter.hasActiveFilter()) {
+            products = productRepository.findAll(ProductSpecification.of(filter), sort);
         } else {
             products = productRepository.findAllAvailablePremiumFirst();
         }
         model.addAttribute("products", products);
+        model.addAttribute("totalCount", products.size());
         return "products";
     }
 
@@ -185,6 +197,11 @@ public class HomeController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produit introuvable"));
         model.addAttribute("pageTitle", product.getName() + " — BOLA");
         model.addAttribute("product", product);
+
+        // Lien WhatsApp pré-rempli via le bean (instruction GPS incluse)
+        String waUrl = whatsAppLinkBuilder.productOrderUrl(product, "");
+        model.addAttribute("waOrderUrl", waUrl);
+
         return "product-detail";
     }
 

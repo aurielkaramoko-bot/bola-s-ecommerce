@@ -3,6 +3,8 @@ package com.bolas.ecommerce.controller;
 import com.bolas.ecommerce.model.Customer;
 import com.bolas.ecommerce.model.CustomerOrder;
 import com.bolas.ecommerce.model.DeliveryOption;
+import com.bolas.ecommerce.model.NotificationDestinataire;
+import com.bolas.ecommerce.model.NotificationType;
 import com.bolas.ecommerce.model.OrderLine;
 import com.bolas.ecommerce.model.VendorPlan;
 import com.bolas.ecommerce.repository.CountryRepository;
@@ -11,6 +13,7 @@ import com.bolas.ecommerce.service.CommissionService;
 import com.bolas.ecommerce.service.MetaWhatsAppService;
 import com.bolas.ecommerce.service.CartService;
 import com.bolas.ecommerce.service.CustomerService;
+import com.bolas.ecommerce.service.NotificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
@@ -39,6 +42,7 @@ public class CartController {
     private final CountryRepository countryRepository;
     private final CommissionService commissionService;
     private final MetaWhatsAppService metaWhatsApp;
+    private final NotificationService notificationService;
     private final String whatsappNumber;
 
     public CartController(CartService cartService,
@@ -47,6 +51,7 @@ public class CartController {
                           CountryRepository countryRepository,
                           CommissionService commissionService,
                           MetaWhatsAppService metaWhatsApp,
+                          NotificationService notificationService,
                           @Value("${whatsapp.number}") String whatsappNumber) {
         this.cartService = cartService;
         this.orderRepository = orderRepository;
@@ -54,6 +59,7 @@ public class CartController {
         this.countryRepository = countryRepository;
         this.commissionService = commissionService;
         this.metaWhatsApp = metaWhatsApp;
+        this.notificationService = notificationService;
         this.whatsappNumber = whatsappNumber;
     }
 
@@ -223,6 +229,18 @@ public class CartController {
         log.info("   → Commande sauvegardée: {}", order.getTrackingNumber());
         cartService.clear(session);
         log.info("   → Panier vidé");
+
+        // ← Notification in-app au vendeur PRO/PREMIUM (nouvelle commande en attente)
+        if (mainVendor != null) {
+            notificationService.envoyer(
+                mainVendor.getId(), NotificationDestinataire.VENDEUR,
+                NotificationType.COMMANDE,
+                "🛒 Nouvelle commande !",
+                "N° " + order.getTrackingNumber() + " — " + customerName.trim()
+                    + " — " + order.getTotalAmountCfa() + " CFA",
+                "/vendor/orders"
+            );
+        }
 
         // Notifier l'admin automatiquement via Meta WhatsApp
         log.info("   → Envoi notification admin...");

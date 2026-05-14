@@ -145,6 +145,9 @@ public class SecurityConfig {
                         new AntPathRequestMatcher("/vendor/logout"),
                         new AntPathRequestMatcher("/boutiques"),
                         new AntPathRequestMatcher("/boutiques/**"),
+                        new AntPathRequestMatcher("/notifications"),
+                        new AntPathRequestMatcher("/notifications/**"),
+                        new AntPathRequestMatcher("/api/notifications/**"),
                         new AntPathRequestMatcher("/error")
                 ).permitAll()
                 .requestMatchers(new AntPathRequestMatcher("/h2-console/**")).access((authentication, context) ->

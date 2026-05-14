@@ -2,11 +2,14 @@ package com.bolas.ecommerce.controller;
 
 import com.bolas.ecommerce.model.ChatMessage;
 import com.bolas.ecommerce.model.Customer;
+import com.bolas.ecommerce.model.NotificationDestinataire;
+import com.bolas.ecommerce.model.NotificationType;
 import com.bolas.ecommerce.model.VendorUser;
 import com.bolas.ecommerce.repository.ChatMessageRepository;
 import com.bolas.ecommerce.repository.VendorUserRepository;
 import com.bolas.ecommerce.service.InputSanitizerService;
 import com.bolas.ecommerce.service.MetaWhatsAppService;
+import com.bolas.ecommerce.service.NotificationService;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,15 +33,18 @@ public class ChatController {
     private final ChatMessageRepository chatMessageRepository;
     private final InputSanitizerService sanitizer;
     private final MetaWhatsAppService metaWhatsApp;
+    private final NotificationService notificationService;
 
     public ChatController(VendorUserRepository vendorUserRepository,
                           ChatMessageRepository chatMessageRepository,
                           InputSanitizerService sanitizer,
-                          MetaWhatsAppService metaWhatsApp) {
+                          MetaWhatsAppService metaWhatsApp,
+                          NotificationService notificationService) {
         this.vendorUserRepository = vendorUserRepository;
         this.chatMessageRepository = chatMessageRepository;
         this.sanitizer = sanitizer;
         this.metaWhatsApp = metaWhatsApp;
+        this.notificationService = notificationService;
     }
 
     /** Récupère le client en session */
@@ -133,6 +139,15 @@ public class ChatController {
         } catch (Exception e) {
             log.warn("⚠️ Notif WhatsApp chat échouée pour vendeur {} : {}", vendor.getDisplayName(), e.getMessage());
         }
+
+        // ← Notification in-app vendeur (système de cloche)
+        notificationService.envoyer(
+            vendor.getId(), NotificationDestinataire.VENDEUR,
+            NotificationType.CHAT,
+            "💬 Nouveau message",
+            customer.getFirstName() + " : " + (sanitized.length() > 60 ? sanitized.substring(0, 60) + "…" : sanitized),
+            "/vendor/messages"
+        );
 
         return "redirect:/chat/" + vendorId;
     }

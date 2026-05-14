@@ -304,7 +304,7 @@
         </div>
       </div>
 
-      <div class="admin-card p-3">
+      <div class="admin-card p-3" th:if="${isOwner}">
         <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);"><i class="bi bi-info-circle me-2"></i>Informations boutique</h2>
         <ul class="list-unstyled small mb-0">
           <li class="mb-2"><span class="text-muted">Identifiant :</span> <strong th:text="${vendor.username}" class="ms-1">—</strong></li>
@@ -313,6 +313,86 @@
           <li th:if="${vendor.email != null}"><span class="text-muted">Email :</span> <span th:text="${vendor.email}" class="ms-1">—</span></li>
         </ul>
       </div>
+
+      <!-- Réglages confiance boutique (Prompt 6) -->
+      <div class="admin-card p-3 mt-3" th:if="${isOwner}">
+        <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);">
+          <i class="bi bi-shield-check me-2"></i>Infos de confiance boutique
+        </h2>
+        <p class="small text-muted mb-3">Ces infos s'affichent dans votre fiche boutique publique pour rassurer vos acheteurs.</p>
+        <form th:action="@{/vendor/settings/trust}" method="post" class="d-flex flex-column gap-2">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div>
+            <label class="form-label small fw-semibold mb-1">
+              <i class="bi bi-geo-alt me-1" style="color:var(--bolas-accent);"></i>Zones de livraison
+            </label>
+            <input type="text" class="form-control form-control-sm" name="deliveryZones"
+                   th:value="${vendor.deliveryZones}" maxlength="500"
+                   placeholder="ex. Lomé, Kpalimé, Atakpamé"/>
+          </div>
+          <div>
+            <label class="form-label small fw-semibold mb-1">
+              <i class="bi bi-clock me-1" style="color:var(--bolas-accent);"></i>Délai de livraison
+            </label>
+            <input type="text" class="form-control form-control-sm" name="deliveryDelay"
+                   th:value="${vendor.deliveryDelay}" maxlength="100"
+                   placeholder="ex. 2 à 4 jours ouvrés"/>
+          </div>
+          <div>
+            <label class="form-label small fw-semibold mb-1">
+              <i class="bi bi-arrow-return-left me-1" style="color:var(--bolas-accent);"></i>Politique de retour
+            </label>
+            <input type="text" class="form-control form-control-sm" name="returnPolicy"
+                   th:value="${vendor.returnPolicy}" maxlength="500"
+                   placeholder="ex. Retour accepté sous 7 jours"/>
+          </div>
+          <div>
+            <label class="form-label small fw-semibold mb-1">
+              <i class="bi bi-translate me-1" style="color:var(--bolas-accent);"></i>Langues parlées
+            </label>
+            <input type="text" class="form-control form-control-sm" name="languagesSpoken"
+                   th:value="${vendor.languagesSpoken}" maxlength="200"
+                   placeholder="ex. Français, Ewe, Anglais"/>
+          </div>
+          <button type="submit" class="btn btn-sm btn-hero-solid mt-1">
+            <i class="bi bi-check-circle me-1"></i>Enregistrer
+          </button>
+        </form>
+      </div>
+
+      <!-- Parrainage vendeur (Prompt 5) -->
+      <div class="admin-card p-3 mt-3" th:if="${isOwner}">
+        <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);">
+          <i class="bi bi-gift me-2"></i>Parrainage vendeur
+        </h2>
+        <p class="small text-muted mb-2">Partagez votre code pour inviter d'autres vendeurs. Vous gagnez <strong>+1 mois offert</strong> par filleul activé !</p>
+
+        <div th:if="${vendor.referralCode != null}">
+          <div class="input-group input-group-sm mb-2">
+            <span class="input-group-text"><i class="bi bi-ticket-perforated"></i></span>
+            <input type="text" class="form-control fw-bold" id="refCode" readonly th:value="${vendor.referralCode}"/>
+            <button class="btn btn-hero-solid" type="button" onclick="copyRef()">
+              <i class="bi bi-clipboard"></i>
+            </button>
+          </div>
+          <div id="ref-ok" class="small text-success mb-2" style="display:none;">✅ Code copié !</div>
+          <a th:href="${'https://wa.me/?text=Rejoignez+BOLA+et+vendez+en+ligne+avec+mon+code+de+parrainage+:+' + vendor.referralCode}"
+             target="_blank" class="btn btn-sm text-white w-100" style="background:#25D366;">
+            <i class="bi bi-whatsapp me-1"></i>Partager sur WhatsApp
+          </a>
+          <div class="mt-2 small text-muted" th:if="${vendor.referralBonusMonths > 0}">
+            🎁 Bonus accumulé : <strong th:text="${vendor.referralBonusMonths} + ' mois offert(s)'"  >0</strong>
+          </div>
+        </div>
+
+        <form th:if="${vendor.referralCode == null}" th:action="@{/vendor/settings/generate-referral}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <button type="submit" class="btn btn-sm btn-hero-solid w-100">
+            <i class="bi bi-magic me-1"></i>Générer mon code de parrainage
+          </button>
+        </form>
+      </div>
+
     </div>
   </div>
 </div>
@@ -326,6 +406,14 @@ function copyShopLink() {
     var ok = document.getElementById('copy-ok');
     ok.style.display = 'block';
     setTimeout(function(){ ok.style.display = 'none'; }, 2500);
+  });
+}
+function copyRef() {
+  var input = document.getElementById('refCode');
+  if (!input) return;
+  navigator.clipboard.writeText(input.value).then(function() {
+    var ok = document.getElementById('ref-ok');
+    if (ok) { ok.style.display = 'block'; setTimeout(function(){ ok.style.display='none'; }, 2500); }
   });
 }
 </script>

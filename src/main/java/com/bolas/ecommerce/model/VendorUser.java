@@ -130,6 +130,43 @@ public class VendorUser {
     @Column(name = "shop_discount_ends_at")
     private java.time.LocalDate shopDiscountEndsAt;
 
+    // ─── Champs confiance boutique (Prompt 6) ─────────────────────────────────
+
+    /** Zones de livraison textuelles (ex: "Lomé, Kpalimé, Atakpamé") */
+    @Size(max = 500)
+    @Column(name = "delivery_zones", length = 500)
+    private String deliveryZones;
+
+    /** Délai de livraison estimé (ex: "2 à 4 jours ouvrés") */
+    @Size(max = 100)
+    @Column(name = "delivery_delay", length = 100)
+    private String deliveryDelay;
+
+    /** Politique de retour (ex: "Retour accepté sous 7 jours") */
+    @Size(max = 500)
+    @Column(name = "return_policy", length = 500)
+    private String returnPolicy;
+
+    /** Langues parlées (ex: "Français, Ewe, Anglais") */
+    @Size(max = 200)
+    @Column(name = "languages_spoken", length = 200)
+    private String languagesSpoken;
+
+    // ─── Champs parrainage vendeur (Prompt 5) ─────────────────────────────────
+
+    /** Code unique de parrainage (ex: BOLA-JEAN-4F2A) */
+    @Size(max = 20)
+    @Column(name = "referral_code", length = 20, unique = true)
+    private String referralCode;
+
+    /** ID du vendeur parrain (null si inscription directe) */
+    @Column(name = "referred_by_id")
+    private Long referredById;
+
+    /** Mois d'abonnement bonus gagnés via parrainage */
+    @Column(name = "referral_bonus_months")
+    private int referralBonusMonths = 0;
+
     // ─── Getters / Setters ────────────────────────────────────────────────────
 
     public Long getId() { return id; }
@@ -272,4 +309,37 @@ public class VendorUser {
         if (shopDiscountEndsAt != null && shopDiscountEndsAt.isBefore(java.time.LocalDate.now())) return false;
         return true;
     }
+
+    // ─── Champs confiance boutique ────────────────────────────────────────────
+
+    public String getDeliveryZones() { return deliveryZones; }
+    public void setDeliveryZones(String deliveryZones) { this.deliveryZones = deliveryZones; }
+
+    public String getDeliveryDelay() { return deliveryDelay; }
+    public void setDeliveryDelay(String deliveryDelay) { this.deliveryDelay = deliveryDelay; }
+
+    public String getReturnPolicy() { return returnPolicy; }
+    public void setReturnPolicy(String returnPolicy) { this.returnPolicy = returnPolicy; }
+
+    public String getLanguagesSpoken() { return languagesSpoken; }
+    public void setLanguagesSpoken(String languagesSpoken) { this.languagesSpoken = languagesSpoken; }
+
+    /** Retourne true si au moins un champ de confiance est renseigné */
+    public boolean hasShopInfos() {
+        return (deliveryZones != null && !deliveryZones.isBlank())
+            || (deliveryDelay != null && !deliveryDelay.isBlank())
+            || (returnPolicy != null && !returnPolicy.isBlank())
+            || (languagesSpoken != null && !languagesSpoken.isBlank());
+    }
+
+    // ─── Champs parrainage ────────────────────────────────────────────────────
+
+    public String getReferralCode() { return referralCode; }
+    public void setReferralCode(String referralCode) { this.referralCode = referralCode; }
+
+    public Long getReferredById() { return referredById; }
+    public void setReferredById(Long referredById) { this.referredById = referredById; }
+
+    public int getReferralBonusMonths() { return referralBonusMonths; }
+    public void setReferralBonusMonths(int referralBonusMonths) { this.referralBonusMonths = referralBonusMonths; }
 }

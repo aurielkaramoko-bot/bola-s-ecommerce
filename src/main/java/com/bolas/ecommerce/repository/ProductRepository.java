@@ -3,13 +3,17 @@ package com.bolas.ecommerce.repository;
 import com.bolas.ecommerce.model.Category;
 import com.bolas.ecommerce.model.Product;
 import com.bolas.ecommerce.model.VendorUser;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
-public interface ProductRepository extends JpaRepository<Product, Long> {
+public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
 
     /** 1. Accueil : Produits mis en avant */
     @Query("""

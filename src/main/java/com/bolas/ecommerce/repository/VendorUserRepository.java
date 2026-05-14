@@ -40,4 +40,13 @@ public interface VendorUserRepository extends JpaRepository<VendorUser, Long> {
 
     /** Compte les vendeurs par plan (analytics optimisé) */
     long countByPlan(VendorPlan plan);
+
+    /** Parrainage : cherche un vendeur par son code de parrainage */
+    Optional<VendorUser> findByReferralCode(String referralCode);
+
+    /** Parrainage : vérifie si un code est déjà utilisé */
+    boolean existsByReferralCode(String referralCode);
+
+    /** Parrainage : filleuls d'un parrain donné */
+    List<VendorUser> findByReferredById(Long referredById);
 }

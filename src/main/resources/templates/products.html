@@ -8,55 +8,115 @@
 <div th:replace="~{fragments/header :: navbar}"></div>
 
 <main class="container py-5 flex-grow-1">
-  <h1 class="h2 section-title">Nos produits</h1>
-  <p class="section-subtitle">Filtrez par catégorie et par fourchette de prix (CFA)</p>
 
-  <!-- Filtres + Recherche -->
+  <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <div>
+      <h1 class="h2 section-title mb-0">Nos produits</h1>
+      <p class="section-subtitle mb-0 small text-muted">
+        <span th:text="${totalCount}">0</span> produit(s)
+        <span th:if="${filter.hasActiveFilter()}"> — filtres actifs</span>
+      </p>
+    </div>
+    <a th:if="${filter.hasActiveFilter()}" th:href="@{/products}"
+       class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-x-circle me-1"></i>Effacer les filtres
+    </a>
+  </div>
+
+  <!-- ─── Formulaire filtres avancés ─────────────────────────────────────── -->
   <form th:action="@{/products}" method="get"
-        class="row g-3 justify-content-center mb-5 p-4 rounded-3 border admin-card mx-auto"
-        style="max-width:900px;">
-    <!-- Barre de recherche -->
-    <div class="col-12">
-      <label for="q" class="form-label small fw-semibold">
-        <i class="bi bi-search me-1"></i>Rechercher un produit
-      </label>
-      <input type="text" class="form-control" id="q" name="q"
-             th:value="${q}" placeholder="Ex : robe, chaussures, téléphone..."
-             maxlength="200" autocomplete="off"/>
+        class="admin-card p-4 mb-4 mx-auto" style="max-width:1000px;">
+
+    <!-- Ligne 1 : recherche + catégorie -->
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-md-6">
+        <label for="q" class="form-label small fw-semibold">
+          <i class="bi bi-search me-1"></i>Mot-clé
+        </label>
+        <input type="text" class="form-control" id="q" name="q"
+               th:value="${filter.q}" placeholder="Ex : robe, chaussures, téléphone…"
+               maxlength="200" autocomplete="off"/>
+      </div>
+      <div class="col-12 col-md-6">
+        <label for="categoryId" class="form-label small fw-semibold">Catégorie</label>
+        <select class="form-select" id="categoryId" name="categoryId">
+          <option value="">Toutes les catégories</option>
+          <option th:each="c : ${categories}"
+                  th:value="${c.id}"
+                  th:selected="${filter.categoryId != null and filter.categoryId == c.id}"
+                  th:text="${c.name}">Cat</option>
+        </select>
+      </div>
     </div>
-    <div class="col-md-4">
-      <label for="categoryId" class="form-label small fw-semibold">Catégorie</label>
-      <select class="form-select" id="categoryId" name="categoryId">
-        <option value="">Toutes</option>
-        <option th:each="c : ${categories}"
-                th:value="${c.id}"
-                th:selected="${selectedCategoryId != null and selectedCategoryId == c.id}"
-                th:text="${c.name}">Cat</option>
-      </select>
-    </div>
-    <div class="col-md-3">
-      <label for="priceMin" class="form-label small fw-semibold">Prix min (CFA)</label>
-      <input type="number" class="form-control" id="priceMin" name="priceMin"
-             min="0" step="1" th:value="${priceMin}" placeholder="0"/>
-    </div>
-    <div class="col-md-3">
-      <label for="priceMax" class="form-label small fw-semibold">Prix max (CFA)</label>
-      <input type="number" class="form-control" id="priceMax" name="priceMax"
-             min="0" step="1" th:value="${priceMax}" placeholder="Illimité"/>
-    </div>
-    <div class="col-md-2 d-flex align-items-end">
-      <button type="submit" class="btn btn-hero-solid w-100">
-        <i class="bi bi-funnel me-1"></i>Filtrer
-      </button>
+
+    <!-- Ligne 2 : prix + ville + promo + tri -->
+    <div class="row g-3 align-items-end">
+      <div class="col-6 col-md-2">
+        <label for="priceMin" class="form-label small fw-semibold">Prix min (CFA)</label>
+        <input type="number" class="form-control" id="priceMin" name="priceMin"
+               min="0" step="100" th:value="${filter.priceMin}" placeholder="0"/>
+      </div>
+      <div class="col-6 col-md-2">
+        <label for="priceMax" class="form-label small fw-semibold">Prix max (CFA)</label>
+        <input type="number" class="form-control" id="priceMax" name="priceMax"
+               min="0" step="100" th:value="${filter.priceMax}" placeholder="∞"/>
+      </div>
+      <div class="col-12 col-md-3">
+        <label for="city" class="form-label small fw-semibold">
+          <i class="bi bi-geo-alt me-1"></i>Ville / zone
+        </label>
+        <input type="text" class="form-control" id="city" name="city"
+               th:value="${filter.city}" placeholder="Lomé, Abidjan…" maxlength="100"/>
+      </div>
+      <div class="col-6 col-md-2">
+        <label for="sortBy" class="form-label small fw-semibold">Trier par</label>
+        <select class="form-select" id="sortBy" name="sortBy">
+          <option value="newest" th:selected="${filter.sortBy == null or filter.sortBy == 'newest'}">
+            Nouveaux d'abord
+          </option>
+          <option value="price_asc"  th:selected="${filter.sortBy == 'price_asc'}">Prix ↑</option>
+          <option value="price_desc" th:selected="${filter.sortBy == 'price_desc'}">Prix ↓</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-1 d-flex align-items-end">
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="promoOnly" name="promoOnly"
+                 value="true" th:checked="${filter.promoOnly}"/>
+          <label class="form-check-label small fw-semibold" for="promoOnly">
+            🔥 Promo
+          </label>
+        </div>
+      </div>
+      <div class="col-12 col-md-2 d-flex align-items-end">
+        <button type="submit" class="btn btn-hero-solid w-100">
+          <i class="bi bi-funnel me-1"></i>Filtrer
+        </button>
+      </div>
     </div>
   </form>
 
-  <!-- Résultat de recherche -->
-  <div th:if="${q != null}" class="mb-3 text-muted small">
-    <i class="bi bi-search me-1"></i>
-    Résultats pour <strong th:text="${q}"></strong>
-    — <span th:text="${products.size()}">0</span> produit(s) trouvé(s)
-    <a th:href="@{/products}" class="ms-2" style="color:var(--bolas-accent);">Effacer</a>
+  <!-- Badge filtres actifs -->
+  <div th:if="${filter.hasActiveFilter()}" class="d-flex flex-wrap gap-2 mb-3">
+    <span th:if="${filter.q != null and !filter.q.isBlank()}"
+          class="badge rounded-pill" style="background:var(--bolas-accent);">
+      <i class="bi bi-search me-1"></i><span th:text="${filter.q}"></span>
+    </span>
+    <span th:if="${filter.categoryId != null}"
+          class="badge rounded-pill" style="background:var(--bolas-accent);">
+      <i class="bi bi-tag me-1"></i>Catégorie
+    </span>
+    <span th:if="${filter.priceMin != null or filter.priceMax != null}"
+          class="badge rounded-pill" style="background:var(--bolas-accent);">
+      <i class="bi bi-cash me-1"></i>Prix filtré
+    </span>
+    <span th:if="${filter.city != null and !filter.city.isBlank()}"
+          class="badge rounded-pill" style="background:var(--bolas-accent);">
+      <i class="bi bi-geo-alt me-1"></i><span th:text="${filter.city}"></span>
+    </span>
+    <span th:if="${filter.promoOnly}"
+          class="badge rounded-pill bg-danger">
+      🔥 Promos uniquement
+    </span>
   </div>
 
   <!-- Grille produits -->
@@ -73,9 +133,11 @@
     <p class="text-muted">Aucun produit ne correspond à votre recherche.</p>
     <a th:href="@{/products}" class="btn btn-hero-outline mt-2">Voir tous les produits</a>
   </div>
+
 </main>
 
 <div th:replace="~{fragments/popular-section :: popular}"></div>
 <div th:replace="~{fragments/footer :: footer}"></div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
 </body>
 </html>

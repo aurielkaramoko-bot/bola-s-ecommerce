@@ -1,6 +1,8 @@
 package com.bolas.ecommerce.service;
 
 import com.bolas.ecommerce.model.CustomerOrder;
+import com.bolas.ecommerce.model.NotificationDestinataire;
+import com.bolas.ecommerce.model.NotificationType;
 import com.bolas.ecommerce.model.OrderStatus;
 import com.bolas.ecommerce.model.VendorUser;
 import com.bolas.ecommerce.repository.CustomerOrderRepository;
@@ -34,6 +36,8 @@ public class OrderFlowService {
     private final AuditLogService auditLogService;
     private final MetaWhatsAppService metaWhatsApp;
     private final ProductRepository productRepository;
+    private final NotificationService notificationService;
+    private final CustomerLoyaltyService loyaltyService;
 
     @Value("${whatsapp.number}")
     private String shopWhatsapp;
@@ -48,11 +52,15 @@ public class OrderFlowService {
     public OrderFlowService(CustomerOrderRepository orderRepository,
                             AuditLogService auditLogService,
                             MetaWhatsAppService metaWhatsApp,
-                            ProductRepository productRepository) {
+                            ProductRepository productRepository,
+                            NotificationService notificationService,
+                            CustomerLoyaltyService loyaltyService) {
         this.orderRepository = orderRepository;
         this.auditLogService = auditLogService;
         this.metaWhatsApp = metaWhatsApp;
         this.productRepository = productRepository;
+        this.notificationService = notificationService;
+        this.loyaltyService = loyaltyService;
     }
 
     // ─── Admin confirme une commande PENDING → READY (compatibilité) ──────────
@@ -129,6 +137,18 @@ public class OrderFlowService {
 
         notifyClientOrderConfirmed(order, appBaseUrl);
         checkAndNotifyLoyalty(order);
+
+        // ← Notification in-app vendeur : nouvelle commande confirmée
+        if (vendor != null) {
+            notificationService.envoyer(
+                vendor.getId(), NotificationDestinataire.VENDEUR,
+                NotificationType.COMMANDE,
+                "Commande prête à expédier",
+                "N° " + order.getTrackingNumber() + " — " + order.getCustomerName(),
+                "/vendor/orders"
+            );
+        }
+
         log.info("✅ Vendeur {} a confirmé+préparé commande {}", vendor.getDisplayName(), order.getTrackingNumber());
     }
 
@@ -200,6 +220,18 @@ public class OrderFlowService {
         orderRepository.save(order);
         auditLogService.orderStatusChanged(order.getId(), order.getTrackingNumber(), "DELIVERED (vendeur)");
         notifyOrderDelivered(order);
+
+        // ← Notification in-app client : livraison terminée (si futur lien session)
+        // Note : CustomerOrder n'a pas de FK customer ; notif via WA déjà envoyée
+
+        // ← Créditer les points de fidélité (clé = téléphone)
+        if (order.getCustomerPhone() != null) {
+            loyaltyService.crediterPoints(
+                order.getCustomerPhone(),
+                order.getTotalAmountCfa() != null ? order.getTotalAmountCfa() : 0L
+            );
+        }
+
         log.info("✅ Vendeur {} a marqué commande {} comme livrée", vendor.getDisplayName(), order.getTrackingNumber());
     }
 
@@ -224,13 +256,27 @@ public class OrderFlowService {
     // ─── Notification commande livrée ────────────────────────────────────────
 
     public void notifyOrderDelivered(CustomerOrder order) {
+        notifyOrderDelivered(order, null);
+    }
+
+    public void notifyOrderDelivered(CustomerOrder order, String appBaseUrl) {
         try {
             if (order.getCustomerPhone() != null && !order.getCustomerPhone().isBlank()) {
-                String clientMsg = "✅ Livraison terminée !\n\n"
+                String trackUrl = (appBaseUrl != null)
+                        ? appBaseUrl + "/tracking?trackingNumber=" + order.getTrackingNumber()
+                        : "/tracking?trackingNumber=" + order.getTrackingNumber();
+                String reviewUrl = (appBaseUrl != null)
+                        ? appBaseUrl + "/review/new?trackingNumber=" + order.getTrackingNumber()
+                        : "/review/new?trackingNumber=" + order.getTrackingNumber();
+
+                String clientMsg = "✅ Commande livrée !\n\n"
                         + "Bonjour " + order.getCustomerName() + ",\n"
                         + "Votre commande " + shopName + " N° " + order.getTrackingNumber()
-                        + " a été livrée avec succès !\n\n"
-                        + "Merci pour votre confiance 🙏";
+                        + " a été livrée avec succès ! 🎉\n\n"
+                        + "📦 Retrouver votre commande : " + trackUrl + "\n\n"
+                        + "⭐ Votre avis compte !\n"
+                        + "Laissez un avis en 30 secondes : " + reviewUrl + "\n\n"
+                        + "Merci de faire confiance à " + shopName + " 🙏";
                 metaWhatsApp.sendText(order.getCustomerPhone(), clientMsg);
             }
         } catch (Exception e) {

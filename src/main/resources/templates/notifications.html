@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Notifications — BOLA</title>
+</head>
+<body class="bolas-body">
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<main class="container py-5 flex-grow-1" style="max-width:760px;">
+
+  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+      <h1 class="h3 fw-bold mb-0" style="color:var(--bolas-accent);">
+        <i class="bi bi-bell me-2"></i>Mes notifications
+      </h1>
+      <p class="text-muted small mb-0" th:if="${unreadCount > 0}">
+        <span th:text="${unreadCount}">0</span> non lue(s)
+      </p>
+    </div>
+    <form th:if="${!notifications.isEmpty()}" action="/notifications/read-all" method="post">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+      <button type="submit" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-check2-all me-1"></i>Tout marquer comme lu
+      </button>
+    </form>
+  </div>
+
+  <!-- Flash -->
+  <div th:if="${flashOk}" class="alert alert-success alert-dismissible fade show" th:text="${flashOk}">
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+
+  <!-- Liste vide -->
+  <div th:if="${notifications.isEmpty()}" class="text-center py-5">
+    <i class="bi bi-bell-slash fs-1 d-block mb-3 text-muted opacity-50"></i>
+    <p class="text-muted">Aucune notification pour le moment.</p>
+    <a th:href="@{/}" class="btn btn-hero-outline mt-2">Retour à l'accueil</a>
+  </div>
+
+  <!-- Liste des notifications -->
+  <div class="d-flex flex-column gap-2" th:if="${!notifications.isEmpty()}">
+    <div th:each="n : ${notifications}"
+         class="admin-card p-3 d-flex align-items-start gap-3"
+         th:classappend="${!n.lue} ? 'border-start border-4' : ''"
+         style="border-color:var(--bolas-accent) !important; transition:.2s;">
+
+      <!-- Icône type -->
+      <div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center"
+           style="width:40px;height:40px;background:linear-gradient(135deg,#fdf6ee,#f5e6d0);">
+        <i th:classappend="${n.type.name() == 'COMMANDE'} ? 'bi-bag-check' :
+                           (${n.type.name() == 'LIVRAISON'} ? 'bi-truck' :
+                           (${n.type.name() == 'ABONNEMENT'} ? 'bi-credit-card' :
+                           (${n.type.name() == 'AVIS'} ? 'bi-star' :
+                           (${n.type.name() == 'CHAT'} ? 'bi-chat-dots' : 'bi-info-circle'))))"
+           class="bi" style="color:var(--bolas-accent);font-size:1.1rem;"></i>
+      </div>
+
+      <!-- Contenu -->
+      <div class="flex-grow-1">
+        <div class="d-flex align-items-start justify-content-between gap-2">
+          <div>
+            <div class="fw-semibold small" th:text="${n.titre}"
+                 th:style="${!n.lue} ? 'color:#3d2b1f;' : 'color:#666;'">Titre</div>
+            <div class="small text-muted mt-1" th:text="${n.message}">Message</div>
+          </div>
+          <span class="small text-muted flex-shrink-0"
+                th:text="${#temporals.format(n.createdAt, 'dd/MM HH:mm')}">date</span>
+        </div>
+
+        <div class="d-flex gap-2 mt-2 flex-wrap">
+          <a th:if="${n.lienAction != null}" th:href="${n.lienAction}"
+             class="btn btn-sm btn-hero-outline py-0 px-2">
+            <i class="bi bi-arrow-right me-1"></i>Voir
+          </a>
+          <form th:action="@{/notifications/{id}/delete(id=${n.id})}" method="post" class="m-0">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2"
+                    onclick="return confirm('Supprimer cette notification ?')">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+          <span th:if="${n.lue}" class="badge bg-light text-muted small align-self-center">Lue</span>
+          <span th:if="${!n.lue}" class="badge align-self-center"
+                style="background:var(--bolas-accent);color:#fff;">Nouveau</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+<th:block th:replace="~{fragments/header :: notif-script}"></th:block>
+</body>
+</html>
