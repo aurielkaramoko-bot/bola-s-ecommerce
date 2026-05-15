@@ -176,156 +176,26 @@ public class AdminController {
         return "admin/dashboard";
     }
 
+    // ─── admin/products SUPPRIMÉ — gestion produits côté vendeur uniquement ─────
+    // Conformément au PRINCIPE FONDAMENTAL BOLA : chaque boutique est indépendante.
+    // Redirige vers le dashboard pour éviter les 404 si lien obsolète.
     @GetMapping("/admin/products")
-    @Transactional(readOnly = true)
-    public String products(Model model) {
-        model.addAttribute("pageTitle", "Produits — Admin Bola's");
-        model.addAttribute("products", productRepository.findAllWithCategoryAndVendor());
-        return "admin/products";
-    }
+    public String productsRedirect() { return "redirect:/admin/dashboard"; }
 
     @GetMapping("/admin/products/new")
-    public String newProduct(Model model) {
-        model.addAttribute("pageTitle", "Nouveau produit — Bola's");
-        Product p = new Product();
-        p.setAvailable(true);
-        p.setDeliveryAvailable(true);
-        p.setFeatured(false);
-        p.setDeliveryPriceCfa(0L);
-        p.setCategory(new Category());
-        model.addAttribute("product", p);
-        model.addAttribute("categories", categoryRepository.findAll());
-        return "admin/product-form";
-    }
+    public String newProductRedirect() { return "redirect:/admin/dashboard"; }
 
     @GetMapping("/admin/products/{id}/edit")
-    public String editProduct(@PathVariable Long id, Model model) {
-        Product p = productRepository.findById(id).orElseThrow();
-        model.addAttribute("pageTitle", "Modifier le produit — Bola's");
-        model.addAttribute("product", p);
-        model.addAttribute("categories", categoryRepository.findAll());
-        return "admin/product-form";
-    }
+    public String editProductRedirect(@PathVariable Long id) { return "redirect:/admin/dashboard"; }
 
     @PostMapping("/admin/products")
-    public String saveProduct(@Valid @ModelAttribute Product form,
-                              BindingResult bindingResult,
-                              @RequestParam(value = "availableChecked", required = false) String availableChecked,
-                              @RequestParam(value = "deliveryAvailableChecked", required = false) String deliveryChecked,
-                              @RequestParam(value = "featuredChecked", required = false) String featuredChecked,
-                              @RequestParam(value = "limitedStockChecked", required = false) String limitedStockChecked,
-                              @RequestParam(value = "imageFile", required = false) MultipartFile imageFile,
-                              @RequestParam(value = "videoFile", required = false) MultipartFile videoFile,
-                              @RequestParam(value = "removeVideo", required = false) String removeVideo,
-                              Model model) {
-        form.setAvailable("true".equals(availableChecked));
-        form.setDeliveryAvailable("true".equals(deliveryChecked));
-        form.setFeatured("true".equals(featuredChecked));
-        form.setLimitedStock("true".equals(limitedStockChecked));
-        form.setName(inputSanitizerService.sanitizeText(form.getName()));
-        form.setDescription(inputSanitizerService.sanitizeText(form.getDescription()));
-        form.setImageUrl(inputSanitizerService.sanitizeText(form.getImageUrl()));
-
-        if (bindingResult.hasErrors()) {
-            model.addAttribute("pageTitle", form.getId() != null ? "Modifier le produit — Bola's" : "Nouveau produit — Bola's");
-            model.addAttribute("product", form);
-            model.addAttribute("categories", categoryRepository.findAll());
-            model.addAttribute("flashError", "Vérifiez les champs du produit.");
-            return "admin/product-form";
-        }
-        if (form.getCategory() == null || form.getCategory().getId() == null) {
-            model.addAttribute("pageTitle", form.getId() != null ? "Modifier le produit — Bola's" : "Nouveau produit — Bola's");
-            model.addAttribute("product", form);
-            model.addAttribute("categories", categoryRepository.findAll());
-            model.addAttribute("flashError", "Choisissez une catégorie.");
-            return "admin/product-form";
-        }
-
-        Category category = categoryRepository.findById(form.getCategory().getId()).orElseThrow();
-        form.setCategory(category);
-
-        try {
-            // --- Image ---
-            if (imageFile != null && !imageFile.isEmpty()) {
-                form.setImageUrl(imageUploadService.store(imageFile));
-            } else if (form.getId() != null) {
-                Product existing = productRepository.findById(form.getId()).orElseThrow();
-                if (form.getImageUrl() == null || form.getImageUrl().isBlank()) {
-                    form.setImageUrl(existing.getImageUrl());
-                }
-            }
-            // --- Vidéo ---
-            if ("true".equals(removeVideo)) {
-                form.setVideoUrl(null);
-            } else if (videoFile != null && !videoFile.isEmpty()) {
-                form.setVideoUrl(imageUploadService.storeVideo(videoFile));
-            } else if (form.getId() != null && (form.getVideoUrl() == null || form.getVideoUrl().isBlank())) {
-                Product existing = productRepository.findById(form.getId()).orElseThrow();
-                form.setVideoUrl(existing.getVideoUrl());
-            }
-        } catch (IllegalArgumentException e) {
-            model.addAttribute("pageTitle", form.getId() != null ? "Modifier le produit — Bola's" : "Nouveau produit — Bola's");
-            model.addAttribute("product", form);
-            model.addAttribute("categories", categoryRepository.findAll());
-            model.addAttribute("flashError", e.getMessage());
-            return "admin/product-form";
-        } catch (IOException e) {
-            model.addAttribute("pageTitle", form.getId() != null ? "Modifier le produit — Bola's" : "Nouveau produit — Bola's");
-            model.addAttribute("product", form);
-            model.addAttribute("categories", categoryRepository.findAll());
-            model.addAttribute("flashError", "Échec de l'enregistrement du fichier.");
-            return "admin/product-form";
-        }
-
-        // Sauvegarde unique — isNew doit être évalué avant le save
-        boolean isNew = (form.getId() == null);
-        Product saved = productRepository.save(form);
-        if (isNew) {
-            auditLogService.productCreated(saved.getId(), saved.getName());
-        } else {
-            auditLogService.productUpdated(saved.getId(), saved.getName());
-        }
-        return "redirect:/admin/products";
-    }
+    public String saveProductRedirect() { return "redirect:/admin/dashboard"; }
 
     @PostMapping("/admin/products/{id}/toggle-sponsored")
-    public String toggleSponsored(@PathVariable Long id, RedirectAttributes ra) {
-        productRepository.findById(id).ifPresent(p -> {
-            // Sponsorisé uniquement si le vendeur est PREMIUM
-            if (p.getVendor() == null || p.getVendor().getPlan() == com.bolas.ecommerce.model.VendorPlan.PREMIUM) {
-                p.setSponsored(!p.isSponsored());
-                productRepository.save(p);
-                ra.addFlashAttribute("flashOk", p.isSponsored()
-                        ? "Produit sponsorisé activé." : "Sponsorisation retirée.");
-            } else {
-                ra.addFlashAttribute("flashError", "Seuls les vendeurs PREMIUM peuvent avoir des produits sponsorisés.");
-            }
-        });
-        return "redirect:/admin/products";
-    }
+    public String toggleSponsoredRedirect(@PathVariable Long id) { return "redirect:/admin/dashboard"; }
 
     @PostMapping("/admin/products/{id}/delete")
-    public String deleteProduct(@PathVariable Long id, RedirectAttributes redirectAttributes) {        Product product = productRepository.findById(id).orElse(null);
-        if (product == null) {
-            redirectAttributes.addFlashAttribute("flashError", "Produit introuvable.");
-            return "redirect:/admin/products";
-        }
-        long linkedOrderLines = orderLineRepository.countByProduct_Id(id);
-        if (linkedOrderLines > 0 && product.isAvailable()) {
-            redirectAttributes.addFlashAttribute("flashError",
-                    "Impossible de supprimer ce produit : il figure sur au moins une commande (historique). "
-                            + "Décochez « Produit disponible » puis supprimez à nouveau.");
-            return "redirect:/admin/products";
-        }
-        if (linkedOrderLines > 0) {
-            orderLineRepository.deleteByProduct_Id(id);
-        }
-        String productName = product.getName();
-        productRepository.deleteById(id);
-        auditLogService.productDeleted(id, productName);
-        redirectAttributes.addFlashAttribute("flashOk", "Produit supprimé.");
-        return "redirect:/admin/products";
-    }
+    public String deleteProductRedirect(@PathVariable Long id) { return "redirect:/admin/dashboard"; }
 
     @GetMapping("/admin/categories")
     public String categories(@ModelAttribute("category") Category category, Model model) {
@@ -396,166 +266,24 @@ public class AdminController {
         return "redirect:/admin/categories";
     }
 
+    // ─── admin/orders SUPPRIMÉ — gestion commandes côté vendeur uniquement ──────
+    // Conformément au PRINCIPE FONDAMENTAL BOLA.
     @GetMapping("/admin/orders")
-    @Transactional(readOnly = true)
-    public String orders(Model model) {
-        try {
-            log.info("📋 Début chargement page commandes...");
-            model.addAttribute("pageTitle", "Commandes — Admin Bola's");
-            
-            // Séparer par statut pour l'affichage priorisé — bornés à 100 pour éviter les timeouts
-            log.info("   → Recherche commandes PENDING...");
-            var pending = customerOrderRepository.findTop100ByStatusWithLinesAsc(OrderStatus.PENDING);
-            model.addAttribute("pendingOrders", pending);
-            log.info("      ✓ {} commandes PENDING trouvées", pending.size());
-            
-            log.info("   → Recherche commandes READY...");
-            var ready = customerOrderRepository.findTop100ByStatusWithLinesAsc(OrderStatus.READY);
-            model.addAttribute("readyOrders", ready);
-            log.info("      ✓ {} commandes READY trouvées", ready.size());
-            
-            log.info("   → Recherche commandes IN_DELIVERY...");
-            var delivery = customerOrderRepository.findTop100ByStatusWithLinesDesc(OrderStatus.IN_DELIVERY);
-            model.addAttribute("activeOrders", delivery);
-            log.info("      ✓ {} commandes IN_DELIVERY trouvées", delivery.size());
-            
-            log.info("   → Recherche commandes fermées...");
-            var closed = customerOrderRepository.findTop20ByStatusInOrderByCreatedAtDesc(
-                    List.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED));
-            model.addAttribute("closedOrders", closed);
-            log.info("      ✓ {} commandes fermées trouvées", closed.size());
-            
-            log.info("   → Initialisation DTOs...");
-            model.addAttribute("newOrder", new NewOrderDto());
-            
-            log.info("   → Recherche produits disponibles...");
-            var products = productRepository.findByAvailableTrue();
-            model.addAttribute("products", products);
-            log.info("      ✓ {} produits trouvés", products.size());
-            
-            log.info("   → Recherche vendeurs ACTIFS uniquement...");
-            var vendors = vendorUserRepository.findByVendorStatusAndActiveTrue(VendorStatus.ACTIVE);
-            model.addAttribute("vendors", vendors);
-            log.info("      ✓ {} vendeurs ACTIFS trouvés", vendors.size());
-
-            log.info("   → Recherche livreurs approuvés...");
-            var approvedCouriers = courierApplicationRepository.findByStatusOrderBySubmittedAtDesc(CourierApplicationStatus.APPROVED);
-            model.addAttribute("approvedCouriers", approvedCouriers);
-            log.info("      ✓ {} livreurs approuvés trouvés", approvedCouriers.size());
-            
-            log.info("✅ Page commandes chargée avec succès");
-        } catch (Exception e) {
-            log.error("❌ Erreur CRITIQUE chargement commandes", e);
-            e.printStackTrace();
-            model.addAttribute("flashError", "Erreur serveur : " + e.getClass().getSimpleName() + " - " + e.getMessage());
-            model.addAttribute("pendingOrders", List.of());
-            model.addAttribute("readyOrders", List.of());
-            model.addAttribute("activeOrders", List.of());
-            model.addAttribute("closedOrders", List.of());
-            model.addAttribute("newOrder", new NewOrderDto());
-            model.addAttribute("products", List.of());
-            model.addAttribute("vendors", List.of());
-            model.addAttribute("approvedCouriers", List.of());
-        }
-        return "admin/orders";
-    }
+    public String ordersRedirect() { return "redirect:/admin/dashboard"; }
 
     @PostMapping("/admin/orders/new")
-    public String createOrder(@Valid @ModelAttribute("newOrder") NewOrderDto dto,
-                              BindingResult br,
-                              @RequestParam(required = false) Long productId,
-                              RedirectAttributes ra) {
-        if (br.hasErrors()) {
-            ra.addFlashAttribute("flashError", "Vérifiez les champs de la commande.");
-            return "redirect:/admin/orders";
-        }
-        CustomerOrder order = new CustomerOrder();
-        order.setTrackingNumber("BOL-" + UUID.randomUUID().toString().replace("-","").substring(0,8).toUpperCase());
-        order.setCustomerName(dto.getCustomerName());
-        order.setCustomerPhone(dto.getCustomerPhone());
-        order.setCustomerAddress(dto.getCustomerAddress());
-        order.setDeliveryOption(dto.getDeliveryOption() != null ? dto.getDeliveryOption() : DeliveryOption.HOME);
-        order.setTotalAmountCfa(dto.getTotalAmountCfa());
-        order.setDeliveryFeeCfa(dto.getDeliveryFeeCfa());
-
-        if (productId != null) {
-            productRepository.findById(productId).ifPresent(p -> {
-                OrderLine line = new OrderLine();
-                line.setProduct(p);
-                line.setQuantity(1);
-                line.setUnitPriceCfa(p.getEffectivePriceCfa());
-                order.addLine(line);
-            });
-        }
-        customerOrderRepository.save(order);
-        auditLogService.orderStatusChanged(order.getId(), order.getTrackingNumber(), "CREATED");
-        ra.addFlashAttribute("flashOk", "Commande " + order.getTrackingNumber() + " créée.");
-        return "redirect:/admin/orders";
-    }
+    public String createOrderRedirect() { return "redirect:/admin/dashboard"; }
 
     @PostMapping("/admin/orders/{id}/status")
-    public String updateOrderStatus(@PathVariable Long id, @RequestParam OrderStatus status) {
-        CustomerOrder order = customerOrderRepository.findById(id).orElseThrow();
-        OrderStatus oldStatus = order.getStatus();
-        order.setStatus(status);
-        customerOrderRepository.save(order);
-        auditLogService.orderStatusChanged(id, order.getTrackingNumber(), status.name());
+    public String updateOrderStatusRedirect(@PathVariable Long id) { return "redirect:/admin/dashboard"; }
 
-        // Notifications WhatsApp automatiques selon le nouveau statut
-        try {
-            if (status == OrderStatus.DELIVERED) {
-                orderFlowService.notifyOrderDelivered(order);
-            } else if (status == OrderStatus.CANCELLED) {
-                orderFlowService.notifyVendorOrderCancelled(order);
-            }
-        } catch (Exception e) {
-            log.warn("⚠️ Notification WhatsApp échouée pour changement statut : {}", e.getMessage());
-        }
-        return "redirect:/admin/orders";
-    }
-
-    /** Admin valide une commande PENDING → CONFIRMED + notifie le vendeur via WhatsApp */
     @PostMapping("/admin/orders/{id}/confirm")
-    public String confirmOrder(@PathVariable Long id,
-                               @RequestParam(required = false) String vendorPhone,
-                               @RequestParam(required = false, defaultValue = "0") long deliveryFee,
-                               HttpServletRequest request,
-                               RedirectAttributes ra) {
-        CustomerOrder order = customerOrderRepository.findById(id).orElseThrow();
-        if (order.getStatus() != OrderStatus.PENDING) {
-            ra.addFlashAttribute("flashError", "Cette commande n'est plus en attente.");
-            return "redirect:/admin/orders";
-        }
-        // Mettre à jour les frais de livraison si saisis
-        if (deliveryFee > 0) {
-            order.setDeliveryFeeCfa(deliveryFee);
-            customerOrderRepository.save(order);
-        }
-        String baseUrl = baseUrl(request);
-        String phone = (vendorPhone != null && !vendorPhone.isBlank()) ? vendorPhone : "";
-        String waLink = orderFlowService.confirmOrder(order, phone, baseUrl);
-        ra.addFlashAttribute("flashOk", "Commande " + order.getTrackingNumber() + " validée !");
-        if (!phone.isBlank()) ra.addFlashAttribute("waVendorLink", waLink);
-        return "redirect:/admin/orders";
-    }
+    public String confirmOrderRedirect(@PathVariable Long id) { return "redirect:/admin/dashboard"; }
 
-    /** Admin informe le client que sa commande est prête / en livraison */
     @PostMapping("/admin/orders/{id}/notify-client")
-    public String notifyClient(@PathVariable Long id,
-                               HttpServletRequest request,
-                               RedirectAttributes ra) {
-        CustomerOrder order = customerOrderRepository.findById(id).orElseThrow();
-        if (order.getStatus() != OrderStatus.READY) {
-            ra.addFlashAttribute("flashError", "La commande n'est pas encore prête.");
-            return "redirect:/admin/orders";
-        }
-        String waLink = orderFlowService.notifyClientReady(order, baseUrl(request));
-        ra.addFlashAttribute("flashOk", "Client notifié — commande en livraison.");
-        ra.addFlashAttribute("waClientLink", waLink);
-        return "redirect:/admin/orders";
-    }
+    public String notifyClientRedirect(@PathVariable Long id) { return "redirect:/admin/dashboard"; }
 
-    // --- Gestion des vendeurs ---
+    // ─── Gestion des vendeurs ────────────────────────────────────────────────────
 
     @GetMapping("/admin/vendors")
     @Transactional(readOnly = true)
@@ -1002,8 +730,8 @@ public class AdminController {
     public String courierActivity(Model model) {
         model.addAttribute("pageTitle", "Activité des livreurs — Admin BOLA");
 
-        // Tous les livreurs approuvés et suspendus
-        var couriers = courierApplicationRepository.findByStatusInOrderBySubmittedAtDesc(
+        // JOIN FETCH vendor pour éviter LazyInitializationException
+        var couriers = courierApplicationRepository.findAllWithVendorByStatusIn(
                 List.of(CourierApplicationStatus.APPROVED,
                         CourierApplicationStatus.SUSPENDED_SOFT,
                         CourierApplicationStatus.SUSPENDED_TOTAL));
@@ -1020,6 +748,17 @@ public class AdminController {
                     courier.getCourierName(), OrderStatus.IN_DELIVERY));
             stat.put("recentOrders", customerOrderRepository.findTop10ByAssignedCourierNameOrderByCreatedAtDesc(
                     courier.getCourierName()));
+            // Commande EN COURS (pour la carte livreur)
+            var activeOrders = customerOrderRepository.findByAssignedCourierNameAndStatus(
+                    courier.getCourierName(), OrderStatus.IN_DELIVERY);
+            stat.put("activeOrder", activeOrders.isEmpty() ? null : activeOrders.get(0));
+            // Nom du vendeur propriétaire avec fallback
+            String vendorLabel = (courier.getVendor() != null)
+                    ? (courier.getVendor().getShopName() != null
+                            ? courier.getVendor().getShopName()
+                            : courier.getVendor().getUsername())
+                    : "Livreur plateforme BOLA";
+            stat.put("vendorLabel", vendorLabel);
             courierStats.add(stat);
         }
 
@@ -1132,7 +871,7 @@ public class AdminController {
         customerOrderRepository.deleteById(id);
         auditLogService.orderDeleted(id, tracking);
         redirectAttributes.addFlashAttribute("flashOk", "Commande supprimée.");
-        return "redirect:/admin/orders";
+        return "redirect:/admin/dashboard";
     }
 
     // --- ICI : LA MÉTHODE POUR LA PAGE DE LIVRAISON AVEC LA CLÉ API ---
@@ -1314,41 +1053,7 @@ public class AdminController {
         return "redirect:/admin/delivery";
     }
 
-    /**
-     * Dispatch : assigne un livreur (optionnel), génère le token GPS,
-     * passe la commande en IN_DELIVERY et retourne le lien livreur.
-     */
-    @PostMapping("/admin/orders/{id}/dispatch")
-    @Transactional
-    public String dispatchOrder(@PathVariable Long id,
-                                @RequestParam(required = false) Long courierId,
-                                HttpServletRequest request,
-                                RedirectAttributes ra) {
-        CustomerOrder order = customerOrderRepository.findById(id).orElseThrow();
-
-        // Assigner le livreur si sélectionné
-        if (courierId != null && courierId > 0) {
-            courierApplicationRepository.findById(courierId).ifPresent(courier -> {
-                order.setAssignedCourierName(courier.getCourierName());
-                order.setAssignedCourierPhone(courier.getCourierPhone());
-            });
-        }
-
-        // Générer token GPS unique
-        String token = UUID.randomUUID().toString();
-        order.setCourierToken(token);
-        order.setStatus(OrderStatus.IN_DELIVERY);
-        customerOrderRepository.save(order);
-        auditLogService.orderStatusChanged(id, order.getTrackingNumber(), "IN_DELIVERY");
-
-        String base = baseUrl(request);
-        String link = base + "/livreur/" + token;
-        String courierName = order.getAssignedCourierName() != null ? order.getAssignedCourierName() : "Admin";
-        ra.addFlashAttribute("flashOk",
-                "Commande " + order.getTrackingNumber() + " en livraison — livreur : " + courierName);
-        ra.addFlashAttribute("courierLink", link);
-        return "redirect:/admin/orders";
-    }
+    // admin/orders/{id}/dispatch supprimé — le dispatch est géré par le vendeur via /vendor/orders/{id}/dispatch
 
     @GetMapping("/admin/vendors/{id}/notify-plan")
 public String notifyPlan(@PathVariable Long id) {

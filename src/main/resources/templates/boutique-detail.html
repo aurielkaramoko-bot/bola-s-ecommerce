@@ -26,9 +26,15 @@
             class="badge me-1" style="background:linear-gradient(135deg,#8B5E3C,#C49A6C);">
         ⭐ Vendeur Premium vérifié
       </span>
-      <span th:if="${vendor.plan.name() == 'PRO_LOCAL' or vendor.plan.name() == 'PRO'}"
-            class="badge bg-warning text-dark me-1">⭐ Pro</span>
-      <!-- Note moyenne -->
+      <span th:if="${vendor.plan.name() == 'PRO'}"
+            class="badge me-1" style="background:var(--bolas-accent);color:#fff;">✓ Vendeur Pro</span>
+      <span th:if="${vendor.plan.name() == 'PRO_LOCAL'}"
+            class="badge bg-success me-1">📍 Vendeur Local</span>
+      <!-- Badge réduction boutique -->
+      <span th:if="${vendor.shopDiscountActive}"
+            class="badge me-1" style="background:linear-gradient(135deg,#ff6b35,#f7931e);color:#fff;">
+        🔥 -<span th:text="${vendor.shopDiscountPercent}">0</span>% sur tout
+      </span>
       <div th:if="${reviewCount != null and reviewCount > 0}" class="mt-1">
         <th:block th:each="i : ${#numbers.sequence(1, 5)}">
           <i class="bi" th:classappend="${i <= avgRating} ? 'bi-star-fill text-warning' : 'bi-star text-muted'" style="font-size:0.9rem;"></i>

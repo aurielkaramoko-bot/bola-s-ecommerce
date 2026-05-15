@@ -166,5 +166,8 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
 
     /** Dernières commandes assignées à un livreur */
     List<CustomerOrder> findTop10ByAssignedCourierNameOrderByCreatedAtDesc(String assignedCourierName);
+
+    /** Commandes actives d'un livreur (pour afficher la commande en cours dans admin/courier-activity) */
+    List<CustomerOrder> findByAssignedCourierNameAndStatus(String assignedCourierName, OrderStatus status);
 }
 

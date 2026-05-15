@@ -13,15 +13,7 @@
     <a class="nav-link" th:href="@{/admin/categories}" th:classappend="${active == 'categories' ? 'active' : ''}">
       <i class="bi bi-tags me-2"></i><span th:text="'Catégories'">Catégories</span>
     </a>
-    <a class="nav-link" th:href="@{/admin/products}" th:classappend="${active == 'products' ? 'active' : ''}">
-      <i class="bi bi-box-seam me-2"></i><span th:text="'Produits'">Produits</span>
-    </a>
-    <a class="nav-link" th:href="@{/admin/orders}" th:classappend="${active == 'orders' ? 'active' : ''}">
-      <i class="bi bi-receipt me-2"></i><span th:text="'Commandes'">Commandes</span>
-    </a>
-    <a class="nav-link" th:href="@{/admin/delivery}" th:classappend="${active == 'delivery' ? 'active' : ''}">
-      <i class="bi bi-geo-alt me-2"></i><span th:text="'Livraison GPS'">Livraison</span>
-    </a>
+    <!-- Produits et Commandes gérés par les vendeurs — supprimés du menu admin -->
     <a class="nav-link" th:href="@{/admin/vendors}" th:classappend="${active == 'vendors' ? 'active' : ''}">
       <i class="bi bi-person-badge me-2"></i><span>Vendeurs</span>
     </a>

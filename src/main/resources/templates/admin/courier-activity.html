@@ -88,10 +88,10 @@
             <!-- Vendeur propriétaire -->
             <div class="px-3 py-2 border-bottom" style="background:#faf8f6;">
               <span class="text-muted" style="font-size:.9rem;">
-                <i class="bi bi-shop me-1"></i>Vendeur :
+                <i class="bi bi-shop me-1"></i>Boutique :
               </span>
               <span class="fw-semibold" style="font-size:.95rem;"
-                    th:text="${entry['courier'].vendor?.shopName ?: entry['courier'].vendor?.username ?: '—'}">—</span>
+                    th:text="${entry['vendorLabel']}">—</span>
             </div>
 
             <!-- Stats de livraison -->
@@ -112,6 +112,15 @@
                        th:text="${entry['inDeliveryCount']}">0</div>
                   <div class="text-muted" style="font-size:.85rem;">En cours</div>
                 </div>
+              </div>
+
+              <!-- Commande EN COURS -->
+              <div th:if="${entry['activeOrder'] != null}" class="mt-2 p-2 rounded" 
+                   style="background:rgba(13,110,253,0.07);border-left:3px solid #0d6efd;font-size:.88rem;">
+                <i class="bi bi-truck me-1 text-primary"></i>
+                <strong>En livraison :</strong>
+                <span class="fw-semibold ms-1" th:text="'#' + ${entry['activeOrder'].trackingNumber}">—</span>
+                <span class="text-muted ms-1" th:text="${entry['activeOrder'].customerName}">—</span>
               </div>
 
               <!-- Dernières commandes -->
