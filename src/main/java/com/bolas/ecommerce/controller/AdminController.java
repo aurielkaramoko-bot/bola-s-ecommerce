@@ -159,8 +159,8 @@ public class AdminController {
                 vendorUserRepository.countByVendorStatus(VendorStatus.PENDING));
 
         // Abonnements expirant dans <= 5 jours
-        java.time.LocalDateTime today = java.time.LocalDateTime.now();
-        java.time.LocalDateTime in5days = today.plusDays(5);
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate in5days = today.plusDays(5);
         var expiring = vendorUserRepository.findBySubscriptionExpiresAtBetween(today, in5days);
         model.addAttribute("expiringVendors", expiring);
 
@@ -447,10 +447,10 @@ public class AdminController {
             v.setPlan(com.bolas.ecommerce.model.VendorPlan.valueOf(plan));
         } catch (Exception ignored) {}
         if (startsAt != null && !startsAt.isBlank()) {
-            v.setSubscriptionStartsAt(java.time.LocalDateTime.parse(startsAt));
+            v.setSubscriptionStartsAt(java.time.LocalDate.parse(startsAt));
         }
         if (expiresAt != null && !expiresAt.isBlank()) {
-            v.setSubscriptionExpiresAt(java.time.LocalDateTime.parse(expiresAt));
+            v.setSubscriptionExpiresAt(java.time.LocalDate.parse(expiresAt));
         }
         vendorUserRepository.save(v);
         ra.addFlashAttribute("flashOk",

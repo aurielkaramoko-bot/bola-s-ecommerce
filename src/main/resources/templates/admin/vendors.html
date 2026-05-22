@@ -383,11 +383,11 @@
                   </td>
                   <td>
                     <span th:if="${v.subscriptionExpiresAt != null}"
-                          th:classappend="${v.subscriptionExpiresAt.isBefore(T(java.time.LocalDate).now())} ? 'text-danger' : 'text-muted'"
+                          th:classappend="${v.subscriptionExpiresAt.isBefore(T(java.time.LocalDateTime).now())} ? 'text-danger' : 'text-muted'"
                           class="small">
                       <i class="bi bi-calendar me-1"></i>
                       <span th:text="${#temporals.format(v.subscriptionExpiresAt,'dd/MM/yy')}">—</span>
-                      <span th:if="${v.subscriptionExpiresAt.isBefore(T(java.time.LocalDate).now())}"
+                      <span th:if="${v.subscriptionExpiresAt.isBefore(T(java.time.LocalDateTime).now())}"
                             class="badge bg-danger ms-1" style="font-size:.65rem;">Expiré</span>
                     </span>
                     <span th:if="${v.subscriptionExpiresAt == null}" class="text-muted small">—</span>
@@ -454,12 +454,12 @@
                                   (${v.plan?.name() == 'PRO_LOCAL'} ? '🏠 Visible homepage' :
                                   (${v.plan?.name() == 'PRO'} ? '🏠 Visible homepage' : 'Gratuit'))">Gratuit</span>
                   <div th:if="${v.subscriptionExpiresAt != null}" class="small mt-1"
-                       th:classappend="${v.subscriptionExpiresAt.isBefore(T(java.time.LocalDate).now())} ? 'text-danger' : 'text-muted'">
+                       th:classappend="${v.subscriptionExpiresAt.isBefore(T(java.time.LocalDateTime).now())} ? 'text-danger' : 'text-muted'">
                     <i class="bi bi-calendar me-1"></i>
                     <span th:if="${v.subscriptionStartsAt != null}"
                           th:text="${#temporals.format(v.subscriptionStartsAt,'dd/MM/yy')} + ' → '">—</span>
                     <span th:text="${#temporals.format(v.subscriptionExpiresAt,'dd/MM/yy')}">—</span>
-                    <span th:if="${v.subscriptionExpiresAt.isBefore(T(java.time.LocalDate).now())}"
+                    <span th:if="${v.subscriptionExpiresAt.isBefore(T(java.time.LocalDateTime).now())}"
                           class="badge bg-danger ms-1" style="font-size:.65rem;">Expiré</span>
                     <span th:if="${v.daysUntilExpiry >= 0 and v.daysUntilExpiry <= 5}"
                           class="badge bg-warning text-dark ms-1" style="font-size:.65rem;"

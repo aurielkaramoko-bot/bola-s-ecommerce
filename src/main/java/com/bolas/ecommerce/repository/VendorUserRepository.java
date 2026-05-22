@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,12 +31,12 @@ public interface VendorUserRepository extends JpaRepository<VendorUser, Long> {
     List<VendorUser> findByVendorStatusAndActiveTrue(VendorStatus status);
 
     /** Vendeurs dont l'abonnement expire à une date spécifique */
-    List<VendorUser> findBySubscriptionExpiresAt(LocalDateTime date);
+    List<VendorUser> findBySubscriptionExpiresAt(LocalDate date);
 
     /** Vendeurs dont l'abonnement expire dans une plage de dates */
     @Query("SELECT v FROM VendorUser v WHERE v.subscriptionExpiresAt >= :startDate AND v.subscriptionExpiresAt <= :endDate AND v.active = true")
-    List<VendorUser> findBySubscriptionExpiresAtBetween(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
-    List<VendorUser> findBySubscriptionExpiresAtNotNullAndSubscriptionExpiresAtBeforeOrderBySubscriptionExpiresAtAsc(java.time.LocalDateTime date);
+    List<VendorUser> findBySubscriptionExpiresAtBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+    List<VendorUser> findBySubscriptionExpiresAtNotNullAndSubscriptionExpiresAtBeforeOrderBySubscriptionExpiresAtAsc(java.time.LocalDate date);
 
     /** Compte les vendeurs par plan (analytics optimisé) */
     long countByPlan(VendorPlan plan);

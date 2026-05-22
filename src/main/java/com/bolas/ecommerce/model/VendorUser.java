@@ -101,11 +101,11 @@ public class VendorUser {
 
     /** Date de début de l'abonnement (avec heure exacte) */
     @Column(name = "subscription_starts_at")
-    private java.time.LocalDateTime subscriptionStartsAt;
+    private java.time.LocalDate subscriptionStartsAt;
 
     /** Date d'expiration de l'abonnement (avec heure exacte — null = pas d'abonnement actif) */
     @Column(name = "subscription_expires_at")
-    private java.time.LocalDateTime subscriptionExpiresAt;
+    private java.time.LocalDate subscriptionExpiresAt;
 
 
 
@@ -237,11 +237,11 @@ public class VendorUser {
     public String getBannerUrl() { return bannerUrl; }
     public void setBannerUrl(String bannerUrl) { this.bannerUrl = bannerUrl; }
 
-    public java.time.LocalDateTime getSubscriptionStartsAt() { return subscriptionStartsAt; }
-    public void setSubscriptionStartsAt(java.time.LocalDateTime subscriptionStartsAt) { this.subscriptionStartsAt = subscriptionStartsAt; }
+    public java.time.LocalDate getSubscriptionStartsAt() { return subscriptionStartsAt; }
+    public void setSubscriptionStartsAt(java.time.LocalDate subscriptionStartsAt) { this.subscriptionStartsAt = subscriptionStartsAt; }
 
-    public java.time.LocalDateTime getSubscriptionExpiresAt() { return subscriptionExpiresAt; }
-    public void setSubscriptionExpiresAt(java.time.LocalDateTime subscriptionExpiresAt) { this.subscriptionExpiresAt = subscriptionExpiresAt; }
+    public java.time.LocalDate getSubscriptionExpiresAt() { return subscriptionExpiresAt; }
+    public void setSubscriptionExpiresAt(java.time.LocalDate subscriptionExpiresAt) { this.subscriptionExpiresAt = subscriptionExpiresAt; }
 
 
 
@@ -262,7 +262,7 @@ public class VendorUser {
     /** Jours restants avant expiration (négatif = expiré) */
     public long getDaysUntilExpiry() {
         if (subscriptionExpiresAt == null) return Long.MAX_VALUE;
-        return java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDateTime.now(), subscriptionExpiresAt);
+        return java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), subscriptionExpiresAt);
     }
 
     /** Nom d'affichage : priorité shopName, sinon username */

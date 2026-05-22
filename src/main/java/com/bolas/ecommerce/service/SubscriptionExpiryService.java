@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -39,7 +39,7 @@ public class SubscriptionExpiryService {
     @Scheduled(fixedDelay = 60_000) // toutes les 60 secondes
     @Transactional
     public void checkExpiredSubscriptions() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDate now = LocalDate.now();
 
         List<VendorUser> expired = vendorUserRepository
                 .findBySubscriptionExpiresAtNotNullAndSubscriptionExpiresAtBeforeOrderBySubscriptionExpiresAtAsc(now)
