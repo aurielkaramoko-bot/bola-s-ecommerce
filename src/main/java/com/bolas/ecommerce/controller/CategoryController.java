@@ -1,4 +1,4 @@
-﻿package com.bolas.ecommerce.controller;
+package com.bolas.ecommerce.controller;
 
 import com.bolas.ecommerce.model.Category;
 import com.bolas.ecommerce.model.Product;
