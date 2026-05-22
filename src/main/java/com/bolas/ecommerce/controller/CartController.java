@@ -274,6 +274,13 @@ public class CartController {
                 vendorMsg.append("👤 Client : ").append(customerName.trim()).append("\n");
                 vendorMsg.append("📞 Tél : ").append(customerPhone.trim()).append("\n");
                 vendorMsg.append("📍 Option : ").append("PICKUP".equals(deliveryOption) ? "Retrait boutique" : "Livraison domicile").append("\n");
+                // Localisation GPS si disponible
+                if (clientLatitude != null && clientLongitude != null) {
+                    vendorMsg.append("🗺️ Position GPS : https://maps.google.com/?q=")
+                             .append(clientLatitude).append(",").append(clientLongitude).append("\n");
+                } else if (!customerAddress.isBlank()) {
+                    vendorMsg.append("🏠 Adresse : ").append(customerAddress.trim()).append("\n");
+                }
                 vendorMsg.append("💰 Total : ").append(order.getTotalAmountCfa()).append(" CFA\n\n");
                 vendorMsg.append("Produits commandés :\n");
                 for (var line : lines) {
@@ -312,6 +319,13 @@ public class CartController {
         msg.append("\nTotal : ").append(order.getTotalAmountCfa()).append(" CFA");
         msg.append("\nPays : ").append(country.toUpperCase());
         msg.append("\nOption : ").append("PICKUP".equals(deliveryOption) ? "Retrait en boutique" : "Livraison à domicile");
+        // Localisation GPS si disponible
+        if (clientLatitude != null && clientLongitude != null) {
+            msg.append("\n🗺️ Position GPS : https://maps.google.com/?q=")
+               .append(clientLatitude).append(",").append(clientLongitude);
+        } else if (!customerAddress.isBlank()) {
+            msg.append("\n🏠 Adresse : ").append(customerAddress.trim());
+        }
         msg.append("\n\n📦 N° de suivi : ").append(order.getTrackingNumber());
 
         String waUrl = "https://wa.me/" + targetPhone

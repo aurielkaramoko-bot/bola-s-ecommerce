@@ -110,6 +110,15 @@ public class HomeController {
         // Bannières PREMIUM
         model.addAttribute("premiumBanners",
                 vendorUserRepository.findActivePremiumWithBanner());
+        // Produits en tendance (max 8 pour la homepage)
+        var trendProducts = productRepository.findAll().stream()
+                .filter(p -> p.isAvailable()
+                        && (p.getVendor() == null || (p.getVendor().isActive()
+                                && p.getVendor().getVendorStatus() == VendorStatus.ACTIVE))
+                        && p.isCurrentlyTrending())
+                .limit(8)
+                .toList();
+        model.addAttribute("trendProducts", trendProducts);
         return "index";
     }
 
@@ -154,7 +163,8 @@ public class HomeController {
 
     @GetMapping("/boutiques/{id}")
     @Transactional(readOnly = true)
-    public String boutiqueDetail(@PathVariable Long id, Model model) {
+    public String boutiqueDetail(@PathVariable Long id, Model model,
+                                  jakarta.servlet.http.HttpSession session) {
         var vendor = vendorUserRepository.findById(id)
                 .filter(v -> v.getVendorStatus() == VendorStatus.ACTIVE && v.isActive())
                 .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
@@ -162,6 +172,9 @@ public class HomeController {
         model.addAttribute("pageTitle", vendor.getDisplayName() + " — BOLA");
         model.addAttribute("vendor", vendor);
         model.addAttribute("products", productRepository.findByVendorAndAvailableTrue(vendor));
+
+        // Client connecté (pour formulaire avis)
+        model.addAttribute("connectedCustomer", session.getAttribute("BOLAS_CUSTOMER"));
 
         // Avis et note moyenne
         try {
@@ -184,6 +197,22 @@ public class HomeController {
     public String contact(Model model) {
         model.addAttribute("pageTitle", "Contact — BOLA");
         return "contact";
+    }
+
+    @GetMapping("/trends")
+    @Transactional(readOnly = true)
+    public String trends(Model model) {
+        model.addAttribute("pageTitle", "Tendances du moment — BOLA");
+        // Produits marqués manuellement comme Trend (non expirés)
+        var now = java.time.LocalDateTime.now();
+        List<Product> trendProducts = productRepository.findAll().stream()
+                .filter(p -> p.isAvailable()
+                        && (p.getVendor() == null || (p.getVendor().isActive() && p.getVendor().getVendorStatus() == VendorStatus.ACTIVE))
+                        && p.isCurrentlyTrending())
+                .limit(20)
+                .toList();
+        model.addAttribute("trendProducts", trendProducts);
+        return "trends";
     }
 
     @GetMapping("/products/{id}")

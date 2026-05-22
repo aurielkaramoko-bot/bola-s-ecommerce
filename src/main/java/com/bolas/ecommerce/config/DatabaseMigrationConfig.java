@@ -304,6 +304,60 @@ public class DatabaseMigrationConfig {
                     log.warn("Migration vendor_users.assigned_courier_id: {}", e.getMessage());
                 }
 
+                // Migration 20 : subscription_starts_at / subscription_expires_at → TIMESTAMP (LocalDateTime)
+                // Convertit les colonnes DATE existantes en TIMESTAMP pour stocker l'heure exacte
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE vendor_users ALTER COLUMN subscription_starts_at TYPE TIMESTAMP USING subscription_starts_at::TIMESTAMP"
+                    );
+                    log.info("Migration: subscription_starts_at converti en TIMESTAMP");
+                } catch (SQLException e) {
+                    log.warn("Migration subscription_starts_at TIMESTAMP: {}", e.getMessage());
+                }
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE vendor_users ALTER COLUMN subscription_expires_at TYPE TIMESTAMP USING subscription_expires_at::TIMESTAMP"
+                    );
+                    log.info("Migration: subscription_expires_at converti en TIMESTAMP");
+                } catch (SQLException e) {
+                    log.warn("Migration subscription_expires_at TIMESTAMP: {}", e.getMessage());
+                }
+
+                // Migration 21 : colonnes trend sur products
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE products ADD COLUMN IF NOT EXISTS trend_active BOOLEAN DEFAULT FALSE"
+                    );
+                    log.info("Migration: colonne trend_active ajoutée sur products");
+                } catch (SQLException e) {
+                    log.warn("Migration products.trend_active: {}", e.getMessage());
+                }
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE products ADD COLUMN IF NOT EXISTS trend_expires_at TIMESTAMP"
+                    );
+                    log.info("Migration: colonne trend_expires_at ajoutée sur products");
+                } catch (SQLException e) {
+                    log.warn("Migration products.trend_expires_at: {}", e.getMessage());
+                }
+
+                // Migration 22 : paramètres boutique sur vendor_users
+                String[][] shopParamCols = {
+                    {"shop_status",   "VARCHAR(20) DEFAULT 'OPEN'"},
+                    {"shop_language", "VARCHAR(50)"},
+                    {"shop_hours",    "VARCHAR(200)"},
+                };
+                for (String[] col : shopParamCols) {
+                    try {
+                        conn.createStatement().execute(
+                            "ALTER TABLE vendor_users ADD COLUMN IF NOT EXISTS " + col[0] + " " + col[1]
+                        );
+                        log.info("Migration: colonne {} ajoutée sur vendor_users", col[0]);
+                    } catch (SQLException e) {
+                        log.warn("Migration vendor_users.{}: {}", col[0], e.getMessage());
+                    }
+                }
+
             } catch (Exception e) {
                 log.error("Migration échouée: {}", e.getMessage());
             }

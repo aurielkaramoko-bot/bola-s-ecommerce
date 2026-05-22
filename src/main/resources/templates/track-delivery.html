@@ -1,33 +1,33 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
 <head th:replace="~{fragments/header :: head(title=${pageTitle})}">
-  <title>Suivi — Bola's</title>
+  <title>Suivi — BOLA</title>
 </head>
 <body class="bolas-body">
 <div th:replace="~{fragments/header :: navbar}"></div>
 
 <main class="container py-5 flex-grow-1">
-  <h1 class="h2 text-center mb-3" style="color: #8B5E3C;" th:text="'Suivi de livraison'">Suivi</h1>
-  <p class="text-center text-muted mb-4" th:text="'Entrez votre numéro de commande pour suivre la livraison.'">Aide</p>
+  <h1 class="h2 text-center mb-3" style="color: #8B5E3C;">Suivi de livraison</h1>
+  <p class="text-center text-muted mb-4">Entrez votre numéro de commande pour suivre la livraison.</p>
 
   <form th:action="@{/tracking}" method="get" class="row g-2 justify-content-center mb-5 mx-auto p-4 rounded-3 border admin-card" style="max-width: 640px;">
     <div class="col-12 col-md-8">
-      <label for="trackingNumber" class="form-label" th:text="'Numéro de commande'">Numéro</label>
+      <label for="trackingNumber" class="form-label">Numéro de commande</label>
       <input type="text" class="form-control border-secondary-subtle" id="trackingNumber" name="trackingNumber" required
              th:value="${trackingNumber}"
              placeholder="ex. BOL-XXXXXXXX"
              autocomplete="off"/>
     </div>
     <div class="col-12 col-md-4 d-flex align-items-end">
-      <button type="submit" class="btn btn-hero-solid w-100" th:text="'Rechercher'">OK</button>
+      <button type="submit" class="btn btn-hero-solid w-100">Rechercher</button>
     </div>
   </form>
 
   <div th:if="${tracking != null}" class="mx-auto mb-4 p-4 rounded-3 border admin-card" style="max-width: 720px;">
-    <p class="small text-muted mb-1" th:text="'Numéro de suivi'">N°</p>
+    <p class="small text-muted mb-1">Numéro de suivi</p>
     <p class="fw-bold fs-5 mb-3" th:text="${tracking.trackingNumber}">BOL</p>
 
-    <!-- ===== BARRE DE PROGRESSION 4 ÉTAPES ===== -->
+    <!-- BARRE DE PROGRESSION 4 ÉTAPES -->
     <th:block th:if="${tracking.status.name() != 'CANCELLED'}">
       <th:block th:with="
         step1=${tracking.status.name() == 'PENDING' ? 'active' : 'done'},
@@ -43,22 +43,18 @@
       ">
         <div class="tracking-progress">
           <div class="tracking-progress-fill" th:style="'width:' + ${fillPct}"></div>
-
           <div class="tracking-step" th:classappend="${step1}">
             <div class="tracking-step-dot"><i class="bi bi-bag-check"></i></div>
             <span class="tracking-step-label">Commande<br/>reçue</span>
           </div>
-
           <div class="tracking-step" th:classappend="${step2 == 'done' or step3 == 'active' or step3 == 'done' ? 'done' : step2}">
             <div class="tracking-step-dot"><i class="bi bi-box-seam"></i></div>
             <span class="tracking-step-label">En<br/>préparation</span>
           </div>
-
           <div class="tracking-step" th:classappend="${step4 == 'done' or step4 == 'active' ? (step4 == 'done' ? 'done' : 'active') : (step3 == 'done' ? 'done' : '')}">
             <div class="tracking-step-dot"><i class="bi bi-truck"></i></div>
             <span class="tracking-step-label">En<br/>livraison</span>
           </div>
-
           <div class="tracking-step" th:classappend="${tracking.status.name() == 'DELIVERED' ? 'done' : ''}">
             <div class="tracking-step-dot"><i class="bi bi-house-check"></i></div>
             <span class="tracking-step-label">Livrée</span>
@@ -71,22 +67,10 @@
     <th:block th:if="${tracking.status.name() == 'CANCELLED'}">
       <div class="tracking-progress">
         <div class="tracking-progress-fill cancelled" style="width:80%"></div>
-        <div class="tracking-step cancelled">
-          <div class="tracking-step-dot"><i class="bi bi-x-lg"></i></div>
-          <span class="tracking-step-label">Commande<br/>annulée</span>
-        </div>
-        <div class="tracking-step cancelled">
-          <div class="tracking-step-dot"><i class="bi bi-x-lg"></i></div>
-          <span class="tracking-step-label"></span>
-        </div>
-        <div class="tracking-step cancelled">
-          <div class="tracking-step-dot"><i class="bi bi-x-lg"></i></div>
-          <span class="tracking-step-label"></span>
-        </div>
-        <div class="tracking-step cancelled">
-          <div class="tracking-step-dot"><i class="bi bi-x-lg"></i></div>
-          <span class="tracking-step-label"></span>
-        </div>
+        <div class="tracking-step cancelled"><div class="tracking-step-dot"><i class="bi bi-x-lg"></i></div><span class="tracking-step-label">Commande<br/>annulée</span></div>
+        <div class="tracking-step cancelled"><div class="tracking-step-dot"><i class="bi bi-x-lg"></i></div><span class="tracking-step-label"></span></div>
+        <div class="tracking-step cancelled"><div class="tracking-step-dot"><i class="bi bi-x-lg"></i></div><span class="tracking-step-label"></span></div>
+        <div class="tracking-step cancelled"><div class="tracking-step-dot"><i class="bi bi-x-lg"></i></div><span class="tracking-step-label"></span></div>
       </div>
     </th:block>
 
@@ -100,37 +84,67 @@
     </p>
   </div>
 
-  <!-- Infos livreur : téléphone, plaque, photo, lien Maps (actualisées avec la position ~30 s) -->
-  <div th:if="${tracking != null}" class="mx-auto mb-4 p-4 rounded-3 border admin-card courier-follow-card" style="max-width: 900px;">
-    <h2 class="h5 mb-2" style="color: #8B5E3C;" th:text="'Votre livreur'">Livreur</h2>
-    <p class="small text-muted mb-4" th:text="'Ces informations sont mises à jour par Bola’s. La position sur la carte suit le GPS du livreur.'">Aide</p>
-    <div class="row g-4 align-items-start">
-      <div class="col-md-4 text-center" id="courier-photo-box"
-           th:style="${tracking.courierPhotoUrl != null and !tracking.courierPhotoUrl.isEmpty()} ? '' : 'display:none;'">
-        <img id="courier-photo-el" class="rounded-3 shadow-sm img-fluid courier-photo-thumb" alt="Livreur / véhicule"
-             th:src="${tracking.courierPhotoUrl != null and !tracking.courierPhotoUrl.isEmpty()} ? ${tracking.courierPhotoUrl} : ''"/>
+  <!-- Infos livreur -->
+  <div th:if="${tracking != null}" class="mx-auto mb-4 p-4 rounded-3 border admin-card" style="max-width: 900px;">
+    <h2 class="h5 mb-3" style="color: #8B5E3C;">
+      <i class="bi bi-bicycle me-2"></i>Votre livreur
+    </h2>
+
+    <!-- Pas encore assigné -->
+    <div th:if="${tracking.assignedCourierName == null and tracking.courierPhone == null}"
+         class="text-muted text-center py-3">
+      <i class="bi bi-hourglass-split" style="font-size:2rem;opacity:.4;display:block;margin-bottom:8px;"></i>
+      Livreur en cours d'assignation...
+    </div>
+
+    <!-- Livreur assigné -->
+    <div th:if="${tracking.assignedCourierName != null or tracking.courierPhone != null}"
+         class="row g-3 align-items-start">
+      <div class="col-md-3 text-center">
+        <div th:if="${tracking.courierPhotoUrl != null and !tracking.courierPhotoUrl.isEmpty()}">
+          <img th:src="${tracking.courierPhotoUrl}" class="rounded-circle shadow-sm"
+               style="width:80px;height:80px;object-fit:cover;border:3px solid var(--bolas-accent);" alt="Photo livreur"/>
+        </div>
+        <div th:if="${tracking.courierPhotoUrl == null or tracking.courierPhotoUrl.isEmpty()}"
+             style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#8B5E3C,#C49A6C);display:inline-flex;align-items:center;justify-content:center;font-size:1.8rem;color:#fff;font-weight:700;margin:0 auto;">
+          <span th:text="${tracking.assignedCourierName != null ? tracking.assignedCourierName.substring(0,1).toUpperCase() : '?'}">?</span>
+        </div>
+        <div class="mt-2">
+          <span class="badge bg-success" th:if="${tracking.status.name() == 'IN_DELIVERY'}">En livraison</span>
+          <span class="badge bg-success" th:if="${tracking.status.name() == 'DELIVERED'}">Livré</span>
+          <span class="badge bg-secondary" th:if="${tracking.status.name() != 'IN_DELIVERY' and tracking.status.name() != 'DELIVERED'}">Assigné</span>
+        </div>
       </div>
-      <div class="col-md-8">
-        <ul class="list-unstyled mb-3 courier-track-details">
-          <li class="mb-3">
-            <span class="text-muted small d-block" th:text="'Téléphone du livreur'">Tél</span>
-            <span id="courier-phone-text" class="fw-semibold" th:text="${tracking.courierPhone != null and !tracking.courierPhone.isEmpty()} ? ${tracking.courierPhone} : '—'">—</span>
-            <span id="courier-phone-actions" class="ms-2"
-                  th:style="${tracking.courierPhone != null and !tracking.courierPhone.isEmpty()} ? '' : 'display:none;'">
-              <a id="courier-tel-a" href="#" class="btn btn-sm btn-outline-secondary" th:text="'Appeler'">Appeler</a>
-              <a id="courier-wa-a" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-sm text-white ms-1" style="background:#25D366;" th:text="'WhatsApp'">WA</a>
+      <div class="col-md-9">
+        <ul class="list-unstyled mb-0">
+          <li class="mb-2" th:if="${tracking.assignedCourierName != null}">
+            <span class="text-muted small d-block">Prénom / Nom</span>
+            <span class="fw-semibold" th:text="${tracking.assignedCourierName}">—</span>
+          </li>
+          <li class="mb-2">
+            <span class="text-muted small d-block">Téléphone</span>
+            <span id="courier-phone-text" class="fw-semibold"
+                  th:text="${tracking.assignedCourierPhone != null ? tracking.assignedCourierPhone : (tracking.courierPhone != null ? tracking.courierPhone : '—')}">—</span>
+            <span class="ms-2" th:if="${tracking.assignedCourierPhone != null or tracking.courierPhone != null}">
+              <a class="btn btn-sm btn-outline-secondary"
+                 th:href="${'tel:+' + (tracking.assignedCourierPhone != null ? tracking.assignedCourierPhone : tracking.courierPhone)}">
+                <i class="bi bi-telephone me-1"></i>Appeler
+              </a>
+              <a target="_blank" class="btn btn-sm text-white ms-1" style="background:#25D366;"
+                 th:href="${'https://wa.me/' + (tracking.assignedCourierPhone != null ? tracking.assignedCourierPhone : tracking.courierPhone)}">
+                <i class="bi bi-whatsapp me-1"></i>WhatsApp
+              </a>
             </span>
           </li>
-          <li class="mb-3">
-            <span class="text-muted small d-block" th:text="'Plaque du véhicule'">Plaque</span>
+          <li class="mb-2" th:if="${tracking.courierVehiclePlate != null}">
+            <span class="text-muted small d-block">Plaque du véhicule</span>
             <span id="courier-plate-text" class="fw-semibold fs-5" style="letter-spacing:.08em;"
-                  th:text="${tracking.courierVehiclePlate != null and !tracking.courierVehiclePlate.isEmpty()} ? ${tracking.courierVehiclePlate} : '—'">—</span>
+                  th:text="${tracking.courierVehiclePlate}">—</span>
           </li>
-          <li class="mb-0">
-            <a id="courier-gmaps-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-hero-outline btn-sm"
-               th:style="${tracking.courierLatitude != null and tracking.courierLongitude != null} ? '' : 'display:none;'"
-               th:href="${tracking.courierLatitude != null and tracking.courierLongitude != null} ? |https://www.google.com/maps?q=${tracking.courierLatitude},${tracking.courierLongitude}| : '#'">
-              <i class="bi bi-geo-alt me-1"></i><span th:text="'Voir la position sur Google Maps'">Maps</span>
+          <li th:if="${tracking.courierLatitude != null and tracking.courierLongitude != null}">
+            <a id="courier-gmaps-link" target="_blank" class="btn btn-hero-outline btn-sm"
+               th:href="${'https://www.google.com/maps?q=' + tracking.courierLatitude + ',' + tracking.courierLongitude}">
+              <i class="bi bi-geo-alt me-1"></i>Voir la position sur Google Maps
             </a>
           </li>
         </ul>
@@ -138,13 +152,20 @@
     </div>
   </div>
 
+  <!-- Carte GPS — hauteur fixe, overflow:hidden, bouton plein écran -->
   <div th:if="${tracking != null and googleMapsApiKey != null and !googleMapsApiKey.isEmpty()}" class="mx-auto" style="max-width: 900px;">
-    <div id="map-tracking" class="shadow-sm"
-         th:attr="data-shop-lat=${shopLatitude},data-shop-lng=${shopLongitude},
-                  data-client-lat=${tracking.clientLatitude},data-client-lng=${tracking.clientLongitude},
-                  data-courier-lat=${tracking.courierLatitude},data-courier-lng=${tracking.courierLongitude},
-                  data-country=${tracking.country}"></div>
-    <p class="small text-muted mt-2 text-center" th:text="'Carte actualisée toutes les 30 secondes en cas de livraison en cours.'">Aide</p>
+    <div style="position:relative;overflow:hidden;border-radius:12px;">
+      <div id="map-tracking" class="shadow-sm"
+           th:attr="data-shop-lat=${shopLatitude},data-shop-lng=${shopLongitude},
+                    data-client-lat=${tracking.clientLatitude},data-client-lng=${tracking.clientLongitude},
+                    data-courier-lat=${tracking.courierLatitude},data-courier-lng=${tracking.courierLongitude},
+                    data-country=${tracking.country}"></div>
+      <button onclick="toggleMapFullscreen()" title="Plein écran"
+              style="position:absolute;top:8px;right:8px;z-index:10;background:rgba(255,255,255,.9);border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:1rem;">
+        <i class="bi bi-arrows-fullscreen" id="fullscreen-icon"></i>
+      </button>
+    </div>
+    <p class="small text-muted mt-2 text-center">Carte actualisée toutes les 30 secondes en cas de livraison en cours.</p>
   </div>
 
   <div th:if="${trackingError != null}" class="alert alert-warning text-center mx-auto" style="max-width: 560px;" role="alert" th:text="${trackingError}">
@@ -159,55 +180,24 @@
   <script th:inline="javascript">
     /*<![CDATA[*/
     (function () {
-      function digits(s) {
-        return s ? String(s).replace(/\D/g, '') : '';
-      }
-      function applyCourierFromData(data) {
-        var phone = data.courierPhone;
-        var plate = data.courierVehiclePlate;
-        var photo = data.courierPhotoUrl;
-        var lat = data.courierLatitude;
-        var lng = data.courierLongitude;
-        var phoneEl = document.getElementById('courier-phone-text');
-        var actions = document.getElementById('courier-phone-actions');
-        var telA = document.getElementById('courier-tel-a');
-        var waA = document.getElementById('courier-wa-a');
-        var plateEl = document.getElementById('courier-plate-text');
-        var photoBox = document.getElementById('courier-photo-box');
-        var photoImg = document.getElementById('courier-photo-el');
-        var gmaps = document.getElementById('courier-gmaps-link');
-        var d = digits(phone);
-        if (phoneEl) phoneEl.textContent = (phone && String(phone).trim()) ? phone : '—';
-        if (actions) actions.style.display = d ? 'inline' : 'none';
-        if (telA) telA.href = d ? ('tel:+' + d) : '#';
-        if (waA) waA.href = d ? ('https://wa.me/' + d) : '#';
-        if (plateEl) plateEl.textContent = (plate && String(plate).trim()) ? plate : '—';
-        if (photoBox && photoImg) {
-          if (photo && String(photo).trim()) {
-            photoBox.style.display = '';
-            photoImg.src = photo;
-          } else {
-            photoBox.style.display = 'none';
-          }
-        }
-        if (gmaps) {
-          if (lat != null && lng != null && !isNaN(parseFloat(lat)) && !isNaN(parseFloat(lng))) {
-            gmaps.href = 'https://www.google.com/maps?q=' + lat + ',' + lng;
-            gmaps.style.display = 'inline-block';
-          } else {
-            gmaps.style.display = 'none';
-          }
-        }
-      }
       var pollBase = /*[[@{/api/public/tracking/}]]*/ '';
       var trackCode = /*[[${tracking.trackingNumber}]]*/ '';
-      window.applyBolasCourierTracking = applyCourierFromData;
       window.bolasTrackingPollSubscribers = window.bolasTrackingPollSubscribers || [];
       function poll() {
         fetch(pollBase + encodeURIComponent(trackCode))
           .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
           .then(function (data) {
-            applyCourierFromData(data);
+            // Mise à jour téléphone
+            var phoneEl = document.getElementById('courier-phone-text');
+            if (phoneEl && data.courierPhone) phoneEl.textContent = data.courierPhone;
+            // Mise à jour plaque
+            var plateEl = document.getElementById('courier-plate-text');
+            if (plateEl && data.courierVehiclePlate) plateEl.textContent = data.courierVehiclePlate;
+            // Mise à jour lien Maps
+            var gmaps = document.getElementById('courier-gmaps-link');
+            if (gmaps && data.courierLatitude && data.courierLongitude) {
+              gmaps.href = 'https://www.google.com/maps?q=' + data.courierLatitude + ',' + data.courierLongitude;
+            }
             (window.bolasTrackingPollSubscribers || []).forEach(function (fn) {
               try { fn(data); } catch (e) {}
             });
@@ -217,6 +207,27 @@
       poll();
       setInterval(poll, 30000);
     })();
+
+    // Plein écran carte
+    var mapFullscreen = false;
+    function toggleMapFullscreen() {
+      var mapEl = document.getElementById('map-tracking');
+      var icon = document.getElementById('fullscreen-icon');
+      if (!mapEl) return;
+      if (!mapFullscreen) {
+        mapEl.style.height = '80vh';
+        if (icon) { icon.className = 'bi bi-fullscreen-exit'; }
+        mapFullscreen = true;
+      } else {
+        mapEl.style.height = '';
+        if (icon) { icon.className = 'bi bi-arrows-fullscreen'; }
+        mapFullscreen = false;
+      }
+      // Forcer le redimensionnement de la carte Google Maps
+      if (window.google && window.google.maps && window._bolasMap) {
+        google.maps.event.trigger(window._bolasMap, 'resize');
+      }
+    }
     /*]]>*/
   </script>
 </th:block>
@@ -239,44 +250,36 @@
       var cLng = parseFloat(el.getAttribute('data-courier-lng'));
       var country = el.getAttribute('data-country') || 'TG';
 
-      // Coordonnées par défaut selon le pays
       var countryDefaults = {
-        'TG': { lat: 6.1375, lng: 1.2123, zoom: 13 },
-        'CI': { lat: 5.3600, lng: -3.9903, zoom: 13 }
+        'TG': { lat: 6.1375, lng: 1.2123 },
+        'CI': { lat: 5.3600, lng: -3.9903 }
       };
       var defaults = countryDefaults[country] || countryDefaults['TG'];
-
-      // Utiliser les coords boutique si valides, sinon défaut pays
       var baseLat = !isNaN(shopLat) ? shopLat : defaults.lat;
       var baseLng = !isNaN(shopLng) ? shopLng : defaults.lng;
-
       var center = { lat: baseLat, lng: baseLng };
       if (!isNaN(clientLat) && !isNaN(clientLng)) {
         center = { lat: (baseLat + clientLat) / 2, lng: (baseLng + clientLng) / 2 };
       }
 
       var map = new google.maps.Map(el, {
-        zoom: 13,
-        center: center,
+        zoom: 13, center: center,
         styles: [
           { elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
           { elementType: 'labels.text.fill', stylers: [{ color: '#8B5E3C' }] },
           { featureType: 'water', elementType: 'geometry.fill', stylers: [{ color: '#e8dfd6' }] }
         ]
       });
+      window._bolasMap = map;
 
       new google.maps.Marker({
-        position: { lat: baseLat, lng: baseLng },
-        map: map,
-        title: 'Bola\'s',
+        position: { lat: baseLat, lng: baseLng }, map: map, title: 'BOLA',
         icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#d9534f', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 }
       });
 
       if (!isNaN(clientLat) && !isNaN(clientLng)) {
         new google.maps.Marker({
-          position: { lat: clientLat, lng: clientLng },
-          map: map,
-          title: 'Client',
+          position: { lat: clientLat, lng: clientLng }, map: map, title: 'Destination',
           icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#0d6efd', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 }
         });
       }
@@ -284,52 +287,37 @@
       var courierMarker = null;
       var directionsService = new google.maps.DirectionsService();
       var directionsRenderer = new google.maps.DirectionsRenderer({
-        polylineOptions: { strokeColor: MAP_THEME, strokeWeight: 5 },
-        suppressMarkers: true
+        polylineOptions: { strokeColor: MAP_THEME, strokeWeight: 5 }, suppressMarkers: true
       });
       directionsRenderer.setMap(map);
-
-      function drawRoute(from, to) {
-        if (!from || !to || isNaN(from.lat) || isNaN(to.lat)) return;
-        directionsService.route(
-          { origin: from, destination: to, travelMode: google.maps.TravelMode.DRIVING },
-          function (response, status) {
-            if (status === 'OK') directionsRenderer.setDirections(response);
-          }
-        );
-      }
 
       function updateCourier(lat, lng) {
         if (isNaN(lat) || isNaN(lng)) return;
         var pos = { lat: lat, lng: lng };
         if (!courierMarker) {
           courierMarker = new google.maps.Marker({
-            position: pos,
-            map: map,
-            title: 'Livreur',
+            position: pos, map: map, title: 'Livreur',
             icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#198754', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 }
           });
         } else {
           courierMarker.setPosition(pos);
         }
         if (!isNaN(clientLat) && !isNaN(clientLng)) {
-          drawRoute(pos, { lat: clientLat, lng: clientLng });
+          directionsService.route(
+            { origin: pos, destination: { lat: clientLat, lng: clientLng }, travelMode: google.maps.TravelMode.DRIVING },
+            function (response, status) { if (status === 'OK') directionsRenderer.setDirections(response); }
+          );
         }
       }
 
       if (!isNaN(cLat) && !isNaN(cLng)) updateCourier(cLat, cLng);
 
-      if (window.bolasTrackingPollSubscribers) {
-        window.bolasTrackingPollSubscribers.push(function (data) {
-          if (data.courierLatitude != null && data.courierLongitude != null) {
-            updateCourier(parseFloat(data.courierLatitude), parseFloat(data.courierLongitude));
-          }
-          if (data.clientLatitude != null && data.clientLongitude != null) {
-            clientLat = parseFloat(data.clientLatitude);
-            clientLng = parseFloat(data.clientLongitude);
-          }
-        });
-      }
+      window.bolasTrackingPollSubscribers = window.bolasTrackingPollSubscribers || [];
+      window.bolasTrackingPollSubscribers.push(function (data) {
+        if (data.courierLatitude != null && data.courierLongitude != null) {
+          updateCourier(parseFloat(data.courierLatitude), parseFloat(data.courierLongitude));
+        }
+      });
     }
     window.initBolasMap = initBolasMap;
     /*]]>*/

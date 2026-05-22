@@ -28,12 +28,41 @@
     </div>
     <!-- Barre de recherche rapide -->
     <form th:action="@{/products}" method="get" class="d-flex gap-2 justify-content-center mt-4" style="max-width:480px;margin:0 auto;">
-      <input type="text" name="q" class="form-control" placeholder="Rechercher un produit..."
-             maxlength="200" autocomplete="off" style="border-radius:999px;padding:.6rem 1.2rem;"/>
+      <div class="position-relative flex-grow-1">
+        <input type="text" name="q" class="form-control" placeholder="Rechercher un produit..."
+               maxlength="200" autocomplete="off" style="border-radius:999px;padding:.6rem 1.2rem;padding-right:3rem;"/>
+        <!-- Icône recherche par photo -->
+        <button type="button" onclick="openImageSearch()" title="Rechercher par photo"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--bolas-accent);font-size:1.1rem;">
+          <i class="bi bi-camera"></i>
+        </button>
+      </div>
       <button type="submit" class="btn btn-hero-solid" style="border-radius:999px;white-space:nowrap;">
         <i class="bi bi-search me-1"></i>Chercher
       </button>
     </form>
+
+    <!-- Modal recherche par photo -->
+    <div id="imageSearchModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:24px;max-width:400px;width:90%;position:relative;">
+        <button onclick="closeImageSearch()" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.3rem;cursor:pointer;">✕</button>
+        <h3 style="color:var(--bolas-accent);margin-bottom:12px;font-size:1.1rem;">
+          <i class="bi bi-camera me-2"></i>Rechercher par photo
+        </h3>
+        <p style="font-size:.9rem;color:#666;margin-bottom:16px;">Uploadez une photo et BOLA cherche des produits similaires.</p>
+        <input type="file" id="imageSearchInput" accept="image/*" capture="environment"
+               style="display:none;" onchange="submitImageSearch(this)"/>
+        <div class="d-flex gap-2">
+          <button onclick="document.getElementById('imageSearchInput').click()"
+                  class="btn btn-hero-solid flex-grow-1">
+            <i class="bi bi-upload me-1"></i>Choisir une photo
+          </button>
+        </div>
+        <div id="imageSearchStatus" style="margin-top:12px;font-size:.9rem;color:#666;display:none;">
+          <i class="bi bi-hourglass-split me-1"></i>Analyse en cours...
+        </div>
+      </div>
+    </div>
     <!-- Stats rapides -->
     <div class="hero-stats">
       <div class="hero-stat-item">
@@ -150,6 +179,36 @@
     </div>
   </section>
 
+  <!-- ===== SECTION TRENDS ===== -->
+  <section class="py-5 border-top" style="border-color:var(--bolas-border) !important;"
+           th:if="${trendProducts != null and !trendProducts.isEmpty()}">
+    <div class="container">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h2 class="h3 section-title mb-0">🔥 Tendances du moment</h2>
+        <a th:href="@{/trends}" class="small fw-semibold" style="color:var(--bolas-accent);">
+          Voir tout <i class="bi bi-arrow-right"></i>
+        </a>
+      </div>
+      <p class="section-subtitle">Les produits qui font le buzz sur BOLA en ce moment</p>
+      <div class="products-scroll-wrap">
+        <button class="scroll-btn scroll-btn-left" onclick="scrollCards('trends-scroll',-1)" aria-label="Précédent">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+        <div class="products-scroll" id="trends-scroll">
+          <th:block th:each="p : ${trendProducts}">
+            <div style="position:relative;flex-shrink:0;">
+              <span style="position:absolute;top:8px;left:8px;z-index:10;background:linear-gradient(135deg,#ff6b35,#f7931e);color:#fff;font-size:.65rem;padding:2px 7px;border-radius:999px;font-weight:700;">🔥 TREND</span>
+              <th:block th:replace="~{fragments/product-card :: card(p=${p})}"></th:block>
+            </div>
+          </th:block>
+        </div>
+        <button class="scroll-btn scroll-btn-right" onclick="scrollCards('trends-scroll',1)" aria-label="Suivant">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== SECTION "VENDRE SUR BOLA" ===== -->
   <section class="sell-on-bola-section py-5">
     <div class="container">
@@ -241,5 +300,53 @@
 </main>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
+
+<script>
+// Recherche par photo
+function openImageSearch() {
+  var modal = document.getElementById('imageSearchModal');
+  if (modal) { modal.style.display = 'flex'; }
+}
+function closeImageSearch() {
+  var modal = document.getElementById('imageSearchModal');
+  if (modal) { modal.style.display = 'none'; }
+}
+function submitImageSearch(input) {
+  if (!input.files || !input.files[0]) return;
+  var status = document.getElementById('imageSearchStatus');
+  if (status) status.style.display = 'block';
+
+  var formData = new FormData();
+  formData.append('image', input.files[0]);
+
+  // CSRF token
+  var csrfMeta = document.querySelector('meta[name="_csrf"]');
+  var csrfHeader = document.querySelector('meta[name="_csrf_header"]');
+  var headers = {};
+  if (csrfMeta && csrfHeader) {
+    headers[csrfHeader.content] = csrfMeta.content;
+  }
+
+  fetch('/api/search/image', {
+    method: 'POST',
+    body: formData,
+    headers: headers
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (status) status.style.display = 'none';
+    closeImageSearch();
+    if (data.keywords) {
+      window.location.href = '/products?q=' + encodeURIComponent(data.keywords);
+    } else {
+      alert('Aucun résultat — essayez avec des mots-clés.');
+    }
+  })
+  .catch(function() {
+    if (status) status.style.display = 'none';
+    alert('Erreur lors de l\'analyse. Réessayez.');
+  });
+}
+</script>
 </body>
 </html>

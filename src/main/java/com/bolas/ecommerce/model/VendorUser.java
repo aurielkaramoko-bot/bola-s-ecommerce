@@ -99,13 +99,13 @@ public class VendorUser {
     @Column(name = "banner_url", length = 2000)
     private String bannerUrl;
 
-    /** Date de début de l'abonnement */
+    /** Date de début de l'abonnement (avec heure exacte) */
     @Column(name = "subscription_starts_at")
-    private java.time.LocalDate subscriptionStartsAt;
+    private java.time.LocalDateTime subscriptionStartsAt;
 
-    /** Date d'expiration de l'abonnement (null = pas d'abonnement actif) */
+    /** Date d'expiration de l'abonnement (avec heure exacte — null = pas d'abonnement actif) */
     @Column(name = "subscription_expires_at")
-    private java.time.LocalDate subscriptionExpiresAt;
+    private java.time.LocalDateTime subscriptionExpiresAt;
 
 
 
@@ -167,6 +167,23 @@ public class VendorUser {
     @Column(name = "referral_bonus_months")
     private int referralBonusMonths = 0;
 
+    // ─── Paramètres boutique ──────────────────────────────────────────────────
+
+    /** Statut boutique : OPEN / CLOSED / VACATION */
+    @Size(max = 20)
+    @Column(name = "shop_status", length = 20)
+    private String shopStatus = "OPEN";
+
+    /** Langue principale de la boutique */
+    @Size(max = 50)
+    @Column(name = "shop_language", length = 50)
+    private String shopLanguage;
+
+    /** Horaires d'ouverture (ex: "Lun-Sam 8h-18h") */
+    @Size(max = 200)
+    @Column(name = "shop_hours", length = 200)
+    private String shopHours;
+
     // ─── Getters / Setters ────────────────────────────────────────────────────
 
     public Long getId() { return id; }
@@ -220,11 +237,11 @@ public class VendorUser {
     public String getBannerUrl() { return bannerUrl; }
     public void setBannerUrl(String bannerUrl) { this.bannerUrl = bannerUrl; }
 
-    public java.time.LocalDate getSubscriptionStartsAt() { return subscriptionStartsAt; }
-    public void setSubscriptionStartsAt(java.time.LocalDate subscriptionStartsAt) { this.subscriptionStartsAt = subscriptionStartsAt; }
+    public java.time.LocalDateTime getSubscriptionStartsAt() { return subscriptionStartsAt; }
+    public void setSubscriptionStartsAt(java.time.LocalDateTime subscriptionStartsAt) { this.subscriptionStartsAt = subscriptionStartsAt; }
 
-    public java.time.LocalDate getSubscriptionExpiresAt() { return subscriptionExpiresAt; }
-    public void setSubscriptionExpiresAt(java.time.LocalDate subscriptionExpiresAt) { this.subscriptionExpiresAt = subscriptionExpiresAt; }
+    public java.time.LocalDateTime getSubscriptionExpiresAt() { return subscriptionExpiresAt; }
+    public void setSubscriptionExpiresAt(java.time.LocalDateTime subscriptionExpiresAt) { this.subscriptionExpiresAt = subscriptionExpiresAt; }
 
 
 
@@ -245,7 +262,7 @@ public class VendorUser {
     /** Jours restants avant expiration (négatif = expiré) */
     public long getDaysUntilExpiry() {
         if (subscriptionExpiresAt == null) return Long.MAX_VALUE;
-        return java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), subscriptionExpiresAt);
+        return java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDateTime.now(), subscriptionExpiresAt);
     }
 
     /** Nom d'affichage : priorité shopName, sinon username */
@@ -342,4 +359,19 @@ public class VendorUser {
 
     public int getReferralBonusMonths() { return referralBonusMonths; }
     public void setReferralBonusMonths(int referralBonusMonths) { this.referralBonusMonths = referralBonusMonths; }
+
+    // ─── Paramètres boutique ─────────────────────────────────────────────────
+
+    public String getShopStatus() { return shopStatus != null ? shopStatus : "OPEN"; }
+    public void setShopStatus(String shopStatus) { this.shopStatus = shopStatus; }
+
+    public boolean isShopOpen() { return "OPEN".equals(getShopStatus()); }
+    public boolean isShopClosed() { return "CLOSED".equals(getShopStatus()); }
+    public boolean isShopOnVacation() { return "VACATION".equals(getShopStatus()); }
+
+    public String getShopLanguage() { return shopLanguage; }
+    public void setShopLanguage(String shopLanguage) { this.shopLanguage = shopLanguage; }
+
+    public String getShopHours() { return shopHours; }
+    public void setShopHours(String shopHours) { this.shopHours = shopHours; }
 }

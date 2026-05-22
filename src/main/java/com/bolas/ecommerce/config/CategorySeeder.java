@@ -42,41 +42,65 @@ public class CategorySeeder {
         "⚽|Sport & Loisirs|Football>Ballons de foot,Maillots de foot,Crampons,Protège-tibias,Filets de but|Fitness & Gym>Haltères,Tapis de sport,Cordes à sauter,Élastiques musculation,Bancs de musculation|Sports d'eau>Maillots de bain homme,Lunettes de natation,Bouées,Palmes|Sports de raquette>Raquettes de tennis,Balles de tennis,Raquettes de badminton|Jeux & Jouets>Jouets bébé,Jeux de société,Poupées,Voitures jouet,Jeux éducatifs|Camping & Plein air>Tentes,Sacs de couchage,Lampes torches,Machettes camping",
         "🐾|Animaux & Accessoires|Chiens>Croquettes chien,Friandises chien,Laisses & Colliers,Jouets chien,Cages & Niches|Chats>Croquettes chat,Litière,Griffoirs,Jouets chat,Transportins|Oiseaux & Volailles>Aliments oiseaux,Cages oiseaux,Accessoires volaille|Vétérinaire>Antiparasitaires,Vaccins,Vitamines animaux,Pansements vétérinaires",
         "🎭|Artisanat Africain|Sculptures & Bois>Masques en bois,Statuettes,Instruments en bois,Mortiers sculptés,Tabourets Ashanti|Poterie & Céramique>Canaris,Jarres décoratives,Bols en terre cuite,Théières africaines|Vannerie & Raphia>Paniers en raphia,Nattes tressées,Chapeaux en paille,Dessous-de-plat|Peinture & Art>Peintures sur tissu,Batik,Peintures sur toile,Affiches artistiques|Bijoux artisanaux africains>Bijoux en perles,Bijoux en bronze,Bijoux en corne,Bijoux en cuir|Instruments traditionnels>Djembé,Kora,Balafon,Tam-tam,Sanza",
-        "🛠️|Services & Prestations|Coiffure & Beauté>Coiffure à domicile,Maquillage événement,Soins spa à domicile,Tressage|Couture & Retouche>Couture sur mesure,Retouches vêtements,Création tenues africaines|Événementiel>Décoration mariage,Traiteur événement,Location tentes & chaises,Sono & DJ|Réparation>Réparation téléphones,Réparation électroménager,Réparation auto,Cordonnerie|Services numériques>Création site web,Graphisme,Impression & Communication,Photos & Vidéos|Immobilier>Location appartement,Location maison,Vente terrain,Location boutique"
+        "🛠️|Services & Prestations|Coiffure & Beauté>Coiffure à domicile,Maquillage événement,Soins spa à domicile,Tressage|Couture & Retouche>Couture sur mesure,Retouches vêtements,Création tenues africaines|Événementiel>Décoration mariage,Traiteur événement,Location tentes & chaises,Sono & DJ|Réparation>Réparation téléphones,Réparation électroménager,Réparation auto,Cordonnerie|Services numériques>Création site web,Graphisme,Impression & Communication,Photos & Vidéos|Immobilier>Location appartement,Location maison,Vente terrain,Location boutique",
+        "💪|Nutrition Sportive|Protéines>Whey protéine,Protéine végétale,Caséine,Isolat de protéine|Prise de masse>Gainers,Créatine,Dextrose,Maltodextrine|Acides aminés>BCAA,Glutamine,Arginine,Bêta-alanine|Perte de poids>Brûleurs de graisse,L-Carnitine,CLA,Thé vert extrait|Énergie & Endurance>Boissons isotoniques,Gels énergétiques,Barres protéinées,Caféine sport|Vitamines & Santé>Multivitamines,Oméga 3,Magnésium,Zinc,Vitamine C & D|Accessoires nutrition>Shakers,Boîtes compartiments,Balances alimentaires,Bouteilles sport",
+        "💒|Mariage & Événements|Tenues mariage>Robes de mariée,Costumes mariés,Tenues demoiselles d'honneur,Tenues invités mariage|Décoration mariage>Centres de table,Ballons & Guirlandes,Arches florales,Nappes & Housses chaises|Faire-part & Papeterie>Faire-part mariage,Faire-part baptême,Menus,Plans de table,Livres d'or|Cadeaux & Souvenirs>Cadeaux invités,Boîtes à dragées,Souvenirs personnalisés,Albums photo|Baptême & Anniversaire>Décorations baptême,Gâteaux événement,Tenues baptême bébé,Cadeaux naissance",
+        "🕌|Mode Modeste & Religion|Mode musulmane femme>Hijabs & Voiles,Abayas,Jilbabs,Turbans femme,Robes longues modestes|Mode musulmane homme>Djellabas,Gandouras,Kufis & Calottes,Chapeaux de prière|Accessoires prière>Tapis de prière,Chapelets,Corans & Livres islamiques,Encens & Bakhour|Mode chrétienne>Tenues église femme,Tenues église homme,Robes de choeur,Croix & Bijoux religieux|Spiritualité africaine>Objets rituels,Encens africains,Huiles spirituelles,Livres spirituels",
+        "✂️|Coiffure Pro & Salon|Matériel coiffure>Ciseaux professionnels,Tondeuses,Rasoirs,Séchoirs pro,Fers à lisser pro|Produits coiffure pro>Colorations cheveux,Décolorants,Permanentes,Lissages brésiliens,Kératine|Mobilier salon>Fauteuils de coiffure,Bacs à shampooing,Miroirs salon,Chariots coiffure|Consommables salon>Tabliers coiffure,Bonnets plastique,Gants latex,Pinces & Barrettes pro|Ongles & Nail art>Lampes UV/LED,Gels UV pro,Acrylique ongles,Ponceuses ongles,Nail art",
+        "🍼|Bébé & Puériculture|Alimentation bébé>Lait infantile 1er âge,Lait 2e âge,Petits pots,Céréales bébé,Biberons & Tétines|Hygiène bébé>Couches jetables,Couches lavables,Lingettes bébé,Crème change,Savon bébé|Couchage & Sécurité>Lits bébé,Matelas bébé,Moustiquaires bébé,Baby monitors,Barrières sécurité|Éveil & Développement>Tapis d'éveil,Mobiles musicaux,Anneaux dentition,Hochets,Portiques activité|Transport bébé>Poussettes,Porte-bébés & Écharpes,Sièges auto bébé,Couffins,Sacs à langer|Bain bébé>Baignoires bébé,Thermomètres bain,Sièges de bain,Serviettes à capuche",
+        "🖨️|Impression & Communication|Impression>Flyers & Prospectus,Affiches,Bannières roll-up,Cartes de visite,Brochures|Signalétique>Enseignes lumineuses,Panneaux publicitaires,Stickers & Autocollants,Bâches imprimées|Cadeaux entreprise>Stylos personnalisés,T-shirts publicitaires,Mugs personnalisés,Casquettes pub|Papeterie entreprise>En-têtes de lettre,Tampons encreurs,Enveloppes personnalisées,Blocs-notes",
+        "⚡|Énergie & Électricité|Énergie solaire>Panneaux solaires,Régulateurs solaires,Batteries solaires,Kits solaires complets,Onduleurs solaires|Groupes électrogènes>Groupes essence,Groupes diesel,Groupes inverter silencieux|Éclairage>Ampoules LED,Lampes solaires,Lampadaires solaires,Guirlandes lumineuses,Torches & Frontales|Eau & Pompage>Pompes à eau solaires,Pompes immergées,Châteaux d'eau,Filtres à eau,Purificateurs|Stabilisateurs>Stabilisateurs de tension,Onduleurs UPS,Parasurtenseurs,Multiprises protégées",
+        "🎒|Scolaire & Formation|Fournitures primaire>Ardoises & Craies,Crayons de couleur,Cahiers grands carreaux,Règles & Équerre|Fournitures lycée>Calculatrices scientifiques,Compas & Rapporteurs,Cahiers petits carreaux,Stylos plumes|Sacs scolaires>Cartables primaire,Sacs à dos lycée,Trousses,Sacs de sport école|Parascolaire>Livres de révision,Cahiers de vacances,Dictionnaires,Encyclopédies jeunesse|Formation pro>Livres de formation métier,Kits couture formation,Kits coiffure formation,Matériels cours"
     };
 
     @Transactional
     public void seed() {
-        // Idempotent : si déjà 21 familles racines → ne rien faire
-        if (repo.countByParentIdIsNull() >= 21) return;
+        // Idempotent : si déjà 30 familles racines → ne rien faire
+        if (repo.countByParentIdIsNull() >= 30) return;
 
-        // Remplace toutes les catégories existantes
-        repo.deleteAll();
-        repo.flush();
+        // Récupérer les slugs existants pour éviter les doublons
+        java.util.Set<String> existingSlugs = repo.findAll().stream()
+                .map(Category::getSlug)
+                .filter(s -> s != null)
+                .collect(java.util.stream.Collectors.toSet());
 
         for (String line : DATA) {
             String[] parts = line.split("\\|", 3);
             if (parts.length < 2) continue;
             String emoji    = parts[0];
             String rootName = parts[1];
+            String rootSlug = slugify(rootName);
 
-            Category root = saveCat(null, rootName, slugify(rootName), emoji);
+            // Ne pas recréer si déjà existant
+            if (existingSlugs.contains(rootSlug)) continue;
+
+            Category root = saveCat(null, rootName, rootSlug, emoji);
+            existingSlugs.add(rootSlug);
 
             if (parts.length < 3 || parts[2].isBlank()) continue;
 
             for (String subPart : parts[2].split("\\|")) {
                 String[] sv = subPart.split(">", 2);
                 String subName = sv[0].trim();
-                String subSlug = root.getSlug() + "-" + slugify(subName);
+                String subSlug = rootSlug + "-" + slugify(subName);
 
-                Category sub = saveCat(root.getId(), subName, subSlug, null);
+                Category sub;
+                if (existingSlugs.contains(subSlug)) {
+                    sub = repo.findBySlug(subSlug).orElse(saveCat(root.getId(), subName, subSlug, null));
+                } else {
+                    sub = saveCat(root.getId(), subName, subSlug, null);
+                    existingSlugs.add(subSlug);
+                }
 
                 if (sv.length < 2 || sv[1].isBlank()) continue;
 
                 for (String leaf : sv[1].split(",")) {
                     String leafName = leaf.trim();
                     String leafSlug = subSlug + "-" + slugify(leafName);
-                    saveCat(sub.getId(), leafName, leafSlug, null);
+                    if (!existingSlugs.contains(leafSlug)) {
+                        saveCat(sub.getId(), leafName, leafSlug, null);
+                        existingSlugs.add(leafSlug);
+                    }
                 }
             }
         }

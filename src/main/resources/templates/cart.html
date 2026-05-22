@@ -22,11 +22,27 @@
 
   <!-- Lignes du panier -->
   <div th:if="${cartLines != null and !cartLines.isEmpty()}">
+    <!-- Sélection globale -->
+    <div class="d-flex align-items-center gap-3 mb-2 px-1">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="selectAll" checked onchange="toggleAll(this)"/>
+        <label class="form-check-label small fw-semibold" for="selectAll">Tout sélectionner</label>
+      </div>
+      <span class="small text-muted ms-auto" id="selectedCount"></span>
+    </div>
+
     <div class="admin-card mb-3 overflow-hidden">
-      <div th:each="line : ${cartLines}" class="d-flex align-items-center gap-3 p-3 border-bottom"
+      <div th:each="line : ${cartLines}" class="d-flex align-items-center gap-3 p-3 border-bottom cart-line-row"
            style="border-color:#eee8e4 !important;"
            data-cart-line="1"
            th:attr="data-name=${line.product.name},data-qty=${line.quantity},data-total=${line.lineTotalCfa}">
+
+        <!-- Checkbox sélection -->
+        <div class="flex-shrink-0">
+          <input class="form-check-input cart-item-check" type="checkbox" checked
+                 th:attr="data-price=${line.lineTotalCfa}"
+                 onchange="updateTotal()"/>
+        </div>
 
         <!-- Photo -->
         <div style="width:72px;height:72px;flex-shrink:0;border-radius:8px;overflow:hidden;background:#f8f6f4;">
@@ -183,6 +199,42 @@
 <div th:replace="~{fragments/footer :: footer}"></div>
 
 <!-- Quantité : validation + soumission -->
+<script>
+// ─── Checkboxes sélection ─────────────────────────────────────────────────
+var cartTotalBase = /*[[${cartTotalCfa}]]*/ 0;
+
+function updateTotal() {
+  var checks = document.querySelectorAll('.cart-item-check');
+  var total = 0;
+  var selected = 0;
+  checks.forEach(function(cb) {
+    if (cb.checked) {
+      total += parseInt(cb.getAttribute('data-price') || '0', 10);
+      selected++;
+    }
+  });
+  var display = document.getElementById('cartTotalDisplay');
+  if (display) display.textContent = total.toLocaleString('fr-FR') + ' CFA';
+  var countEl = document.getElementById('selectedCount');
+  if (countEl) countEl.textContent = selected + ' article(s) sélectionné(s)';
+  // Mettre à jour la variable pour le calcul de taxe
+  cartTotal = total;
+  updateTax();
+}
+
+function toggleAll(masterCb) {
+  document.querySelectorAll('.cart-item-check').forEach(function(cb) {
+    cb.checked = masterCb.checked;
+  });
+  updateTotal();
+}
+
+// Init au chargement
+document.addEventListener('DOMContentLoaded', function() {
+  updateTotal();
+});
+</script>
+
 <script>
 document.querySelectorAll('.qty-form').forEach(function(form) {
   var input = form.querySelector('.qty-input');

@@ -39,6 +39,87 @@ public class ReviewReportController {
         this.notificationService = notificationService;
     }
 
+    /** Option "nouveauté pour moi" — notifie le vendeur */
+    @PostMapping("/products/{id}/novelty")
+    public String markAsNovelty(@PathVariable Long id,
+                                HttpSession session,
+                                RedirectAttributes ra) {
+        Customer customer = (Customer) session.getAttribute("BOLAS_CUSTOMER");
+        if (customer == null) {
+            ra.addFlashAttribute("flashError", "Vous devez être connecté.");
+            return "redirect:/products/" + id;
+        }
+
+        Product product = productRepository.findById(id).orElse(null);
+        if (product == null) {
+            return "redirect:/products";
+        }
+
+        // Notifier le vendeur si le produit lui appartient
+        if (product.getVendor() != null) {
+            notificationService.envoyer(
+                product.getVendor().getId(), NotificationDestinataire.VENDEUR,
+                NotificationType.AVIS,
+                "Un client découvre votre produit !",
+                "\"" + product.getName() + "\" — c'est une nouveauté pour "
+                    + customer.getFirstName(),
+                "/vendor/products"
+            );
+        }
+
+        ra.addFlashAttribute("flashOk", "Merci ! Le vendeur a été notifié de votre intérêt.");
+        return "redirect:/products/" + id;
+    }
+
+    /** Soumettre un avis sur une boutique (depuis la page boutique) */
+    @PostMapping("/review/submit")
+    public String submitVendorReview(@RequestParam Long vendorId,
+                                     @RequestParam int rating,
+                                     @RequestParam(required = false) String comment,
+                                     HttpSession session,
+                                     RedirectAttributes ra) {
+        Customer customer = (Customer) session.getAttribute("BOLAS_CUSTOMER");
+        if (customer == null) {
+            ra.addFlashAttribute("flashError", "Vous devez être connecté pour laisser un avis.");
+            return "redirect:/boutiques/" + vendorId;
+        }
+
+        VendorUser vendor = vendorUserRepository.findById(vendorId).orElse(null);
+        if (vendor == null) {
+            ra.addFlashAttribute("flashError", "Boutique introuvable.");
+            return "redirect:/boutiques";
+        }
+
+        if (rating < 1 || rating > 5) {
+            ra.addFlashAttribute("flashError", "Note invalide.");
+            return "redirect:/boutiques/" + vendorId;
+        }
+
+        Review review = new Review();
+        review.setReviewerName(customer.getFirstName() + " " + customer.getLastName());
+        review.setRating(rating);
+        review.setComment(comment != null ? comment.trim() : null);
+        review.setCreatedAt(Instant.now());
+        review.setApproved(true); // Auto-approuvé pour les clients connectés
+        // Lier au vendeur via un produit fictif ou directement si le modèle le permet
+        // Pour l'instant on utilise le premier produit du vendeur comme référence
+        productRepository.findByVendorAndAvailableTrue(vendor).stream().findFirst()
+                .ifPresent(review::setProduct);
+        reviewRepository.save(review);
+
+        // Notification au vendeur
+        notificationService.envoyer(
+            vendor.getId(), NotificationDestinataire.VENDEUR,
+            NotificationType.AVIS,
+            "Nouvel avis sur votre boutique",
+            rating + "/5 par " + customer.getFirstName(),
+            "/vendor/reviews"
+        );
+
+        ra.addFlashAttribute("flashOk", "Merci pour votre avis !");
+        return "redirect:/boutiques/" + vendorId;
+    }
+
     /** Soumettre un avis sur un produit */
     @PostMapping("/products/{id}/review")
     public String submitReview(@PathVariable Long id,

@@ -59,6 +59,38 @@
     </div>
   </div>
 
+  <!-- Carte de localisation compacte EN HAUT (juste sous le header) -->
+  <div th:if="${vendor.hasLocation()}" class="mb-4">
+    <!-- Mobile : repliée par défaut -->
+    <div class="d-md-none">
+      <button class="btn btn-outline-secondary btn-sm w-100 mb-2" type="button"
+              data-bs-toggle="collapse" data-bs-target="#shopMapMobile" aria-expanded="false">
+        <i class="bi bi-map me-1"></i>Voir sur la carte
+      </button>
+      <div class="collapse" id="shopMapMobile">
+        <a th:href="${'https://maps.google.com/?q=' + vendor.shopLatitude + ',' + vendor.shopLongitude}"
+           target="_blank" class="d-block">
+          <div id="shopMapMobileEl" style="width:100%;height:150px;border-radius:10px;border:2px solid var(--bolas-accent);overflow:hidden;cursor:pointer;"></div>
+        </a>
+        <div class="text-center mt-1">
+          <a th:href="${'https://maps.google.com/?q=' + vendor.shopLatitude + ',' + vendor.shopLongitude}"
+             target="_blank" class="small text-muted"><i class="bi bi-box-arrow-up-right me-1"></i>Ouvrir dans Google Maps</a>
+        </div>
+      </div>
+    </div>
+    <!-- Desktop : visible directement -->
+    <div class="d-none d-md-block">
+      <a th:href="${'https://maps.google.com/?q=' + vendor.shopLatitude + ',' + vendor.shopLongitude}"
+         target="_blank" title="Ouvrir dans Google Maps">
+        <div id="shopMapDesktop" style="width:100%;height:150px;border-radius:10px;border:2px solid var(--bolas-accent);overflow:hidden;cursor:pointer;position:relative;">
+          <div style="position:absolute;top:8px;right:8px;z-index:1;background:rgba(255,255,255,.9);border-radius:6px;padding:4px 8px;font-size:.8rem;">
+            <i class="bi bi-box-arrow-up-right me-1"></i>Agrandir
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
   <!-- Bandeau réduction boutique -->
   <div th:if="${vendor.shopDiscountActive}" class="alert mb-4 py-3 d-flex align-items-center gap-3"
        style="background:linear-gradient(135deg,#ff6b35,#f7931e);color:#fff;border:none;border-radius:12px;font-size:1.1rem;">
@@ -67,6 +99,18 @@
       <strong th:text="'🔥 -' + ${vendor.shopDiscountPercent} + '% sur toute la boutique !'">Réduction</strong>
       <span th:if="${vendor.shopDiscountEndsAt != null}" class="d-block" style="font-size:.85rem;opacity:.9;">
         Offre valable jusqu'au <span th:text="${vendor.shopDiscountEndsAt}">—</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Bandeau boutique fermée -->
+  <div th:if="${!vendor.shopOpen}" class="alert alert-warning mb-4 d-flex align-items-center gap-2">
+    <i class="bi bi-shop-window fs-4"></i>
+    <div>
+      <strong th:if="${vendor.shopClosed}">Cette boutique est temporairement fermée.</strong>
+      <strong th:if="${vendor.shopOnVacation}">Cette boutique est en vacances.</strong>
+      <span class="d-block small text-muted" th:if="${vendor.shopHours != null}">
+        Horaires habituels : <span th:text="${vendor.shopHours}">—</span>
       </span>
     </div>
   </div>
@@ -88,38 +132,82 @@
   </div>
 
   <!-- Section avis clients -->
-  <div th:if="${vendorReviews != null and !vendorReviews.isEmpty()}" class="mt-5">
+  <div class="mt-5">
     <h2 class="h5 fw-bold mb-3" style="color:var(--bolas-accent);">
       <i class="bi bi-chat-quote me-2"></i>Avis clients
     </h2>
-    <div th:each="review : ${vendorReviews}" class="admin-card p-3 mb-2">
-      <div class="d-flex align-items-start gap-3">
-        <div style="width:36px;height:36px;background:linear-gradient(135deg,#eee,#ddd);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <i class="bi bi-person" style="font-size:1rem;color:#999;"></i>
+
+    <!-- Formulaire laisser un avis (client connecté) -->
+    <div th:if="${connectedCustomer != null}" class="admin-card p-3 mb-3">
+      <h3 class="h6 fw-semibold mb-3" style="color:var(--bolas-accent);">
+        <i class="bi bi-pencil-square me-1"></i>Laisser un avis
+      </h3>
+      <form th:action="@{/review/submit}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <input type="hidden" name="vendorId" th:value="${vendor.id}"/>
+        <div class="mb-2">
+          <label class="form-label small fw-semibold">Note</label>
+          <div class="d-flex gap-2">
+            <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="rating" th:id="${'star' + i}" th:value="${i}" th:required="${true}"/>
+                <label class="form-check-label" th:for="${'star' + i}">
+                  <i class="bi bi-star-fill text-warning"></i> <span th:text="${i}">1</span>
+                </label>
+              </div>
+            </th:block>
+          </div>
         </div>
-        <div class="flex-grow-1">
-          <div class="d-flex align-items-center gap-2 mb-1">
-            <strong class="small" th:text="${review.reviewerName}">Client</strong>
-            <div>
-              <th:block th:each="i : ${#numbers.sequence(1, 5)}">
-                <i class="bi" th:classappend="${i <= review.rating} ? 'bi-star-fill text-warning' : 'bi-star text-muted'" style="font-size:0.75rem;"></i>
-              </th:block>
+        <div class="mb-2">
+          <label class="form-label small fw-semibold">Commentaire (optionnel)</label>
+          <textarea class="form-control" name="comment" rows="2" maxlength="1000"
+                    placeholder="Partagez votre expérience avec cette boutique..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-hero-solid btn-sm">
+          <i class="bi bi-send me-1"></i>Publier mon avis
+        </button>
+      </form>
+    </div>
+    <div th:if="${connectedCustomer == null}" class="alert alert-light border mb-3" style="font-size:.95rem;">
+      <i class="bi bi-person-lock me-1"></i>
+      <a th:href="@{/customer/login}" style="color:var(--bolas-accent);">Connectez-vous</a> pour laisser un avis.
+    </div>
+
+    <!-- Liste des avis -->
+    <div th:if="${vendorReviews != null and !vendorReviews.isEmpty()}">
+      <div th:each="review : ${vendorReviews}" class="admin-card p-3 mb-2">
+        <div class="d-flex align-items-start gap-3">
+          <div style="width:36px;height:36px;background:linear-gradient(135deg,#eee,#ddd);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="bi bi-person" style="font-size:1rem;color:#999;"></i>
+          </div>
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <strong class="small" th:text="${review.reviewerName}">Client</strong>
+              <div>
+                <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                  <i class="bi" th:classappend="${i <= review.rating} ? 'bi-star-fill text-warning' : 'bi-star text-muted'" style="font-size:0.75rem;"></i>
+                </th:block>
+              </div>
+              <span class="small text-muted ms-auto" th:text="${#temporals.format(review.createdAt, 'dd/MM/yyyy')}"></span>
             </div>
-            <span class="small text-muted ms-auto" th:text="${#temporals.format(review.createdAt, 'dd/MM/yyyy')}"></span>
-          </div>
-          <div class="small text-muted mb-1" th:if="${review.product != null}">
-            <i class="bi bi-box-seam me-1"></i><span th:text="${review.product.name}">Produit</span>
-          </div>
-          <p th:if="${review.comment != null}" class="small mb-1" th:text="${review.comment}"></p>
-          <div th:if="${review.vendorReply != null}" class="p-2 rounded small mt-1"
-               style="background:rgba(139,94,60,0.05);border-left:3px solid var(--bolas-accent);">
-            <span class="fw-semibold" style="color:var(--bolas-accent);">
-              <i class="bi bi-reply me-1"></i>Réponse du vendeur :
-            </span>
-            <span th:text="${review.vendorReply}"></span>
+            <div class="small text-muted mb-1" th:if="${review.product != null}">
+              <i class="bi bi-box-seam me-1"></i><span th:text="${review.product.name}">Produit</span>
+            </div>
+            <p th:if="${review.comment != null}" class="small mb-1" th:text="${review.comment}"></p>
+            <div th:if="${review.vendorReply != null}" class="p-2 rounded small mt-1"
+                 style="background:rgba(139,94,60,0.05);border-left:3px solid var(--bolas-accent);">
+              <span class="fw-semibold" style="color:var(--bolas-accent);">
+                <i class="bi bi-reply me-1"></i>Réponse du vendeur :
+              </span>
+              <span th:text="${review.vendorReply}"></span>
+            </div>
           </div>
         </div>
       </div>
+    </div>
+    <div th:if="${vendorReviews == null or vendorReviews.isEmpty()}" class="text-muted small py-3 text-center">
+      <i class="bi bi-chat-square-text fs-3 d-block mb-2 opacity-25"></i>
+      Aucun avis pour l'instant. Soyez le premier à laisser un avis !
     </div>
   </div>
 
@@ -250,32 +338,37 @@
   </div>
 </div>
 
-<!-- Google Maps pour localisation boutique -->
+<!-- Google Maps pour cartes compactes en haut -->
 <script th:if="${vendor.hasLocation() and googleMapsApiKey != null and !googleMapsApiKey.isEmpty()}"
-        th:src="${'https://maps.googleapis.com/maps/api/js?key=' + googleMapsApiKey + '&callback=initShopMap'}"
+        th:src="${'https://maps.googleapis.com/maps/api/js?key=' + googleMapsApiKey + '&callback=initShopMaps'}"
         async defer></script>
 <script th:if="${vendor.hasLocation()}">
-function initShopMap() {
+function initShopMaps() {
   var lat = [[${vendor.shopLatitude}]];
   var lng = [[${vendor.shopLongitude}]];
   var shopName = '[[${vendor.displayName}]]';
-  var mapEl = document.getElementById('shopMap');
-  if (!mapEl) return;
   var pos = { lat: lat, lng: lng };
-  var map = new google.maps.Map(mapEl, {
+  var mapOptions = {
     center: pos, zoom: 15,
+    disableDefaultUI: true,
     styles: [
       { featureType: 'poi', stylers: [{ visibility: 'simplified' }] },
       { featureType: 'transit', stylers: [{ visibility: 'off' }] }
     ]
-  });
-  new google.maps.Marker({
-    position: pos, map: map, title: shopName,
-    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12,
+  };
+  var markerOpts = {
+    position: pos, title: shopName,
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10,
             fillColor: '#8B5E3C', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3 }
+  };
+  ['shopMapDesktop', 'shopMapMobileEl'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var map = new google.maps.Map(el, mapOptions);
+    new google.maps.Marker(Object.assign({}, markerOpts, { map: map }));
   });
 }
-if (typeof google !== 'undefined' && google.maps) initShopMap();
+if (typeof google !== 'undefined' && google.maps) initShopMaps();
 </script>
 </body>
 </html>

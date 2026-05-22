@@ -53,6 +53,8 @@
                     th:text="${vendor.daysUntilExpiry < 0} ? 'Expiré' :
                               (${vendor.daysUntilExpiry == 0} ? 'Expire aujourd\'hui !' :
                               ${vendor.daysUntilExpiry} + ' jours restants')">—</span>
+              <div class="small text-muted mt-1"
+                   th:text="${#temporals.format(vendor.subscriptionExpiresAt, 'dd/MM/yyyy HH:mm')}">—</div>
             </div>
             <span th:if="${vendor.subscriptionExpiresAt == null}" class="text-muted small">Aucun</span>
           </div>
@@ -85,17 +87,17 @@
           <!-- Calendrier abonnement -->
           <div class="col-md-6">
             <label class="form-label fw-semibold small">
-              <i class="bi bi-calendar-check me-1"></i>Date de début
+              <i class="bi bi-calendar-check me-1"></i>Date et heure de début
             </label>
-            <input type="date" name="startsAt" class="form-control"
-                   th:value="${vendor.subscriptionStartsAt}"/>
+            <input type="datetime-local" name="startsAt" class="form-control"
+                   th:value="${vendor.subscriptionStartsAt != null ? #temporals.format(vendor.subscriptionStartsAt, 'yyyy-MM-dd''T''HH:mm') : ''}"/>
           </div>
           <div class="col-md-6">
             <label class="form-label fw-semibold small">
-              <i class="bi bi-calendar-x me-1"></i>Date de fin (expiration)
+              <i class="bi bi-calendar-x me-1"></i>Date et heure d'expiration
             </label>
-            <input type="date" name="expiresAt" class="form-control"
-                   th:value="${vendor.subscriptionExpiresAt}"/>
+            <input type="datetime-local" name="expiresAt" class="form-control"
+                   th:value="${vendor.subscriptionExpiresAt != null ? #temporals.format(vendor.subscriptionExpiresAt, 'yyyy-MM-dd''T''HH:mm') : ''}"/>
           </div>
 
           <!-- Raccourcis durée -->

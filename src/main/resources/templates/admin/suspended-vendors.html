@@ -184,13 +184,13 @@
             </div>
             <div class="col-6">
               <label class="form-label fw-semibold small">Début abonnement</label>
-              <input type="date" name="startsAt" class="form-control"
-                     th:value="${v.subscriptionStartsAt != null ? #temporals.format(v.subscriptionStartsAt,'yyyy-MM-dd') : #temporals.format(T(java.time.LocalDate).now(),'yyyy-MM-dd')}"/>
+              <input type="datetime-local" name="startsAt" class="form-control"
+                     th:value="${v.subscriptionStartsAt != null ? #temporals.format(v.subscriptionStartsAt,'yyyy-MM-dd''T''HH:mm') : #temporals.format(T(java.time.LocalDateTime).now(),'yyyy-MM-dd''T''HH:mm')}"/>
             </div>
             <div class="col-6">
               <label class="form-label fw-semibold small">Fin abonnement</label>
-              <input type="date" name="expiresAt" class="form-control"
-                     th:value="${v.subscriptionExpiresAt != null ? #temporals.format(v.subscriptionExpiresAt,'yyyy-MM-dd') : ''}"/>
+              <input type="datetime-local" name="expiresAt" class="form-control"
+                     th:value="${v.subscriptionExpiresAt != null ? #temporals.format(v.subscriptionExpiresAt,'yyyy-MM-dd''T''HH:mm') : ''}"/>
             </div>
           </div>
           <div class="modal-footer">

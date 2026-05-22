@@ -26,7 +26,10 @@
                       (${vendor.plan.name() == 'PRO'} ? 'Pack Pro' : 'Pack Débutant'))">Pack</span>
       <span class="badge bg-success">Actif</span>
       <span th:if="${vendor.subscriptionExpiresAt != null}" class="badge bg-light text-dark ms-1">
-        Expire le <span th:text="${vendor.subscriptionExpiresAt}"></span>
+        Expire le <span th:text="${#temporals.format(vendor.subscriptionExpiresAt, 'dd/MM/yyyy à HH\'h\'mm')}"></span>
+      </span>
+      <span th:if="${vendor.subscriptionStartsAt != null}" class="badge bg-light text-dark ms-1 d-none d-md-inline">
+        Activé le <span th:text="${#temporals.format(vendor.subscriptionStartsAt, 'dd/MM/yyyy à HH\'h\'mm')}"></span>
       </span>
     </div>
     <div class="ms-auto d-flex gap-2">
@@ -42,6 +45,18 @@
   <!-- Alertes flash -->
   <div th:if="${flashOk}" class="alert alert-success mb-3" th:text="${flashOk}"></div>
   <div th:if="${flashError}" class="alert alert-danger mb-3" th:text="${flashError}"></div>
+
+  <!-- Bannière profil incomplet -->
+  <div th:if="${vendor.shopDescription == null or vendor.shopAddress == null}"
+       class="alert alert-warning mb-3 d-flex align-items-center gap-2">
+    <i class="bi bi-exclamation-circle-fill"></i>
+    <div>
+      Complétez votre profil boutique pour attirer plus de clients.
+      <a th:href="@{/vendor/onboarding}" class="fw-semibold ms-1" style="color:var(--bolas-accent);">
+        Compléter maintenant →
+      </a>
+    </div>
+  </div>
 
   <!-- Bandeau sous-vendeur connecté -->
   <div th:if="${currentSeller != null}" class="alert alert-info mb-3 d-flex align-items-center gap-2">
@@ -360,6 +375,46 @@
         </form>
       </div>
 
+      <!-- Paramètres boutique -->
+      <div class="admin-card p-3 mt-3" th:if="${isOwner}">
+        <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);">
+          <i class="bi bi-gear me-2"></i>Paramètres boutique
+        </h2>
+        <form th:action="@{/vendor/settings/shop-params}" method="post" class="d-flex flex-column gap-2">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <div>
+            <label class="form-label small fw-semibold mb-1">Statut de la boutique</label>
+            <select class="form-select form-select-sm" name="shopStatus">
+              <option value="OPEN" th:selected="${vendor.shopStatus == 'OPEN' or vendor.shopStatus == null}">🟢 Ouverte</option>
+              <option value="CLOSED" th:selected="${vendor.shopStatus == 'CLOSED'}">🔴 Fermée temporairement</option>
+              <option value="VACATION" th:selected="${vendor.shopStatus == 'VACATION'}">🏖️ En vacances</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label small fw-semibold mb-1">Langue principale</label>
+            <select class="form-select form-select-sm" name="shopLanguage">
+              <option value="" th:selected="${vendor.shopLanguage == null}">— Non précisée —</option>
+              <option value="Français" th:selected="${'Français' == vendor.shopLanguage}">Français</option>
+              <option value="Anglais" th:selected="${'Anglais' == vendor.shopLanguage}">Anglais</option>
+              <option value="Ewe" th:selected="${'Ewe' == vendor.shopLanguage}">Ewe</option>
+              <option value="Haoussa" th:selected="${'Haoussa' == vendor.shopLanguage}">Haoussa</option>
+              <option value="Wolof" th:selected="${'Wolof' == vendor.shopLanguage}">Wolof</option>
+              <option value="Dioula" th:selected="${'Dioula' == vendor.shopLanguage}">Dioula</option>
+              <option value="Bambara" th:selected="${'Bambara' == vendor.shopLanguage}">Bambara</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label small fw-semibold mb-1">Horaires d'ouverture</label>
+            <input type="text" class="form-control form-control-sm" name="shopHours"
+                   th:value="${vendor.shopHours}" maxlength="200"
+                   placeholder="ex. Lun-Sam 8h-18h"/>
+          </div>
+          <button type="submit" class="btn btn-sm btn-hero-solid mt-1">
+            <i class="bi bi-check-circle me-1"></i>Enregistrer
+          </button>
+        </form>
+      </div>
+
       <!-- Parrainage vendeur (Prompt 5) -->
       <div class="admin-card p-3 mt-3" th:if="${isOwner}">
         <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);">
@@ -380,6 +435,26 @@
              target="_blank" class="btn btn-sm text-white w-100" style="background:#25D366;">
             <i class="bi bi-whatsapp me-1"></i>Partager sur WhatsApp
           </a>
+          <!-- Progression filleuls -->
+          <div class="mt-3 p-2 rounded" style="background:rgba(139,94,60,0.05);border:1px solid rgba(139,94,60,0.15);">
+            <div class="small fw-semibold mb-1" style="color:var(--bolas-accent);">
+              <i class="bi bi-people me-1"></i>Progression parrainage
+            </div>
+            <div class="small text-muted mb-1"
+                 th:text="${activeFilleuls} + ' filleul(s) actif(s) sur 3 requis pour votre prochain mois offert'">0/3</div>
+            <div class="progress mb-1" style="height:6px;">
+              <div class="progress-bar" style="background:var(--bolas-accent);"
+                   th:style="'width:' + (${activeFilleuls % 3} * 100 / 3) + '%;'"
+                   role="progressbar"></div>
+            </div>
+            <div class="small text-muted"
+                 th:if="${filleulsRestants > 0}"
+                 th:text="'Encore ' + ${filleulsRestants} + ' filleul(s) actif(s) pour gagner +1 mois'">—</div>
+            <div class="small text-success fw-semibold"
+                 th:if="${filleulsRestants == 0 and activeFilleuls > 0}">
+              🎉 Vous avez atteint le seuil ! Contactez BOLA pour activer votre mois bonus.
+            </div>
+          </div>
           <div class="mt-2 small text-muted" th:if="${vendor.referralBonusMonths > 0}">
             🎁 Bonus accumulé : <strong th:text="${vendor.referralBonusMonths} + ' mois offert(s)'"  >0</strong>
           </div>

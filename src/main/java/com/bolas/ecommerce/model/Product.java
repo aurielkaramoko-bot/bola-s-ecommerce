@@ -77,6 +77,14 @@ public class Product {
     @Column(name = "promo_label", length = 60)
     private String promoLabel;
 
+    /** Produit marqué comme Tendance (PRO/PREMIUM uniquement) */
+    @Column(name = "trend_active", nullable = false)
+    private boolean trendActive = false;
+
+    /** Date d'expiration du badge Trend (auto-retiré après 14 jours) */
+    @Column(name = "trend_expires_at")
+    private java.time.LocalDateTime trendExpiresAt;
+
     /** URL de la vidéo du produit (YouTube ou TikTok). Optionnel. */
     @Size(max = 2000)
     @Column(name = "video_url", length = 2000)
@@ -208,6 +216,19 @@ public class Product {
 
     public String getPromoLabel() { return promoLabel; }
     public void setPromoLabel(String promoLabel) { this.promoLabel = promoLabel; }
+
+    public boolean isTrendActive() { return trendActive; }
+    public void setTrendActive(boolean trendActive) { this.trendActive = trendActive; }
+
+    public java.time.LocalDateTime getTrendExpiresAt() { return trendExpiresAt; }
+    public void setTrendExpiresAt(java.time.LocalDateTime trendExpiresAt) { this.trendExpiresAt = trendExpiresAt; }
+
+    /** Vérifie si le badge Trend est actif et non expiré */
+    public boolean isCurrentlyTrending() {
+        if (!trendActive) return false;
+        if (trendExpiresAt != null && trendExpiresAt.isBefore(java.time.LocalDateTime.now())) return false;
+        return true;
+    }
 
     public String getVideoUrl() {
         return videoUrl;

@@ -1,52 +1,139 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="fr">
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
 <head th:replace="~{fragments/header :: head(title=${pageTitle})}">
-  <title>Catégories — Bola's</title>
+  <title>Categories - BOLA</title>
 </head>
 <body class="bolas-body">
 <div th:replace="~{fragments/header :: navbar}"></div>
 
-<main class="container py-5 flex-grow-1">
-  <h1 class="h2 section-title">Nos catégories</h1>
-  <p class="section-subtitle">Choisissez un univers pour découvrir nos produits</p>
+<main class="flex-grow-1" style="min-height:80vh;">
 
-  <div class="row g-4 justify-content-center"
-       th:if="${categories != null and !categories.isEmpty()}">
-    <div class="col-sm-6 col-lg-4" th:each="c : ${categories}">
-
-      <!-- Avec image : overlay photo -->
-      <a th:href="@{/products(categoryId=${c.id})}" class="cat-card d-block"
-         th:if="${c.imageUrl != null and !c.imageUrl.isEmpty()}">
-        <img th:src="${c.imageUrl}" th:alt="${c.name}" loading="lazy"/>
-        <div class="cat-card-overlay">
-          <p class="cat-card-name" th:text="${c.name}">Catégorie</p>
-          <p class="cat-card-desc"
-             th:if="${c.description != null and !c.description.isEmpty()}"
-             th:text="${#strings.abbreviate(c.description, 80)}">Desc</p>
-        </div>
-      </a>
-
-      <!-- Sans image : carte simple -->
-      <a th:href="@{/products(categoryId=${c.id})}" class="cat-card-plain"
-         th:if="${c.imageUrl == null or c.imageUrl.isEmpty()}">
-        <h2 th:text="${c.name}">Catégorie</h2>
-        <p th:if="${c.description != null and !c.description.isEmpty()}"
-           th:text="${#strings.abbreviate(c.description, 140)}">Desc</p>
-        <span class="small" style="color:var(--bolas-accent)">
-          Voir les produits <i class="bi bi-arrow-right"></i>
-        </span>
+  <!-- Barre familles (niveau 1) - scrollable horizontalement -->
+  <div style="background:#fff;border-bottom:2px solid var(--bolas-border);overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;">
+    <div style="display:inline-flex;gap:0;padding:0 8px;">
+      <a th:each="f : ${families}"
+         th:href="@{/categories(familyId=${f.id})}"
+         th:text="${f.emoji != null ? f.emoji + ' ' + f.name : f.name}"
+         th:classappend="${selectedFamily != null and selectedFamily.id == f.id} ? ' cat-tab-active' : ''"
+         class="cat-tab">
       </a>
     </div>
   </div>
 
-  <p th:if="${categories == null or categories.isEmpty()}"
-     class="text-center text-muted py-5">
-    Aucune catégorie pour le moment.
-  </p>
+  <!-- Layout 2 colonnes : sous-cats gauche + produits droite -->
+  <div style="display:flex;min-height:calc(100vh - 120px);">
+
+    <!-- Colonne gauche : sous-catégories (niveau 2) -->
+    <div style="width:120px;flex-shrink:0;background:#f8f6f4;border-right:1px solid var(--bolas-border);overflow-y:auto;">
+      <a th:each="s : ${subCategories}"
+         th:href="@{/categories(familyId=${selectedFamily?.id},subId=${s.id})}"
+         th:text="${s.name}"
+         th:classappend="${selectedSub != null and selectedSub.id == s.id} ? ' cat-sub-active' : ''"
+         class="cat-sub-item">
+      </a>
+      <div th:if="${subCategories == null or subCategories.isEmpty()}"
+           class="p-3 text-muted small text-center">
+        Aucune sous-catégorie
+      </div>
+    </div>
+
+    <!-- Colonne droite : feuilles + produits -->
+    <div style="flex:1;overflow-y:auto;padding:12px;">
+
+      <!-- Titre sous-catégorie sélectionnée -->
+      <div th:if="${selectedSub != null}" class="mb-3">
+        <h2 class="h6 fw-bold mb-2" style="color:var(--bolas-accent);"
+            th:text="${selectedSub.name}">Sous-catégorie</h2>
+
+        <!-- Feuilles (niveau 3) comme chips cliquables -->
+        <div th:if="${leaves != null and !leaves.isEmpty()}"
+             style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+          <a th:each="leaf : ${leaves}"
+             th:href="@{/products(categoryId=${leaf.id})}"
+             th:text="${leaf.name}"
+             class="cat-leaf-chip">
+          </a>
+        </div>
+      </div>
+
+      <!-- Grille produits -->
+      <div th:if="${products != null and !products.isEmpty()}"
+           class="row g-2">
+        <div class="col-6 col-md-4 col-lg-3" th:each="p : ${products}">
+          <th:block th:replace="~{fragments/product-card :: card(p=${p})}"></th:block>
+        </div>
+      </div>
+
+      <!-- Etat vide -->
+      <div th:if="${products == null or products.isEmpty()}"
+           class="text-center py-5 text-muted">
+        <i class="bi bi-box fs-1 d-block mb-3 opacity-25"></i>
+        <p class="mb-2">Aucun produit dans cette catégorie pour l'instant.</p>
+        <a th:if="${leaves != null and !leaves.isEmpty()}"
+           th:href="@{/products(categoryId=${selectedSub?.id})}"
+           class="btn btn-hero-outline btn-sm">
+          Voir tous les produits
+        </a>
+      </div>
+
+    </div>
+  </div>
+
 </main>
 
-<div th:replace="~{fragments/popular-section :: popular}"></div>
 <div th:replace="~{fragments/footer :: footer}"></div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+
+<style>
+.cat-tab {
+  display: inline-block;
+  padding: 12px 16px;
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--bolas-text);
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+  transition: color .15s, border-color .15s;
+  white-space: nowrap;
+}
+.cat-tab:hover { color: var(--bolas-accent); }
+.cat-tab-active {
+  color: var(--bolas-accent) !important;
+  border-bottom-color: var(--bolas-accent) !important;
+}
+.cat-sub-item {
+  display: block;
+  padding: 12px 10px;
+  font-size: .82rem;
+  color: var(--bolas-text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--bolas-border);
+  line-height: 1.3;
+  transition: background .15s, color .15s;
+}
+.cat-sub-item:hover { background: #ede8e3; color: var(--bolas-accent); }
+.cat-sub-active {
+  background: #fff !important;
+  color: var(--bolas-accent) !important;
+  font-weight: 700;
+  border-left: 3px solid var(--bolas-accent);
+}
+.cat-leaf-chip {
+  display: inline-block;
+  padding: 4px 12px;
+  background: var(--bolas-light);
+  border: 1px solid var(--bolas-border);
+  border-radius: 999px;
+  font-size: .78rem;
+  color: var(--bolas-text);
+  text-decoration: none;
+  transition: background .15s, color .15s;
+}
+.cat-leaf-chip:hover {
+  background: var(--bolas-accent);
+  color: #fff;
+  border-color: var(--bolas-accent);
+}
+</style>
 </body>
 </html>
