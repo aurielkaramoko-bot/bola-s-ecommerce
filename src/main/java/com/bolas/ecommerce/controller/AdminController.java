@@ -543,9 +543,9 @@ public class AdminController {
                 catch (IllegalArgumentException ignored) {}
             }
             v.setSubscriptionStartsAt(startsAt != null && !startsAt.isBlank()
-                    ? java.time.LocalDateTime.parse(startsAt) : null);
+                    ? java.time.LocalDate.parse(startsAt) : null);
             v.setSubscriptionExpiresAt(expiresAt != null && !expiresAt.isBlank()
-                    ? java.time.LocalDateTime.parse(expiresAt) : null);
+                    ? java.time.LocalDate.parse(expiresAt) : null);
             vendorUserRepository.save(v);
         });
         ra.addFlashAttribute("flashOk", "Plan mis à jour.");
