@@ -68,10 +68,14 @@ public class CategorySeeder {
                 .collect(java.util.stream.Collectors.toSet());
 
         for (String line : DATA) {
-            String[] parts = line.split("\\|", 3);
-            if (parts.length < 2) continue;
-            String emoji    = parts[0];
-            String rootName = parts[1];
+            String[] parts = line.split("\\|", 2);
+            if (parts.length < 1) continue;
+
+            // Format : "NomFamille|SousCat1>feuille1,...|SousCat2>..."
+            // Pas d'emoji dans le DATA actuel
+            String emoji    = null;
+            String rootName = parts[0].trim();
+            String subCatsPart = parts.length > 1 ? parts[1] : "";
             String rootSlug = slugify(rootName);
 
             // Ne pas recréer si déjà existant (par slug OU par nom)
@@ -81,9 +85,9 @@ public class CategorySeeder {
             existingSlugs.add(rootSlug);
             existingNamesLower.add(rootName.toLowerCase());
 
-            if (parts.length < 3 || parts[2].isBlank()) continue;
+            if (subCatsPart == null || subCatsPart.isBlank()) continue;
 
-            for (String subPart : parts[2].split("\\|")) {
+            for (String subPart : subCatsPart.split("\\|")) {
                 String[] sv = subPart.split(">", 2);
                 String subName = sv[0].trim();
                 String subSlug = rootSlug + "-" + slugify(subName);
