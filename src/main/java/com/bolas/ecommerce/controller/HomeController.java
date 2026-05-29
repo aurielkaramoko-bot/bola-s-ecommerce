@@ -107,9 +107,17 @@ public class HomeController {
         model.addAttribute("categories", categoryRepository.findAll());
         model.addAttribute("popularProducts", productRepository.findPopularForHomepage());
         model.addAttribute("countryCount", countryRepository.countByActiveTrue());
-        // Bannières PREMIUM
+        // Bannières PREMIUM (pleine largeur si 1 seul, grille 2 colonnes si plusieurs)
         model.addAttribute("premiumBanners",
                 vendorUserRepository.findActivePremiumWithBanner());
+        // Bannières PRO (section secondaire)
+        model.addAttribute("proBanners",
+                vendorUserRepository.findActiveProWithBanner());
+        // Compteurs dynamiques
+        model.addAttribute("activeVendorCount",
+                vendorUserRepository.findByVendorStatusAndActiveTrue(VendorStatus.ACTIVE).size());
+        model.addAttribute("activeProductCount",
+                productRepository.findByAvailableTrue().size());
         // Produits en tendance (max 8 pour la homepage)
         var trendProducts = productRepository.findAll().stream()
                 .filter(p -> p.isAvailable()

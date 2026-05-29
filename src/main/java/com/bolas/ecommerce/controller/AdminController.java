@@ -12,6 +12,7 @@ import com.bolas.ecommerce.model.VendorUser;
 import com.bolas.ecommerce.model.VendorStatus;
 import com.bolas.ecommerce.model.CourierApplicationStatus;
 import com.bolas.ecommerce.model.Country;
+import com.bolas.ecommerce.model.PriceChangeHistory;
 import com.bolas.ecommerce.repository.CategoryRepository;
 import com.bolas.ecommerce.repository.ChatMessageRepository;
 import com.bolas.ecommerce.repository.CustomerOrderRepository;
@@ -23,6 +24,7 @@ import com.bolas.ecommerce.repository.CourierApplicationRepository;
 import com.bolas.ecommerce.repository.CountryRepository;
 import com.bolas.ecommerce.repository.VendorCategoryRepository;
 import com.bolas.ecommerce.repository.ReportRepository;
+import com.bolas.ecommerce.repository.PriceChangeHistoryRepository;
 import com.bolas.ecommerce.service.SessionCounterService;
 import com.bolas.ecommerce.service.WhatsAppNotificationService;
 import com.bolas.ecommerce.service.AuditLogService;
@@ -83,6 +85,7 @@ public class AdminController {
     private final SessionCounterService sessionCounter;
     private final PackPricingService packPricingService;
     private final com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository;
+    private final PriceChangeHistoryRepository priceChangeHistoryRepository;
 
     @Value("${google.maps.api.key:}")
     private String googleMapsApiKey;
@@ -113,7 +116,8 @@ public class AdminController {
                            ReportRepository reportRepository,
                            SessionCounterService sessionCounter,
                            PackPricingService packPricingService,
-                           com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository) {
+                           com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository,
+                           PriceChangeHistoryRepository priceChangeHistoryRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.chatMessageRepository = chatMessageRepository;
@@ -135,6 +139,7 @@ public class AdminController {
         this.sessionCounter = sessionCounter;
         this.packPricingService = packPricingService;
         this.shopSellerRepository = shopSellerRepository;
+        this.priceChangeHistoryRepository = priceChangeHistoryRepository;
     }
 
     @InitBinder
@@ -158,9 +163,18 @@ public class AdminController {
         model.addAttribute("pendingVendorCount",
                 vendorUserRepository.countByVendorStatus(VendorStatus.PENDING));
 
+        // Vendeurs actifs
+        var activeVendors = vendorUserRepository.findByVendorStatusAndActiveTrue(VendorStatus.ACTIVE);
+        model.addAttribute("activeVendorCount", activeVendors.size());
+
+        // Nouveaux vendeurs cette semaine
+        java.time.LocalDateTime weekAgo = java.time.LocalDateTime.now().minusDays(7);
+        // (approximation via ID — les nouveaux ont les IDs les plus élevés)
+        model.addAttribute("newVendorsWeek", 0); // enrichi si createdAt disponible
+
         // Abonnements expirant dans <= 5 jours
-        java.time.LocalDate today = java.time.LocalDate.now();
-        java.time.LocalDate in5days = today.plusDays(5);
+        java.time.LocalDateTime today = java.time.LocalDateTime.now();
+        java.time.LocalDateTime in5days = today.plusDays(5);
         var expiring = vendorUserRepository.findBySubscriptionExpiresAtBetween(today, in5days);
         model.addAttribute("expiringVendors", expiring);
 
@@ -543,9 +557,9 @@ public class AdminController {
                 catch (IllegalArgumentException ignored) {}
             }
             v.setSubscriptionStartsAt(startsAt != null && !startsAt.isBlank()
-                    ? java.time.LocalDate.parse(startsAt) : null);
+                    ? java.time.LocalDateTime.parse(startsAt) : null);
             v.setSubscriptionExpiresAt(expiresAt != null && !expiresAt.isBlank()
-                    ? java.time.LocalDate.parse(expiresAt) : null);
+                    ? java.time.LocalDateTime.parse(expiresAt) : null);
             vendorUserRepository.save(v);
         });
         ra.addFlashAttribute("flashOk", "Plan mis à jour.");
@@ -564,7 +578,33 @@ public class AdminController {
         return "redirect:/admin/vendors";
     }
 
-    @PostMapping("/admin/vendors/{id}/banner")
+    // ─── /admin/plans — Gestion des prix des plans ────────────────────────────
+
+    @GetMapping("/admin/plans")
+    public String plansPage(Model model) {
+        model.addAttribute("pageTitle", "Plans & Tarifs — Admin BOLA");
+        model.addAttribute("gratuitPrice",   packPricingService.getGratuitPrice());
+        model.addAttribute("proLocalPrice",  packPricingService.getProLocalPrice());
+        model.addAttribute("proPrice",       packPricingService.getProPrice());
+        model.addAttribute("premiumPrice",   packPricingService.getPremiumPrice());
+        model.addAttribute("priceHistory",   priceChangeHistoryRepository.findTop20ByOrderByChangedAtDesc());
+        return "admin/plans";
+    }
+
+    @PostMapping("/admin/plans/update")
+    public String updatePlanPrice(@RequestParam String plan,
+                                  @RequestParam int price,
+                                  RedirectAttributes ra) {
+        if ("GRATUIT".equals(plan)) {
+            ra.addFlashAttribute("flashError", "Le plan Gratuit est toujours à 0 FCFA.");
+            return "redirect:/admin/plans";
+        }
+        int oldPrice = packPricingService.getPriceForPlan(plan);
+        packPricingService.updatePrice(plan, price);
+        priceChangeHistoryRepository.save(new PriceChangeHistory(plan, oldPrice, price));
+        ra.addFlashAttribute("flashOk", "Prix du plan " + plan + " mis à jour : " + price + " FCFA.");
+        return "redirect:/admin/plans";
+    }    @PostMapping("/admin/vendors/{id}/banner")
     public String setVendorBanner(@PathVariable Long id,
                                   @RequestParam(required = false) String bannerUrl,
                                   @RequestParam(value = "bannerFile", required = false) MultipartFile bannerFile,

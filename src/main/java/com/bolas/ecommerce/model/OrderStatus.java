@@ -1,14 +1,21 @@
 package com.bolas.ecommerce.model;
 
 public enum OrderStatus {
-    /** Commande reçue — en attente de traitement vendeur */
     PENDING,
-    /** Vendeur a confirmé ET préparé — prête pour livraison */
+    CONFIRMED,
     READY,
-    /** En cours de livraison */
     IN_DELIVERY,
-    /** Livrée */
     DELIVERED,
-    /** Annulée */
-    CANCELLED
+    CANCELLED;
+
+    public String getLabel() {
+        return switch (this) {
+            case PENDING    -> "En attente";
+            case CONFIRMED  -> "Confirmée";
+            case READY      -> "Prête";
+            case IN_DELIVERY -> "En livraison";
+            case DELIVERED  -> "Livrée";
+            case CANCELLED  -> "Annulée";
+        };
+    }
 }

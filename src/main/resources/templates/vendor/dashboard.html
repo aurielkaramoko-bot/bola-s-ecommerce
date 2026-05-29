@@ -26,10 +26,10 @@
                       (${vendor.plan.name() == 'PRO'} ? 'Pack Pro' : 'Pack Débutant'))">Pack</span>
       <span class="badge bg-success">Actif</span>
       <span th:if="${vendor.subscriptionExpiresAt != null}" class="badge bg-light text-dark ms-1">
-        Expire le <span th:text="${#temporals.format(vendor.subscriptionExpiresAt, 'dd/MM/yyyy')}"></span>
+        Expire le <span th:text="${#temporals.format(vendor.subscriptionExpiresAt, 'dd/MM/yyyy')} + ' à ' + ${#temporals.format(vendor.subscriptionExpiresAt, 'HH')}+'h'+${#temporals.format(vendor.subscriptionExpiresAt, 'mm')}"></span>
       </span>
       <span th:if="${vendor.subscriptionStartsAt != null}" class="badge bg-light text-dark ms-1 d-none d-md-inline">
-        Activé le <span th:text="${#temporals.format(vendor.subscriptionStartsAt, 'dd/MM/yyyy')}"></span>
+        Activé le <span th:text="${#temporals.format(vendor.subscriptionStartsAt, 'dd/MM/yyyy')} + ' à ' + ${#temporals.format(vendor.subscriptionStartsAt, 'HH')}+'h'+${#temporals.format(vendor.subscriptionStartsAt, 'mm')}"></span>
       </span>
     </div>
     <div class="ms-auto d-flex gap-2">
@@ -45,6 +45,18 @@
   <!-- Alertes flash -->
   <div th:if="${flashOk}" class="alert alert-success mb-3" th:text="${flashOk}"></div>
   <div th:if="${flashError}" class="alert alert-danger mb-3" th:text="${flashError}"></div>
+
+  <!-- Bandeau abonnement expiré -->
+  <div th:if="${vendor.subscriptionExpiresAt != null and vendor.subscriptionExpiresAt.isBefore(T(java.time.LocalDateTime).now()) and vendor.plan.name() == 'GRATUIT'}"
+       class="alert alert-danger mb-3 d-flex align-items-center gap-2">
+    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+    <div>
+      <strong>Votre abonnement a expiré — Renouvelez maintenant pour débloquer votre boutique</strong>
+      <a th:href="@{/contact}" class="btn btn-sm btn-danger ms-2">
+        <i class="bi bi-whatsapp me-1"></i>Contacter BOLA
+      </a>
+    </div>
+  </div>
 
   <!-- Bannière profil incomplet -->
   <div th:if="${vendor.shopDescription == null or vendor.shopAddress == null}"
@@ -192,7 +204,10 @@
                     <span th:text="${p.name}">Produit</span>
                   </div>
                 </td>
-                <td><span th:text="${#numbers.formatInteger(p.effectivePriceCfa,1,'COMMA')} + ' FCFA'" th:style="${p.onPromotion}? 'color:var(--bolas-accent);font-weight:600;' : ''"></span></td>
+                <td><span th:text="${#numbers.formatInteger(p.effectivePriceCfa,1,'COMMA')} + ' FCFA'"
+                         th:style="${p.onPromotion}? 'color:var(--bolas-accent);font-weight:600;' : ''"
+                         th:attr="data-promo-price=${p.onPromotion ? p.priceCfa : null}"
+                         th:title="${p.onPromotion ? 'Prix promo — Prix normal : ' + p.priceCfa + ' FCFA' : ''}"></span></td>
                 <td>
                   <span th:if="${p.available}" class="badge bg-success">Oui</span>
                   <span th:if="${!p.available}" class="badge bg-secondary">Non</span>
@@ -201,6 +216,9 @@
               </tr>
             </tbody>
           </table>
+        </div>
+        <div class="px-3 pb-2 border-top pt-2">
+          <span class="small text-muted"><span style="color:var(--bolas-accent);">●</span> Prix en orange = prix promotionnel actif</span>
         </div>
       </div>
     </div>
@@ -224,30 +242,51 @@
       <div class="admin-card p-3 mb-3">
         <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);"><i class="bi bi-lightning me-2"></i>Actions rapides</h2>
         <div class="d-grid gap-2">
+          <!-- Toujours disponible -->
           <a th:href="@{/vendor/products/add}" id="btn-add-product" class="btn btn-hero-solid text-start"><i class="bi bi-plus-circle me-2"></i>Ajouter un produit</a>
-          <a th:href="@{/vendor/orders}" id="btn-my-orders" class="btn btn-outline-secondary text-start">
-            <i class="bi bi-receipt me-2"></i>Voir mes commandes
-            <span th:if="${pendingOrders > 0}" class="badge bg-danger ms-1" th:text="${pendingOrders}">0</span>
-          </a>
-          <a th:href="@{/vendor/messages}" class="btn btn-outline-secondary text-start position-relative">
-            <i class="bi bi-chat-dots me-2"></i>Messages clients
-            <span th:if="${unreadMessages != null and unreadMessages > 0}" class="badge bg-danger ms-1" th:text="${unreadMessages}">0</span>
-            <span th:if="${!vendor.canChat()}" class="badge bg-secondary ms-auto">PRO</span>
-          </a>
-          <a th:href="@{/vendor/stats}" class="btn btn-outline-secondary text-start">
-            <i class="bi bi-graph-up me-2"></i>Statistiques
-            <span th:if="${!vendor.canViewStats()}" class="badge bg-secondary ms-auto">PRO</span>
-          </a>
-          <a th:href="@{/vendor/reviews}" class="btn btn-outline-secondary text-start"><i class="bi bi-star me-2"></i>Avis clients</a>
-          <a th:href="@{/vendor/couriers}" class="btn btn-outline-secondary text-start"><i class="bi bi-bicycle me-2"></i>Proposer un livreur</a>
-          <a th:href="@{/vendor/loyalty}" class="btn btn-outline-secondary text-start"><i class="bi bi-award me-2"></i>Cartes fidélité</a>
-          <a th:href="@{/vendor/sellers}" class="btn btn-outline-secondary text-start position-relative"
-             th:if="${isOwner}">
-            <i class="bi bi-people me-2"></i>Mes vendeurs
-            <span th:if="${sellerCount != null and sellerCount > 0}" class="badge bg-info ms-1" th:text="${sellerCount}">0</span>
-            <span th:if="${!vendor.canManageSellers()}" class="badge bg-secondary ms-auto">PRO</span>
-          </a>
           <a th:href="@{/boutiques/{id}(id=${vendor.id})}" id="btn-see-shop" target="_blank" class="btn btn-outline-secondary text-start"><i class="bi bi-eye me-2"></i>Voir ma boutique</a>
+
+          <!-- Localisation -->
+          <a th:href="@{/vendor/onboarding#location}" class="btn btn-outline-secondary text-start position-relative">
+            <i class="bi bi-geo-alt me-2"></i>Ma localisation
+            <span th:if="${vendor.shopLatitude == null}" class="badge ms-1" style="background:#f39c12;">Manquante</span>
+          </a>
+
+          <!-- PRO_LOCAL+ -->
+          <th:block th:if="${vendor.plan.name() != 'GRATUIT'}">
+            <a th:href="@{/vendor/orders}" id="btn-my-orders" class="btn btn-outline-secondary text-start">
+              <i class="bi bi-receipt me-2"></i>Voir mes commandes
+              <span th:if="${pendingOrders > 0}" class="badge bg-danger ms-1" th:text="${pendingOrders}">0</span>
+            </a>
+            <a th:href="@{/vendor/messages}" class="btn btn-outline-secondary text-start">
+              <i class="bi bi-chat-dots me-2"></i>Messages clients
+              <span th:if="${unreadMessages != null and unreadMessages > 0}" class="badge bg-danger ms-1" th:text="${unreadMessages}">0</span>
+            </a>
+            <a th:href="@{/vendor/stats}" class="btn btn-outline-secondary text-start">
+              <i class="bi bi-graph-up me-2"></i>Statistiques
+            </a>
+          </th:block>
+
+          <!-- PRO+ -->
+          <th:block th:if="${vendor.plan.name() == 'PRO' or vendor.plan.name() == 'PREMIUM'}">
+            <a th:href="@{/vendor/couriers}" class="btn btn-outline-secondary text-start">
+              <i class="bi bi-bicycle me-2"></i>Mes livreurs
+            </a>
+            <a th:href="@{/vendor/reviews}" class="btn btn-outline-secondary text-start"><i class="bi bi-star me-2"></i>Avis clients</a>
+            <a th:href="@{/trends}" class="btn btn-outline-secondary text-start"><i class="bi bi-fire me-2"></i>Trends</a>
+          </th:block>
+
+          <!-- PREMIUM uniquement -->
+          <th:block th:if="${vendor.plan.name() == 'PREMIUM'}">
+            <a th:href="@{/vendor/loyalty}" class="btn btn-outline-secondary text-start"><i class="bi bi-award me-2"></i>Cartes fidélité</a>
+          </th:block>
+
+          <!-- GRATUIT : CTA upgrade -->
+          <th:block th:if="${vendor.plan.name() == 'GRATUIT'}">
+            <a th:href="@{/contact}" class="btn btn-outline-secondary text-start" style="border-color:#f39c12;color:#f39c12;">
+              <i class="bi bi-rocket-takeoff me-2"></i>Passer en PRO
+            </a>
+          </th:block>
         </div>
       </div>
 
@@ -278,6 +317,37 @@
           </div>
         </form>
         <div class="form-text">Mettez 0% pour désactiver. S'applique à tous vos produits (sauf ceux déjà en promo).</div>
+      </div>
+
+      <div class="admin-card p-3 mb-3" th:if="${isOwner}">
+        <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);"><i class="bi bi-image me-2"></i>Ma bannière boutique</h2>
+        <div th:if="${vendor.bannerUrl != null}" class="mb-3">
+          <img th:src="${vendor.bannerUrl}" alt="Bannière actuelle"
+               style="width:100%;max-height:180px;object-fit:cover;border-radius:8px;border:1px solid #ddd;"/>
+          <div class="small text-muted mt-1">Bannière actuelle</div>
+        </div>
+        <p class="small text-muted mb-2">Choisissez une belle image qui représente votre boutique (format recommandé : 1200×400px, max 2Mo, JPG/PNG/WebP)</p>
+        <form th:action="@{/vendor/settings/banner}" method="post" enctype="multipart/form-data" class="d-flex flex-column gap-2">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="file" class="form-control form-control-sm" name="bannerFile"
+                 accept="image/jpeg,image/png,image/webp" id="bannerFileInput"/>
+          <div id="bannerPreview" class="d-none">
+            <img id="bannerPreviewImg" src="#" alt="Aperçu"
+                 style="width:100%;max-height:120px;object-fit:cover;border-radius:6px;border:1px solid #ddd;"/>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-sm btn-hero-solid flex-grow-1">
+              <i class="bi bi-upload me-1"></i>Changer ma bannière
+            </button>
+            <form th:if="${vendor.bannerUrl != null}"
+                  th:action="@{/vendor/settings/banner/delete}" method="post" class="m-0">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash me-1"></i>Supprimer
+              </button>
+            </form>
+          </div>
+        </form>
       </div>
 
       <div class="admin-card p-3 mb-3" th:if="${isOwner}">
@@ -491,6 +561,25 @@ function copyRef() {
     if (ok) { ok.style.display = 'block'; setTimeout(function(){ ok.style.display='none'; }, 2500); }
   });
 }
+// Aperçu bannière
+var bannerInput = document.getElementById('bannerFileInput');
+if (bannerInput) {
+  bannerInput.addEventListener('change', function() {
+    var file = this.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('bannerPreviewImg').src = e.target.result;
+      document.getElementById('bannerPreview').classList.remove('d-none');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+// Légende prix orange
+document.querySelectorAll('[data-promo-price]').forEach(function(el) {
+  el.title = 'Prix promo — Prix normal : ' + el.getAttribute('data-promo-price') + ' FCFA';
+});
+</script>
 </script>
 
 <!-- Carte localisation boutique -->

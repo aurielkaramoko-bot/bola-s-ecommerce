@@ -1559,6 +1559,54 @@ public class VendorController {
         return "redirect:/vendor/dashboard";
     }
 
+    // ─── Bannière boutique ───────────────────────────────────────────────────
+
+    @PostMapping("/settings/banner")
+    @Transactional
+    public String saveBanner(@RequestParam(value = "bannerFile", required = false) MultipartFile bannerFile,
+                             HttpSession session,
+                             RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        if (!isOwner(session)) {
+            ra.addFlashAttribute("flashError", "Seul le propriétaire peut modifier la bannière.");
+            return "redirect:/vendor/dashboard";
+        }
+        VendorUser vendor = vendorUserRepository.findById(currentVendor(session).getId()).orElseThrow();
+        try {
+            if (bannerFile != null && !bannerFile.isEmpty()) {
+                String url = imageUploadService.store(bannerFile);
+                vendor.setBannerUrl(url);
+                vendorUserRepository.save(vendor);
+                session.setAttribute(SESSION_KEY, vendor);
+                ra.addFlashAttribute("flashOk", "Bannière mise à jour !");
+            } else {
+                ra.addFlashAttribute("flashError", "Aucun fichier sélectionné.");
+            }
+        } catch (IOException e) {
+            log.error("Erreur upload bannière vendeur", e);
+            ra.addFlashAttribute("flashError", "Erreur lors de l'upload. Réessayez.");
+        }
+        return "redirect:/vendor/dashboard";
+    }
+
+    @PostMapping("/settings/banner/delete")
+    @Transactional
+    public String deleteBanner(HttpSession session, RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        if (!isOwner(session)) {
+            ra.addFlashAttribute("flashError", "Seul le propriétaire peut supprimer la bannière.");
+            return "redirect:/vendor/dashboard";
+        }
+        VendorUser vendor = vendorUserRepository.findById(currentVendor(session).getId()).orElseThrow();
+        vendor.setBannerUrl(null);
+        vendorUserRepository.save(vendor);
+        session.setAttribute(SESSION_KEY, vendor);
+        ra.addFlashAttribute("flashOk", "Bannière supprimée.");
+        return "redirect:/vendor/dashboard";
+    }
+
     // ─── Réduction boutique ──────────────────────────────────────────────────
 
     @PostMapping("/settings/discount")

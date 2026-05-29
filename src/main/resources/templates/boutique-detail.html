@@ -8,6 +8,18 @@
 
 <main class="container py-5 flex-grow-1">
 
+  <!-- Bannière boutique (tous les plans) -->
+  <div th:if="${vendor.bannerUrl != null}" class="mb-4"
+       style="border-radius:12px;overflow:hidden;height:200px;">
+    <img th:src="${vendor.bannerUrl}" th:alt="${vendor.displayName} — bannière"
+         style="width:100%;height:200px;object-fit:cover;display:block;"/>
+  </div>
+  <!-- Fond dégradé si pas de bannière -->
+  <div th:if="${vendor.bannerUrl == null}" class="mb-4 d-flex align-items-center justify-content-center"
+       style="border-radius:12px;height:120px;background:linear-gradient(135deg,#8B5E3C,#C49A6C);">
+    <span style="color:#fff;font-size:1.4rem;font-weight:700;" th:text="${vendor.displayName}">Boutique</span>
+  </div>
+
   <!-- Header boutique -->
   <div class="d-flex align-items-center gap-4 mb-5 flex-wrap">
     <img th:if="${vendor.logoUrl != null}" th:src="${vendor.logoUrl}"

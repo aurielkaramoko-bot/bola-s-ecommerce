@@ -44,6 +44,11 @@ public class Customer {
     @Column(length = 200, unique = true)
     private String googleId;
 
+    /** Nom d'affichage personnalisé (distinct de prénom/nom) */
+    @Size(max = 60)
+    @Column(name = "display_name", length = 60)
+    private String displayName;
+
     @Column(nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -72,6 +77,15 @@ public class Customer {
 
     public String getGoogleId() { return googleId; }
     public void setGoogleId(String googleId) { this.googleId = googleId; }
+
+    public String getDisplayName() { return displayName; }
+    public void setDisplayName(String displayName) { this.displayName = displayName; }
+
+    /** Nom d'affichage effectif : displayName si défini, sinon prénom + nom */
+    public String getEffectiveDisplayName() {
+        if (displayName != null && !displayName.isBlank()) return displayName;
+        return firstName + " " + lastName;
+    }
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }

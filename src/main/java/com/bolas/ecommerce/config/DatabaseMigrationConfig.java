@@ -358,6 +358,51 @@ public class DatabaseMigrationConfig {
                     }
                 }
 
+                // Migration 23 : déduplication catégories (one-shot)
+                // Garde la catégorie avec le plus petit ID pour chaque nom, redirige les produits
+                try {
+                    conn.createStatement().execute("""
+                        UPDATE products SET category_id = (
+                            SELECT MIN(id) FROM categories c2
+                            WHERE LOWER(c2.name) = LOWER((SELECT name FROM categories c3 WHERE c3.id = products.category_id))
+                        )
+                        WHERE category_id IS NOT NULL
+                    """);
+                    log.info("Migration 23: références produits redirigées vers catégories canoniques");
+                } catch (SQLException e) {
+                    log.warn("Migration 23 update products: {}", e.getMessage());
+                }
+                try {
+                    conn.createStatement().execute("""
+                        DELETE FROM categories WHERE id NOT IN (
+                            SELECT MIN(id) FROM categories GROUP BY LOWER(name)
+                        )
+                    """);
+                    log.info("Migration 23: doublons catégories supprimés");
+                } catch (SQLException e) {
+                    log.warn("Migration 23 delete duplicates: {}", e.getMessage());
+                }
+
+                // Migration 24 : colonne display_name sur customers (nom d'affichage modifiable)
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE customers ADD COLUMN IF NOT EXISTS display_name VARCHAR(60)"
+                    );
+                    log.info("Migration 24: colonne display_name ajoutée sur customers");
+                } catch (SQLException e) {
+                    log.warn("Migration 24 customers.display_name: {}", e.getMessage());
+                }
+
+                // Migration 25 : colonne delivery_mode sur vendor_users
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE vendor_users ADD COLUMN IF NOT EXISTS delivery_mode VARCHAR(30) DEFAULT 'BOLA_COURIER'"
+                    );
+                    log.info("Migration 25: colonne delivery_mode ajoutée sur vendor_users");
+                } catch (SQLException e) {
+                    log.warn("Migration 25 vendor_users.delivery_mode: {}", e.getMessage());
+                }
+
             } catch (Exception e) {
                 log.error("Migration échouée: {}", e.getMessage());
             }

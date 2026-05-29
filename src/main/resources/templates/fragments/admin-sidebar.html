@@ -13,7 +13,9 @@
     <a class="nav-link" th:href="@{/admin/categories}" th:classappend="${active == 'categories' ? 'active' : ''}">
       <i class="bi bi-tags me-2"></i><span th:text="'Catégories'">Catégories</span>
     </a>
-    <!-- Produits et Commandes gérés par les vendeurs — supprimés du menu admin -->
+    <a class="nav-link" th:href="@{/admin/plans}" th:classappend="${active == 'plans' ? 'active' : ''}">
+      <i class="bi bi-credit-card me-2"></i><span>Plans &amp; Tarifs</span>
+    </a>
     <a class="nav-link" th:href="@{/admin/vendors}" th:classappend="${active == 'vendors' ? 'active' : ''}">
       <i class="bi bi-person-badge me-2"></i><span>Vendeurs</span>
     </a>

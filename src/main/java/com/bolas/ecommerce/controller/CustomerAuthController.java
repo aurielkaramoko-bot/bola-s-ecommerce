@@ -162,6 +162,7 @@ public class CustomerAuthController {
     public String updateProfile(@RequestParam String firstName,
                                  @RequestParam String lastName,
                                  @RequestParam(required = false) String phone,
+                                 @RequestParam(required = false) String displayName,
                                  HttpSession session,
                                  RedirectAttributes ra) {
         Customer customer = (Customer) session.getAttribute("BOLAS_CUSTOMER");
@@ -171,10 +172,16 @@ public class CustomerAuthController {
         if (firstName != null && !firstName.isBlank()) customer.setFirstName(firstName.trim());
         if (lastName != null && !lastName.isBlank()) customer.setLastName(lastName.trim());
         if (phone != null) customer.setPhone(phone.trim().isEmpty() ? null : phone.trim());
+        if (displayName != null && !displayName.isBlank()) {
+            String dn = displayName.trim();
+            if (dn.length() >= 3 && dn.length() <= 60 && dn.matches("[\\p{L}\\s]+")) {
+                customer.setDisplayName(dn);
+            }
+        }
         customerService.save(customer);
         session.setAttribute("BOLAS_CUSTOMER", customer);
 
-        ra.addFlashAttribute("flashOk", "Profil mis à jour !");
+        ra.addFlashAttribute("flashOk", "Profil mis à jour avec succès !");
         return "redirect:/client/me";
     }
 

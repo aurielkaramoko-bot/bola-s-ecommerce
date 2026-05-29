@@ -87,6 +87,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     List<Product> findByVendorAndAvailableTrue(VendorUser vendor);
     long countByVendor(VendorUser vendor);
     List<Product> findByVendor(VendorUser vendor);
+    List<Product> findByVendorOrderByIdDesc(VendorUser vendor);
     List<Product> findByAvailableTrue();
 
     @Query("""

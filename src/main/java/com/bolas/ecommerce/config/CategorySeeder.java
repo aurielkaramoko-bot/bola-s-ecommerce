@@ -58,10 +58,13 @@ public class CategorySeeder {
         // Idempotent : si déjà 30 familles racines → ne rien faire
         if (repo.countByParentIdIsNull() >= 30) return;
 
-        // Récupérer les slugs existants pour éviter les doublons
+        // Récupérer les slugs ET noms existants pour éviter les doublons
         java.util.Set<String> existingSlugs = repo.findAll().stream()
                 .map(Category::getSlug)
                 .filter(s -> s != null)
+                .collect(java.util.stream.Collectors.toSet());
+        java.util.Set<String> existingNamesLower = repo.findAll().stream()
+                .map(c -> c.getName().toLowerCase())
                 .collect(java.util.stream.Collectors.toSet());
 
         for (String line : DATA) {
@@ -71,11 +74,12 @@ public class CategorySeeder {
             String rootName = parts[1];
             String rootSlug = slugify(rootName);
 
-            // Ne pas recréer si déjà existant
-            if (existingSlugs.contains(rootSlug)) continue;
+            // Ne pas recréer si déjà existant (par slug OU par nom)
+            if (existingSlugs.contains(rootSlug) || existingNamesLower.contains(rootName.toLowerCase())) continue;
 
             Category root = saveCat(null, rootName, rootSlug, emoji);
             existingSlugs.add(rootSlug);
+            existingNamesLower.add(rootName.toLowerCase());
 
             if (parts.length < 3 || parts[2].isBlank()) continue;
 
