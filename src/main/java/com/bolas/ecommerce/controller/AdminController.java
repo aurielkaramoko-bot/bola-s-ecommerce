@@ -461,10 +461,10 @@ public class AdminController {
             v.setPlan(com.bolas.ecommerce.model.VendorPlan.valueOf(plan));
         } catch (Exception ignored) {}
         if (startsAt != null && !startsAt.isBlank()) {
-            v.setSubscriptionStartsAt(java.time.LocalDate.parse(startsAt));
+            v.setSubscriptionStartsAt(java.time.LocalDateTime.parse(startsAt));
         }
         if (expiresAt != null && !expiresAt.isBlank()) {
-            v.setSubscriptionExpiresAt(java.time.LocalDate.parse(expiresAt));
+            v.setSubscriptionExpiresAt(java.time.LocalDateTime.parse(expiresAt));
         }
         vendorUserRepository.save(v);
         ra.addFlashAttribute("flashOk",
