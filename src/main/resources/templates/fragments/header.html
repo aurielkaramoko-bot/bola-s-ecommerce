@@ -156,7 +156,8 @@
               <div th:each="n : ${recentNotifs}"
                    class="notif-item"
                    th:classappend="${!n.lue} ? 'unread' : ''"
-                   th:onclick="|window.location.href='${n.lienAction ?: '/vendor/notifications'}'|">
+                   th:data-href="${n.lienAction ?: '/vendor/notifications'}"
+                   onclick="window.location.href=this.dataset.href">
                 <div class="notif-titre" th:text="${n.titre}">Titre</div>
                 <div class="notif-msg"  th:text="${n.message}">Message</div>
               </div>
