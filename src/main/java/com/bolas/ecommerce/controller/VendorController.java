@@ -6,6 +6,7 @@ import com.bolas.ecommerce.service.IdDocumentVerificationService;
 import com.bolas.ecommerce.service.InputSanitizerService;
 import com.bolas.ecommerce.service.ImageUploadService;
 import com.bolas.ecommerce.service.MetaWhatsAppService;
+import com.bolas.ecommerce.service.NotificationService;
 import com.bolas.ecommerce.service.ReferralService;
 import com.bolas.ecommerce.service.SessionCounterService;
 import com.bolas.ecommerce.service.WhatsAppNotificationService;
@@ -64,6 +65,7 @@ public class VendorController {
     private final ReviewRepository            reviewRepository;
     private final com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository;
     private final ReferralService             referralService;
+    private final NotificationService         notificationService;
 
     public VendorController(CustomerOrderRepository orderRepository,
                             VendorUserRepository vendorUserRepository,
@@ -85,7 +87,8 @@ public class VendorController {
                             VendorStatsService vendorStatsService,
                             ReviewRepository reviewRepository,
                             com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository,
-                            ReferralService referralService) {
+                            ReferralService referralService,
+                            NotificationService notificationService) {
         this.orderRepository               = orderRepository;
         this.vendorUserRepository          = vendorUserRepository;
         this.productRepository             = productRepository;
@@ -107,6 +110,7 @@ public class VendorController {
         this.reviewRepository              = reviewRepository;
         this.shopSellerRepository          = shopSellerRepository;
         this.referralService               = referralService;
+        this.notificationService           = notificationService;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -231,7 +235,14 @@ public class VendorController {
     public String registerPage(HttpSession session, Model model) {
         if (currentVendor(session) != null) return "redirect:/vendor/dashboard";
         model.addAttribute("pageTitle", "Ouvrir ma boutique — BOLA");
-        model.addAttribute("categories", categoryRepository.findAll());
+        // Catégories hiérarchiques
+        var rootCats = categoryRepository.findByParentIdIsNullAndActiveTrueOrderByNameAsc();
+        var subsByParent = rootCats.stream().collect(Collectors.toMap(
+            c -> c.getId(),
+            c -> categoryRepository.findByParentIdAndActiveTrueOrderByNameAsc(c.getId())
+        ));
+        model.addAttribute("rootCategories", rootCats);
+        model.addAttribute("subsByParent",   subsByParent);
         model.addAttribute("gratuitPrice",  packPricingService.getGratuitPrice());
         model.addAttribute("proLocalPrice", packPricingService.getProLocalPrice());
         model.addAttribute("proPrice",      packPricingService.getProPrice());
@@ -622,7 +633,7 @@ public class VendorController {
         orderFlowService.vendorStartDelivery(order, vendor, appBaseUrl);
         String courierName = order.getAssignedCourierName() != null ? order.getAssignedCourierName() : "—";
         ra.addFlashAttribute("flashOk",
-                "Commande " + order.getTrackingNumber() + " envoyée en livraison — livreur : " + courierName + " 🚚");
+                "Commande " + order.getTrackingNumber() + " envoyée en livraison — livreur : " + courierName);
         return "redirect:/vendor/orders";
     }
 
@@ -654,7 +665,7 @@ public class VendorController {
 
         orderFlowService.vendorMarkDelivered(order, vendor);
         ra.addFlashAttribute("flashOk",
-                "Commande " + order.getTrackingNumber() + " marquée comme livrée ! 🎉");
+                "Commande " + order.getTrackingNumber() + " marquée comme livrée !");
         return "redirect:/vendor/orders";
     }
 
@@ -1758,7 +1769,7 @@ public class VendorController {
             }
             p.setTrendActive(true);
             p.setTrendExpiresAt(java.time.LocalDateTime.now().plusDays(14));
-            ra.addFlashAttribute("flashOk", "🔥 Badge Trend activé pour 14 jours !");
+            ra.addFlashAttribute("flashOk", "Badge Trend activé pour 14 jours !");
         } else {
             p.setTrendActive(false);
             p.setTrendExpiresAt(null);
@@ -1779,12 +1790,58 @@ public class VendorController {
         VendorUser vendor = vendorUserRepository.findById(currentVendor(session).getId()).orElseThrow();
         model.addAttribute("pageTitle", "Compléter mon profil boutique — BOLA");
         model.addAttribute("vendor", vendor);
-        model.addAttribute("allCategories", categoryRepository.findByParentIdIsNullAndActiveTrueOrderByNameAsc());
+        // Catégories hiérarchiques
+        var rootCats = categoryRepository.findByParentIdIsNullAndActiveTrueOrderByNameAsc();
+        var subsByParent = rootCats.stream().collect(Collectors.toMap(
+            c -> c.getId(),
+            c -> categoryRepository.findByParentIdAndActiveTrueOrderByNameAsc(c.getId())
+        ));
+        model.addAttribute("rootCategories", rootCats);
+        model.addAttribute("subsByParent",   subsByParent);
         model.addAttribute("assignedCategoryIds",
                 vendorCategoryRepository.findCategoriesByVendor(vendor).stream()
                         .map(c -> c.getId()).toList());
         model.addAttribute("googleMapsApiKey", googleMapsApiKey);
         return "vendor/onboarding";
+    }
+
+    // ─── Modification profil de base (username + shopName) ───────────────────────
+
+    @PostMapping("/settings/profile")
+    @Transactional
+    public String saveProfile(@RequestParam(required = false) String shopName,
+                              @RequestParam(required = false) String newUsername,
+                              HttpSession session,
+                              RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        if (!isOwner(session)) {
+            ra.addFlashAttribute("flashError", "Seul le propriétaire peut modifier le profil.");
+            return "redirect:/vendor/onboarding";
+        }
+        VendorUser vendor = vendorUserRepository.findById(currentVendor(session).getId()).orElseThrow();
+
+        if (shopName != null && !shopName.isBlank()) {
+            vendor.setShopName(sanitizer.sanitizeText(shopName.trim()));
+        }
+        if (newUsername != null && !newUsername.isBlank()) {
+            String clean = sanitizer.sanitizeText(newUsername.trim());
+            if (clean != null && !clean.equals(vendor.getUsername())) {
+                if (!clean.matches("[a-zA-Z0-9._-]+")) {
+                    ra.addFlashAttribute("flashError", "L'identifiant ne peut contenir que des lettres, chiffres, tirets et points.");
+                    return "redirect:/vendor/onboarding";
+                }
+                if (vendorUserRepository.findByUsername(clean).isPresent()) {
+                    ra.addFlashAttribute("flashError", "Ce nom d'utilisateur est déjà pris.");
+                    return "redirect:/vendor/onboarding";
+                }
+                vendor.setUsername(clean);
+            }
+        }
+        vendorUserRepository.save(vendor);
+        session.setAttribute(SESSION_KEY, vendor);
+        ra.addFlashAttribute("flashOk", "Profil mis à jour avec succès !");
+        return "redirect:/vendor/onboarding";
     }
 
     @PostMapping("/onboarding")
@@ -1796,6 +1853,8 @@ public class VendorController {
                                    @RequestParam(required = false) String deliveryDelay,
                                    @RequestParam(required = false) String returnPolicy,
                                    @RequestParam(required = false) String languagesSpoken,
+                                   @RequestParam(required = false) String shopName,
+                                   @RequestParam(required = false) String username,
                                    @RequestParam(required = false) List<Long> categoryIds,
                                    @RequestParam(value = "logoFile", required = false) MultipartFile logoFile,
                                    @RequestParam(value = "bannerFile", required = false) MultipartFile bannerFile,
@@ -1804,14 +1863,48 @@ public class VendorController {
         String redirect = requireVendor(session);
         if (redirect != null) return redirect;
 
-        VendorUser vendor = vendorUserRepository.findById(currentVendor(session).getId()).orElseThrow();
+        VendorUser vendor;
+        try {
+            vendor = vendorUserRepository.findById(currentVendor(session).getId()).orElseThrow();
+        } catch (Exception e) {
+            log.error("❌ Onboarding: vendeur introuvable en base", e);
+            ra.addFlashAttribute("flashError", "Session expirée. Veuillez vous reconnecter.");
+            return "redirect:/vendor/login";
+        }
+
+        // Modification du nom d'utilisateur (si fourni et différent)
+        if (username != null && !username.isBlank()) {
+            String cleanUsername = sanitizer.sanitizeText(username.trim());
+            if (cleanUsername != null && !cleanUsername.equals(vendor.getUsername())) {
+                if (!cleanUsername.matches("[a-zA-Z0-9._-]+")) {
+                    ra.addFlashAttribute("flashError", "L'identifiant ne peut contenir que des lettres, chiffres, tirets et points.");
+                    return "redirect:/vendor/onboarding";
+                }
+                if (vendorUserRepository.findByUsername(cleanUsername).isPresent()) {
+                    ra.addFlashAttribute("flashError", "Ce nom d'utilisateur est déjà pris. Choisissez-en un autre.");
+                    return "redirect:/vendor/onboarding";
+                }
+                vendor.setUsername(cleanUsername);
+                log.info("✅ Vendeur {} a changé son identifiant en {}", vendor.getId(), cleanUsername);
+            }
+        }
+
+        // Modification du nom de boutique (si fourni)
+        if (shopName != null && !shopName.isBlank()) {
+            vendor.setShopName(sanitizer.sanitizeText(shopName.trim()));
+        }
 
         if (shopDescription != null && !shopDescription.isBlank())
             vendor.setShopDescription(sanitizer.sanitizeText(shopDescription));
         if (shopAddress != null && !shopAddress.isBlank())
             vendor.setShopAddress(sanitizer.sanitizeText(shopAddress));
-        if (shopLatitude != null) vendor.setShopLatitude(shopLatitude);
-        if (shopLongitude != null) vendor.setShopLongitude(shopLongitude);
+
+        // Validation coordonnées GPS : plages valides uniquement
+        if (shopLatitude != null && shopLatitude >= -90 && shopLatitude <= 90)
+            vendor.setShopLatitude(shopLatitude);
+        if (shopLongitude != null && shopLongitude >= -180 && shopLongitude <= 180)
+            vendor.setShopLongitude(shopLongitude);
+
         if (deliveryDelay != null && !deliveryDelay.isBlank())
             vendor.setDeliveryDelay(sanitizer.sanitizeText(deliveryDelay));
         if (returnPolicy != null && !returnPolicy.isBlank())
@@ -1819,17 +1912,32 @@ public class VendorController {
         if (languagesSpoken != null && !languagesSpoken.isBlank())
             vendor.setLanguagesSpoken(sanitizer.sanitizeText(languagesSpoken));
 
+        // Upload fichiers (avec gestion d'erreur fine)
         try {
             if (logoFile != null && !logoFile.isEmpty())
                 vendor.setLogoUrl(imageUploadService.store(logoFile));
-            if (bannerFile != null && !bannerFile.isEmpty())
-                vendor.setBannerUrl(imageUploadService.store(bannerFile));
         } catch (IllegalArgumentException | IOException e) {
-            ra.addFlashAttribute("flashError", "Erreur upload : " + e.getMessage());
+            log.warn("⚠️ Onboarding: erreur upload logo pour vendeur {}: {}", vendor.getId(), e.getMessage());
+            ra.addFlashAttribute("flashError", "Erreur upload photo de boutique : " + e.getMessage());
             return "redirect:/vendor/onboarding";
         }
 
-        vendorUserRepository.save(vendor);
+        try {
+            if (bannerFile != null && !bannerFile.isEmpty())
+                vendor.setBannerUrl(imageUploadService.store(bannerFile));
+        } catch (IllegalArgumentException | IOException e) {
+            log.warn("⚠️ Onboarding: erreur upload bannière pour vendeur {}: {}", vendor.getId(), e.getMessage());
+            ra.addFlashAttribute("flashError", "Erreur upload bannière : " + e.getMessage());
+            return "redirect:/vendor/onboarding";
+        }
+
+        try {
+            vendorUserRepository.save(vendor);
+        } catch (Exception e) {
+            log.error("❌ Onboarding: erreur sauvegarde vendeur {}", vendor.getId(), e);
+            ra.addFlashAttribute("flashError", "Erreur lors de la sauvegarde. Veuillez réessayer.");
+            return "redirect:/vendor/onboarding";
+        }
         session.setAttribute(SESSION_KEY, vendor);
 
         // Catégories
@@ -1841,7 +1949,75 @@ public class VendorController {
             }
         }
 
-        ra.addFlashAttribute("flashOk", "✅ Profil boutique complété ! Bienvenue sur BOLA.");
+        ra.addFlashAttribute("flashOk", "Profil boutique complété ! Bienvenue sur BOLA.");
+        return "redirect:/vendor/dashboard";
+    }
+
+    // ─── Notifications vendeur ────────────────────────────────────────────────
+
+    @GetMapping("/notifications")
+    public String notificationsPage(HttpSession session, Model model) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        VendorUser vendor = currentVendor(session);
+        model.addAttribute("pageTitle", "Mes notifications — BOLA");
+        model.addAttribute("notifications",
+                notificationService.getAll(vendor.getId(), NotificationDestinataire.VENDEUR));
+        return "vendor/notifications";
+    }
+
+    @PostMapping("/notifications/read-all")
+    public String notificationsReadAll(HttpSession session, RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        VendorUser vendor = currentVendor(session);
+        notificationService.marquerToutesLues(vendor.getId(), NotificationDestinataire.VENDEUR);
+        ra.addFlashAttribute("flashOk", "Toutes les notifications ont été marquées comme lues.");
+        return "redirect:/vendor/notifications";
+    }
+
+    // ─── Demande d'upgrade abonnement (paiement cash) ─────────────────────────
+
+    @PostMapping("/subscription/request")
+    @Transactional
+    public String requestSubscription(@RequestParam String desiredPlan,
+                                      @RequestParam(required = false, defaultValue = "Cash livraison") String paymentMethod,
+                                      HttpSession session,
+                                      RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        if (!isOwner(session)) {
+            ra.addFlashAttribute("flashError", "Seul le propriétaire peut demander un upgrade.");
+            return "redirect:/vendor/dashboard";
+        }
+
+        VendorUser vendor = vendorUserRepository.findById(currentVendor(session).getId()).orElseThrow();
+
+        // Valider le plan demandé
+        VendorPlan requested;
+        try {
+            requested = VendorPlan.valueOf(desiredPlan.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            ra.addFlashAttribute("flashError", "Plan invalide.");
+            return "redirect:/vendor/dashboard";
+        }
+
+        if (requested == vendor.getPlan()) {
+            ra.addFlashAttribute("flashError", "Vous êtes déjà sur ce plan.");
+            return "redirect:/vendor/dashboard";
+        }
+
+        vendor.setPendingPlan(requested.name());
+        vendor.setPendingPaymentMethod(sanitizer.sanitizeText(paymentMethod));
+        vendor.setPendingPlanRequestedAt(java.time.LocalDateTime.now());
+        vendorUserRepository.save(vendor);
+        session.setAttribute(SESSION_KEY, vendor);
+
+        log.info("📋 Vendeur {} a demandé l'upgrade vers {} (paiement: {})",
+                vendor.getId(), requested.name(), paymentMethod);
+        ra.addFlashAttribute("flashOk",
+                "Votre demande d'upgrade vers " + requested.name() + " a été soumise. "
+                + "L'équipe BOLA vous contactera pour confirmer le paiement.");
         return "redirect:/vendor/dashboard";
     }
 }

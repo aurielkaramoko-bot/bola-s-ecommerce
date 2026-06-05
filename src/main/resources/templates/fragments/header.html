@@ -73,7 +73,7 @@
         <li class="nav-item"><a class="nav-link" th:href="@{/}">Accueil</a></li>
         <li class="nav-item"><a class="nav-link" th:href="@{/products}">Produits</a></li>
         <li class="nav-item"><a class="nav-link" th:href="@{/categories}">Catégories</a></li>
-        <li class="nav-item"><a class="nav-link" th:href="@{/trends}">🔥 Trends</a></li>
+        <li class="nav-item"><a class="nav-link" th:href="@{/trends}">Tendances</a></li>
         <li class="nav-item"><a class="nav-link" th:href="@{/tracking}">Suivi livraison</a></li>
         <li class="nav-item"><a class="nav-link" th:href="@{/contact}">Contact</a></li>
         <!-- Liens client dans hamburger mobile -->
@@ -132,7 +132,41 @@
           </div>
         </div>
 
-        <!-- Client connecté via session -->
+        <!-- Cloche notifications VENDEUR (Thymeleaf, global pour toutes les pages) -->
+        <div class="position-relative d-none d-lg-block"
+             th:if="${session.BOLAS_VENDOR != null}"
+             id="vendor-notif-bell-wrap">
+          <button class="btn btn-admin-pill position-relative"
+                  onclick="toggleNotifPanel('vendor-notif-panel')" aria-label="Notifications vendeur">
+            <i class="bi bi-bell"></i>
+            <span th:if="${unreadNotifCount != null and unreadNotifCount > 0}"
+                  class="position-absolute badge rounded-pill bg-danger"
+                  style="top:-4px;right:-4px;font-size:.65rem;"
+                  th:text="${unreadNotifCount}">0</span>
+          </button>
+          <div id="vendor-notif-panel" class="notif-dropdown-panel shadow" style="display:none;right:0;min-width:320px;">
+            <div class="p-2 border-bottom d-flex justify-content-between align-items-center">
+              <span class="small fw-bold" style="color:#8B5E3C;">Notifications</span>
+              <form action="/vendor/notifications/read-all" method="post" class="m-0">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <button type="submit" class="btn btn-link btn-sm p-0 small text-muted text-decoration-none">Tout lire</button>
+              </form>
+            </div>
+            <div class="notif-list">
+              <div th:each="n : ${recentNotifs}"
+                   class="notif-item"
+                   th:classappend="${!n.lue} ? 'unread' : ''"
+                   th:onclick="|window.location.href='${n.lienAction ?: '/vendor/notifications'}'|">
+                <div class="notif-titre" th:text="${n.titre}">Titre</div>
+                <div class="notif-msg"  th:text="${n.message}">Message</div>
+              </div>
+              <div th:if="${recentNotifs == null or recentNotifs.isEmpty()}"
+                   class="notif-item text-muted small text-center">Aucune notification</div>
+            </div>
+            <a th:href="@{/vendor/notifications}" class="d-block text-center small p-2 border-top" style="color:#8B5E3C;">Voir toutes les notifications →</a>
+          </div>
+        </div>
+
         <th:block th:if="${session.BOLAS_CUSTOMER != null}">
           <a class="btn btn-admin-pill d-none d-lg-inline-flex align-items-center" th:href="@{/client/me}">
             <i class="bi bi-person-circle me-1"></i>

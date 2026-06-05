@@ -104,7 +104,7 @@ public class HomeController {
         model.addAttribute("countryName", countryName);
         model.addAttribute("countryFlag", countryFlag);
         model.addAttribute("featuredProducts", productRepository.findFeaturedForHomepage());
-        model.addAttribute("categories", categoryRepository.findAll());
+        model.addAttribute("categories", categoryRepository.findByParentIdIsNullAndActiveTrueOrderByNameAsc());
         model.addAttribute("popularProducts", productRepository.findPopularForHomepage());
         model.addAttribute("countryCount", countryRepository.countByActiveTrue());
         // Bannières PREMIUM (pleine largeur si 1 seul, grille 2 colonnes si plusieurs)
@@ -113,19 +113,13 @@ public class HomeController {
         // Bannières PRO (section secondaire)
         model.addAttribute("proBanners",
                 vendorUserRepository.findActiveProWithBanner());
-        // Compteurs dynamiques
+        // Compteurs dynamiques — requêtes COUNT optimisées (pas de chargement en mémoire)
         model.addAttribute("activeVendorCount",
-                vendorUserRepository.findByVendorStatusAndActiveTrue(VendorStatus.ACTIVE).size());
+                vendorUserRepository.countByVendorStatusAndActiveTrue(VendorStatus.ACTIVE));
         model.addAttribute("activeProductCount",
-                productRepository.findByAvailableTrue().size());
+                productRepository.countByAvailableTrue());
         // Produits en tendance (max 8 pour la homepage)
-        var trendProducts = productRepository.findAll().stream()
-                .filter(p -> p.isAvailable()
-                        && (p.getVendor() == null || (p.getVendor().isActive()
-                                && p.getVendor().getVendorStatus() == VendorStatus.ACTIVE))
-                        && p.isCurrentlyTrending())
-                .limit(8)
-                .toList();
+        var trendProducts = productRepository.findCurrentlyTrendingAvailable();
         model.addAttribute("trendProducts", trendProducts);
         return "index";
     }
@@ -213,12 +207,7 @@ public class HomeController {
         model.addAttribute("pageTitle", "Tendances du moment — BOLA");
         // Produits marqués manuellement comme Trend (non expirés)
         var now = java.time.LocalDateTime.now();
-        List<Product> trendProducts = productRepository.findAll().stream()
-                .filter(p -> p.isAvailable()
-                        && (p.getVendor() == null || (p.getVendor().isActive() && p.getVendor().getVendorStatus() == VendorStatus.ACTIVE))
-                        && p.isCurrentlyTrending())
-                .limit(20)
-                .toList();
+        List<Product> trendProducts = productRepository.findCurrentlyTrendingAvailable();
         model.addAttribute("trendProducts", trendProducts);
         return "trends";
     }

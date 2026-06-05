@@ -34,6 +34,9 @@ public interface VendorUserRepository extends JpaRepository<VendorUser, Long> {
     /** Vendeurs actifs avec un statut spécifique (ex: ACTIVE uniquement) */
     List<VendorUser> findByVendorStatusAndActiveTrue(VendorStatus status);
 
+    /** Compteur optimisé — évite de charger tous les vendeurs en mémoire */
+    long countByVendorStatusAndActiveTrue(VendorStatus status);
+
     /** Vendeurs dont l'abonnement expire dans une plage de dates */
     @Query("SELECT v FROM VendorUser v WHERE v.subscriptionExpiresAt >= :startDate AND v.subscriptionExpiresAt <= :endDate AND v.active = true")
     List<VendorUser> findBySubscriptionExpiresAtBetween(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
@@ -53,4 +56,12 @@ public interface VendorUserRepository extends JpaRepository<VendorUser, Long> {
 
     /** Parrainage : filleuls d'un parrain donné */
     List<VendorUser> findByReferredById(Long referredById);
+
+    /** Abonnements en attente de validation admin */
+    @Query("SELECT v FROM VendorUser v WHERE v.pendingPlan IS NOT NULL AND v.pendingPlan <> '' ORDER BY v.pendingPlanRequestedAt ASC")
+    List<VendorUser> findPendingSubscriptions();
+
+    /** Nombre de demandes d'abonnement en attente (pour badge dashboard admin) */
+    @Query("SELECT COUNT(v) FROM VendorUser v WHERE v.pendingPlan IS NOT NULL AND v.pendingPlan <> ''")
+    long countPendingSubscriptions();
 }

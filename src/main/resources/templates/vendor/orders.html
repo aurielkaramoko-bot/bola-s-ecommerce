@@ -50,7 +50,7 @@
         <div class="d-flex align-items-start justify-content-between mb-2">
           <div>
             <span class="fw-bold" style="font-size:.95rem;" th:text="'#' + ${o.trackingNumber}">—</span>
-            <span class="badge bg-warning text-dark ms-1">⏳ EN ATTENTE</span>
+            <span class="badge bg-warning text-dark ms-1">EN ATTENTE</span>
           </div>
           <span class="text-muted" style="font-size:.85rem;"
                 th:text="${#temporals.format(o.createdAt,'dd/MM HH:mm')}">—</span>
@@ -108,7 +108,7 @@
         <div class="d-flex align-items-start justify-content-between mb-2">
           <div>
             <span class="fw-bold" style="font-size:.95rem;" th:text="'#' + ${o.trackingNumber}">—</span>
-            <span class="badge bg-info text-dark ms-1">📦 PRÊTE</span>
+            <span class="badge bg-info text-dark ms-1">PRÊTE</span>
           </div>
           <span class="text-muted" style="font-size:.85rem;"
                 th:text="${#temporals.format(o.createdAt,'dd/MM HH:mm')}">—</span>
@@ -187,9 +187,20 @@
            th:classappend="${o.status.name() == 'DELIVERED'} ? 'border-success' : 'border-primary'">
         <div class="d-flex justify-content-between mb-1">
           <span class="fw-bold" style="font-size:.95rem;" th:text="'#' + ${o.trackingNumber}">—</span>
+          <!-- Bouton copier + lien suivi client -->
+          <span class="d-flex gap-1 align-items-center">
+            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-1"
+                    th:onclick="|copyText('${o.trackingNumber}')|" title="Copier le numéro">
+              <i class="bi bi-clipboard"></i>
+            </button>
+            <a th:href="@{/tracking(trackingNumber=${o.trackingNumber})}" target="_blank"
+               class="btn btn-outline-info btn-sm py-0 px-1" title="Page suivi client">
+              <i class="bi bi-box-arrow-up-right"></i>
+            </a>
+          </span>
           <span class="badge"
                 th:classappend="${o.status.name() == 'DELIVERED'} ? 'bg-success' : 'bg-primary'"
-                th:text="${o.status.name() == 'DELIVERED' ? '✅ LIVRÉE' : '🚚 EN LIVRAISON'}">Statut</span>
+                th:text="${o.status.name() == 'DELIVERED' ? 'LIVRÉE' : 'EN LIVRAISON'}">Statut</span>
         </div>
         <div style="font-size:.95rem;" th:text="${o.customerName}">—</div>
         <div class="text-muted" style="font-size:.9rem;" th:text="${o.customerPhone}">—</div>
@@ -229,5 +240,16 @@
 
 <div th:replace="~{fragments/footer :: footer}"></div>
 <th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+<script>
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(function() {
+    const toast = document.createElement('div');
+    toast.textContent = 'Numéro copié : ' + text;
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 18px;border-radius:8px;font-size:.9rem;z-index:9999;opacity:1;transition:opacity .5s';
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity='0'; setTimeout(() => toast.remove(), 500); }, 2000);
+  });
+}
+</script>
 </body>
 </html>

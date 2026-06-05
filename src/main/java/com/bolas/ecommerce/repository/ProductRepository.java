@@ -121,4 +121,20 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     long countActiveByCategory(@Param("category") Category category);
     
     long countByCategory(Category category);
+
+    /** Compteur optimisé pour la homepage (COUNT SQL, pas de chargement en mémoire) */
+    long countByAvailableTrue();
+
+    /** Produits en tendance actifs — utilisé par homepage et page /trends */
+    @Query("""
+        SELECT p FROM Product p
+        LEFT JOIN FETCH p.vendor v
+        WHERE p.available = true
+        AND p.trendActive = true
+        AND (v IS NULL OR (v.active = true AND v.vendorStatus = 'ACTIVE'))
+        AND (p.trendExpiresAt IS NULL OR p.trendExpiresAt > CURRENT_TIMESTAMP)
+        ORDER BY p.id DESC
+        LIMIT 20
+        """)
+    List<Product> findCurrentlyTrendingAvailable();
 }

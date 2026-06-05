@@ -8,6 +8,7 @@ import com.bolas.ecommerce.model.DeliveryOption;
 import com.bolas.ecommerce.model.OrderLine;
 import com.bolas.ecommerce.model.OrderStatus;
 import com.bolas.ecommerce.model.Product;
+import com.bolas.ecommerce.model.VendorPlan;
 import com.bolas.ecommerce.model.VendorUser;
 import com.bolas.ecommerce.model.VendorStatus;
 import com.bolas.ecommerce.model.CourierApplicationStatus;
@@ -162,6 +163,8 @@ public class AdminController {
         model.addAttribute("recentOrders", customerOrderRepository.findTop10ByOrderByCreatedAtDesc());
         model.addAttribute("pendingVendorCount",
                 vendorUserRepository.countByVendorStatus(VendorStatus.PENDING));
+        model.addAttribute("pendingSubscriptionCount",
+                vendorUserRepository.countPendingSubscriptions());
 
         // Vendeurs actifs
         var activeVendors = vendorUserRepository.findByVendorStatusAndActiveTrue(VendorStatus.ACTIVE);
@@ -1184,6 +1187,80 @@ public String notifyExpiry(@PathVariable Long id) {
         }
         ra.addFlashAttribute("flashOk", added + " pays africains importés (inactifs par défaut). Active ceux que tu veux desservir.");
         return "redirect:/admin/countries";
+    }
+
+    // ─── Gestion abonnements en attente ──────────────────────────────────────
+
+    @GetMapping("/admin/subscriptions")
+    @Transactional(readOnly = true)
+    public String subscriptionsPage(Model model) {
+        model.addAttribute("pageTitle", "Abonnements en attente — Admin");
+        model.addAttribute("pendingList", vendorUserRepository.findPendingSubscriptions());
+        model.addAttribute("pendingCount", vendorUserRepository.countPendingSubscriptions());
+        return "admin/subscriptions";
+    }
+
+    /**
+     * Activer un abonnement : applique le plan demandé, définit une durée de 30 jours,
+     * vide les champs pending et notifie le vendeur.
+     */
+    @PostMapping("/admin/subscriptions/{vendorId}/activate")
+    @Transactional
+    public String activateSubscription(@PathVariable Long vendorId,
+                                       @RequestParam(defaultValue = "30") int durationDays,
+                                       RedirectAttributes ra) {
+        VendorUser vendor = vendorUserRepository.findById(vendorId).orElse(null);
+        if (vendor == null) {
+            ra.addFlashAttribute("flashError", "Vendeur introuvable.");
+            return "redirect:/admin/subscriptions";
+        }
+        if (!vendor.hasPendingPlan()) {
+            ra.addFlashAttribute("flashError", "Ce vendeur n'a pas de demande en attente.");
+            return "redirect:/admin/subscriptions";
+        }
+
+        VendorPlan plan;
+        try {
+            plan = VendorPlan.valueOf(vendor.getPendingPlan().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            ra.addFlashAttribute("flashError", "Plan invalide : " + vendor.getPendingPlan());
+            return "redirect:/admin/subscriptions";
+        }
+
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        vendor.setPlan(plan);
+        vendor.setSubscriptionStartsAt(now);
+        vendor.setSubscriptionExpiresAt(now.plusDays(durationDays));
+        vendor.setPendingPlan(null);
+        vendor.setPendingPaymentMethod(null);
+        vendor.setPendingPlanRequestedAt(null);
+        vendorUserRepository.save(vendor);
+
+        log.info("✅ Admin: abonnement {} activé pour vendeur {} ({}j)", plan, vendor.getId(), durationDays);
+        ra.addFlashAttribute("flashOk",
+                "Abonnement " + plan.name() + " activé pour " + vendor.getDisplayName() + " (" + durationDays + " jours).");
+        return "redirect:/admin/subscriptions";
+    }
+
+    /**
+     * Refuser une demande d'abonnement : vide les champs pending, garde le plan actuel.
+     */
+    @PostMapping("/admin/subscriptions/{vendorId}/refuse")
+    @Transactional
+    public String refuseSubscription(@PathVariable Long vendorId, RedirectAttributes ra) {
+        VendorUser vendor = vendorUserRepository.findById(vendorId).orElse(null);
+        if (vendor == null) {
+            ra.addFlashAttribute("flashError", "Vendeur introuvable.");
+            return "redirect:/admin/subscriptions";
+        }
+        vendor.setPendingPlan(null);
+        vendor.setPendingPaymentMethod(null);
+        vendor.setPendingPlanRequestedAt(null);
+        vendorUserRepository.save(vendor);
+
+        log.info("❌ Admin: demande d'abonnement refusée pour vendeur {}", vendor.getId());
+        ra.addFlashAttribute("flashOk", "Demande de " + vendor.getDisplayName() + " refusée.");
+        return "redirect:/admin/subscriptions";
     }
 
 }

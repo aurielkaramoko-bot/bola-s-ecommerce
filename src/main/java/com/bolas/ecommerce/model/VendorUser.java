@@ -107,6 +107,17 @@ public class VendorUser {
     @Column(name = "subscription_expires_at")
     private java.time.LocalDateTime subscriptionExpiresAt;
 
+    /** Plan demandé en attente de validation par l'admin (ex. PRO, PREMIUM) */
+    @Column(name = "pending_plan", length = 30)
+    private String pendingPlan;
+
+    /** Mode de paiement pour la demande en attente (ex. Cash livraison, Cash boutique) */
+    @Column(name = "pending_payment_method", length = 100)
+    private String pendingPaymentMethod;
+
+    /** Date de soumission de la demande d'abonnement en attente */
+    @Column(name = "pending_plan_requested_at")
+    private java.time.LocalDateTime pendingPlanRequestedAt;
 
 
     /** Latitude GPS de la boutique physique */
@@ -243,6 +254,17 @@ public class VendorUser {
     public java.time.LocalDateTime getSubscriptionExpiresAt() { return subscriptionExpiresAt; }
     public void setSubscriptionExpiresAt(java.time.LocalDateTime subscriptionExpiresAt) { this.subscriptionExpiresAt = subscriptionExpiresAt; }
 
+    public String getPendingPlan() { return pendingPlan; }
+    public void setPendingPlan(String pendingPlan) { this.pendingPlan = pendingPlan; }
+
+    public String getPendingPaymentMethod() { return pendingPaymentMethod; }
+    public void setPendingPaymentMethod(String pendingPaymentMethod) { this.pendingPaymentMethod = pendingPaymentMethod; }
+
+    public java.time.LocalDateTime getPendingPlanRequestedAt() { return pendingPlanRequestedAt; }
+    public void setPendingPlanRequestedAt(java.time.LocalDateTime pendingPlanRequestedAt) { this.pendingPlanRequestedAt = pendingPlanRequestedAt; }
+
+    /** Le vendeur a une demande d'abonnement en attente de validation admin */
+    public boolean hasPendingPlan() { return pendingPlan != null && !pendingPlan.isBlank(); }
 
 
     public Double getShopLatitude() { return shopLatitude; }
@@ -288,7 +310,7 @@ public class VendorUser {
     /** Le vendeur a accès aux statistiques avancées (graphiques 6 mois, conversion) */
     public boolean hasAdvancedStats() { return plan == VendorPlan.PREMIUM; }
 
-    /** Badge vérifié ⭐ visible partout */
+    /** Badge vérifié visible partout */
     public boolean isVerified() { return plan == VendorPlan.PREMIUM; }
 
     /** Le vendeur peut répondre aux avis clients */
@@ -308,6 +330,18 @@ public class VendorUser {
             case PREMIUM -> 5;
         };
     }
+
+    /** Nombre maximum de livreurs autorisés par plan (PREMIUM = illimité) */
+    public int getMaxCouriers() {
+        return switch (plan) {
+            case GRATUIT -> 1;
+            case PRO_LOCAL, PRO -> 3;
+            case PREMIUM -> Integer.MAX_VALUE; // illimité
+        };
+    }
+
+    /** PREMIUM : livreurs illimités */
+    public boolean hasUnlimitedCouriers() { return plan == VendorPlan.PREMIUM; }
 
     /** Le vendeur peut gérer des sous-vendeurs */
     public boolean canManageSellers() { return isPaidPlan(); }

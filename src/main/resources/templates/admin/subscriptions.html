@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head th:replace="~{fragments/header :: head(title=${pageTitle})}">
+  <title>Abonnements en attente — Admin</title>
+</head>
+<body class="bolas-body">
+<div th:replace="~{fragments/header :: navbar}"></div>
+
+<div class="container py-4 flex-grow-1">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="/admin/dashboard" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <div>
+      <h1 class="h4 fw-bold mb-0" style="color:var(--bolas-accent);">
+        <i class="bi bi-credit-card me-2"></i>Abonnements en attente
+      </h1>
+      <p class="text-muted small mb-0">
+        <span th:text="${pendingCount}">0</span> demande(s) en attente de validation
+      </p>
+    </div>
+  </div>
+
+  <!-- Alertes flash -->
+  <div th:if="${flashOk}"    class="alert alert-success" th:text="${flashOk}"></div>
+  <div th:if="${flashError}" class="alert alert-danger"  th:text="${flashError}"></div>
+
+  <!-- Table des demandes -->
+  <div class="admin-card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Boutique</th>
+            <th>Contact</th>
+            <th>Plan actuel</th>
+            <th>Plan demandé</th>
+            <th>Paiement</th>
+            <th>Date demande</th>
+            <th>Durée</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <!-- État vide -->
+          <tr th:if="${pendingList == null or pendingList.isEmpty()}">
+            <td colspan="8" class="text-center py-5 text-muted">
+              <i class="bi bi-check-circle" style="font-size:2.5rem;opacity:.3;display:block;margin-bottom:8px;"></i>
+              Aucune demande d'abonnement en attente.
+            </td>
+          </tr>
+
+          <!-- Ligne par vendeur -->
+          <tr th:each="v : ${pendingList}">
+
+            <!-- Boutique -->
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <img th:if="${v.logoUrl != null}" th:src="${v.logoUrl}"
+                     style="width:36px;height:36px;border-radius:50%;object-fit:cover;" alt=""/>
+                <div>
+                  <div class="fw-semibold small" th:text="${v.displayName}">Boutique</div>
+                  <div class="text-muted" style="font-size:.75rem;" th:text="${'@' + v.username}">@user</div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Contact -->
+            <td class="small">
+              <a th:href="${'https://wa.me/' + v.phone}" target="_blank"
+                 class="text-decoration-none">
+                <i class="bi bi-whatsapp text-success me-1"></i>
+                <span th:text="${v.phone}">—</span>
+              </a>
+            </td>
+
+            <!-- Plan actuel -->
+            <td>
+              <span class="badge"
+                    th:classappend="${v.plan.name() == 'PREMIUM'} ? 'text-bg-warning'
+                                  : (${v.plan.name() == 'GRATUIT'} ? 'bg-secondary' : 'text-bg-info')"
+                    th:text="${v.plan.name()}">PLAN</span>
+            </td>
+
+            <!-- Plan demandé -->
+            <td>
+              <span class="badge"
+                    th:classappend="${v.pendingPlan == 'PREMIUM'} ? 'text-bg-warning'
+                                  : (${v.pendingPlan == 'GRATUIT'} ? 'bg-secondary' : 'text-bg-success')"
+                    th:text="${v.pendingPlan}">PLAN</span>
+            </td>
+
+            <!-- Paiement -->
+            <td class="small text-muted" th:text="${v.pendingPaymentMethod ?: '—'}">—</td>
+
+            <!-- Date demande -->
+            <td class="small text-muted">
+              <span th:if="${v.pendingPlanRequestedAt != null}"
+                    th:text="${#temporals.format(v.pendingPlanRequestedAt, 'dd/MM/yyyy HH:mm')}">—</span>
+              <span th:if="${v.pendingPlanRequestedAt == null}">—</span>
+            </td>
+
+            <!-- Durée -->
+            <td>
+              <form th:id="${'form-activate-' + v.id}" method="post" class="d-flex align-items-center gap-1">
+                <th:block th:with="actionUrl=@{/admin/subscriptions/{id}/activate(id=${v.id})}">
+                  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                  <input type="number" name="durationDays" value="30" min="7" max="365"
+                         class="form-control form-control-sm" style="width:70px;" title="Durée en jours"/>
+                  <!-- Le submit est dans la colonne Actions -->
+                </th:block>
+              </form>
+            </td>
+
+            <!-- Actions -->
+            <td class="text-center">
+              <div class="d-flex gap-1 justify-content-center">
+                <!-- Activer -->
+                <form th:action="@{/admin/subscriptions/{id}/activate(id=${v.id})}" method="post">
+                  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                  <input type="hidden" name="durationDays" value="30"/>
+                  <button type="submit" class="btn btn-sm btn-success" title="Activer l'abonnement">
+                    <i class="bi bi-check-circle me-1"></i>Activer
+                  </button>
+                </form>
+                <!-- Refuser -->
+                <form th:action="@{/admin/subscriptions/{id}/refuse(id=${v.id})}" method="post">
+                  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                  <button type="submit" class="btn btn-sm btn-outline-danger" title="Refuser la demande"
+                          onclick="return confirm('Refuser la demande de ' + this.closest('tr').querySelector('.fw-semibold').textContent + ' ?')">
+                    <i class="bi bi-x-circle me-1"></i>Refuser
+                  </button>
+                </form>
+              </div>
+            </td>
+
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+</body>
+</html>

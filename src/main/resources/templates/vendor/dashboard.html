@@ -167,15 +167,42 @@
            th:style="'width:' + (${productCount} * 100 / ${gratuitLimit}) + '%;'"
            role="progressbar"></div>
     </div>
-    <div class="mt-3 p-3 rounded" style="background:rgba(139,94,60,0.05);border:1px dashed rgba(139,94,60,0.3);">
-      <h6 class="fw-bold mb-2" style="color:var(--bolas-accent);">🚀 Passez au niveau supérieur !</h6>
-      <ul class="small mb-2">
-        <li><strong>Pack Pro Local (3 000 FCFA/mois)</strong> : Produits illimités, gestion commandes, chat client, stats, 1 livreur</li>
-        <li><strong>Pack Premium (10 000 FCFA/mois)</strong> : + badge vérifié ⭐, stats avancées, réponse avis, priorité homepage</li>
+    <!-- Demande d'upgrade déjà en attente -->
+    <div th:if="${vendor.hasPendingPlan()}" class="mt-3 p-3 rounded alert alert-info mb-0">
+      <i class="bi bi-hourglass-split me-1"></i>
+      Votre demande d'upgrade vers <strong th:text="${vendor.pendingPlan}">PLAN</strong> est en cours de traitement.
+      L'équipe BOLA vous contactera sous 24h.
+    </div>
+    <!-- Formulaire d'upgrade -->
+    <div th:if="${!vendor.hasPendingPlan()}" class="mt-3 p-3 rounded" style="background:rgba(139,94,60,0.05);border:1px dashed rgba(139,94,60,0.3);">
+      <h6 class="fw-bold mb-3" style="color:var(--bolas-accent);">Passez au niveau supérieur</h6>
+      <ul class="small mb-3">
+        <li><strong>Pack Pro Local (3 000 FCFA/mois)</strong> : Produits illimités, commandes, chat client, stats, livreurs</li>
+        <li><strong>Pack Premium (10 000 FCFA/mois)</strong> : + badge vérifié, stats avancées, réponse avis, priorité homepage, livreurs illimités</li>
       </ul>
-      <a th:href="@{/contact}" class="btn btn-sm btn-hero-solid">
-        <i class="bi bi-whatsapp me-1"></i>Contacter BOLA pour upgrader
-      </a>
+      <form th:action="@{/vendor/subscription/request}" method="post" class="row g-2 align-items-end">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold mb-1">Plan souhaité</label>
+          <select class="form-select form-select-sm" name="desiredPlan">
+            <option value="PRO_LOCAL">Pack Pro Local — 3 000 FCFA/mois</option>
+            <option value="PRO">Pack Pro — 5 000 FCFA/mois</option>
+            <option value="PREMIUM">Pack Premium — 10 000 FCFA/mois</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold mb-1">Mode de paiement</label>
+          <select class="form-select form-select-sm" name="paymentMethod">
+            <option value="Cash livraison">Cash à la livraison</option>
+            <option value="Cash boutique">Cash en boutique BOLA</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <button type="submit" class="btn btn-sm btn-hero-solid w-100">
+            <i class="bi bi-send me-1"></i>Envoyer la demande
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -455,9 +482,9 @@
           <div>
             <label class="form-label small fw-semibold mb-1">Statut de la boutique</label>
             <select class="form-select form-select-sm" name="shopStatus">
-              <option value="OPEN" th:selected="${vendor.shopStatus == 'OPEN' or vendor.shopStatus == null}">🟢 Ouverte</option>
-              <option value="CLOSED" th:selected="${vendor.shopStatus == 'CLOSED'}">🔴 Fermée temporairement</option>
-              <option value="VACATION" th:selected="${vendor.shopStatus == 'VACATION'}">🏖️ En vacances</option>
+              <option value="OPEN" th:selected="${vendor.shopStatus == 'OPEN' or vendor.shopStatus == null}">Ouverte</option>
+              <option value="CLOSED" th:selected="${vendor.shopStatus == 'CLOSED'}">Fermée temporairement</option>
+              <option value="VACATION" th:selected="${vendor.shopStatus == 'VACATION'}">En vacances</option>
             </select>
           </div>
           <div>
