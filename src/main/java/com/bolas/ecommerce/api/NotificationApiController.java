@@ -63,6 +63,18 @@ public class NotificationApiController {
         return ResponseEntity.ok().build();
     }
 
+    // ─── Alias vendeur (même logique, URL différente pour le JS) ─────────────
+
+    @GetMapping("/vendor/count")
+    public ResponseEntity<Map<String, Long>> vendorCount(HttpSession session) {
+        return count(session);
+    }
+
+    @GetMapping("/vendor/recent")
+    public ResponseEntity<List<Notification>> vendorRecent(HttpSession session) {
+        return recent(session);
+    }
+
     // ─── Résolution de l'utilisateur courant ─────────────────────────────────
 
     private UserContext resolveUser(HttpSession session) {
@@ -71,7 +83,12 @@ public class NotificationApiController {
         if (customer instanceof Customer c) {
             return new UserContext(c.getId(), NotificationDestinataire.CLIENT);
         }
-        // Vendeur connecté via Spring Security
+        // Vendeur connecté via session (BOLAS_VENDOR)
+        Object vendor = session.getAttribute("BOLAS_VENDOR");
+        if (vendor instanceof VendorUser v) {
+            return new UserContext(v.getId(), NotificationDestinataire.VENDEUR);
+        }
+        // Vendeur via Spring Security principal
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof VendorUser v) {
             return new UserContext(v.getId(), NotificationDestinataire.VENDEUR);

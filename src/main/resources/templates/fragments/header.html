@@ -222,7 +222,10 @@
 <!-- ===== SCRIPT CLOCHE (polling 30s) ===== -->
 <script th:fragment="notif-script" th:if="${session.BOLAS_CUSTOMER != null or session.BOLAS_VENDOR != null}">
 (function() {
-  const CSRF = document.querySelector('meta[name="_csrf"]')?.content || '';
+  const IS_VENDOR = /*[[${session.BOLAS_VENDOR != null}]]*/ false;
+  const COUNT_URL  = IS_VENDOR ? '/api/vendor/notifications/count'  : '/api/notifications/count';
+  const RECENT_URL = IS_VENDOR ? '/api/vendor/notifications/recent' : '/api/notifications/recent';
+  const READ_URL   = IS_VENDOR ? '/api/vendor/notifications/'       : '/api/notifications/';
 
   function updateBadge(count) {
     ['notif-badge','notif-badge-mobile'].forEach(id => {
@@ -237,27 +240,25 @@
     const el = document.getElementById(containerId);
     if (!el) return;
     if (!list || list.length === 0) {
-      el.innerHTML = '<div class="notif-item text-muted small text-center">Aucune notification</div>';
+      el.innerHTML = '<div class="notif-item text-muted small text-center p-3">Aucune notification</div>';
       return;
     }
     el.innerHTML = list.map(n => `
       <div class="notif-item ${!n.lue ? 'unread' : ''}"
-           onclick="markRead(${n.id}, '${n.lienAction || ''}')">
+           style="cursor:pointer;"
+           onmousedown="event.stopPropagation(); window.location.href='${n.lienAction || (IS_VENDOR ? '/vendor/notifications' : '/notifications')}'">
         <span class="notif-time">${formatAge(n.createdAt)}</span>
-        <div class="notif-titre">${n.titre}</div>
-        <div class="notif-msg">${n.message}</div>
+        <div class="notif-titre">${n.titre || ''}</div>
+        <div class="notif-msg">${n.message || ''}</div>
       </div>`).join('');
   }
 
   function fetchCount() {
-    fetch('/api/notifications/count')
-      .then(r => r.json())
-      .then(d => updateBadge(d.count || 0))
-      .catch(() => {});
+    fetch(COUNT_URL).then(r => r.json()).then(d => updateBadge(d.count || 0)).catch(() => {});
   }
 
   function fetchRecent() {
-    fetch('/api/notifications/recent')
+    fetch(RECENT_URL)
       .then(r => r.json())
       .then(list => {
         renderNotifs(list, 'notif-list-desktop');
@@ -265,12 +266,6 @@
       })
       .catch(() => {});
   }
-
-  window.markRead = function(id, url) {
-    fetch('/api/notifications/' + id + '/read', {method:'POST',
-      headers:{'X-CSRF-TOKEN': getCsrf()}})
-      .finally(() => { if (url) window.location.href = url; else fetchCount(); });
-  };
 
   window.toggleNotifPanel = function(panelId) {
     const p = document.getElementById(panelId);
@@ -295,14 +290,15 @@
     return Math.floor(diff/1440) + 'j';
   }
 
-  // Fermer le panneau en cliquant ailleurs
-  document.addEventListener('click', e => {
-    if (!e.target.closest('#notif-bell-wrap') && !e.target.closest('#notif-bell-mobile-wrap')) {
+  // Fermer le panneau en cliquant ailleurs (mousedown pour ne pas interférer avec les clics notifs)
+  document.addEventListener('mousedown', e => {
+    if (!e.target.closest('#notif-bell-wrap') &&
+        !e.target.closest('#notif-bell-mobile-wrap') &&
+        !e.target.closest('#vendor-notif-bell-wrap')) {
       document.querySelectorAll('.notif-dropdown-panel').forEach(el => el.style.display='none');
     }
   });
 
-  // Premier chargement + polling 30s
   fetchCount();
   setInterval(fetchCount, 30000);
 })();
