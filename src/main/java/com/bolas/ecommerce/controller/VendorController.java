@@ -685,8 +685,8 @@ public class VendorController {
         if (redirect != null) return redirect;
 
         VendorUser vendor = currentVendor(session);
-        List<Product> products = productRepository.findByVendor(vendor);
-        long count = products.size();
+        List<Product> products = productRepository.findByVendorIdOrderByIdDesc(vendor.getId());
+        long count = productRepository.countByVendorId(vendor.getId());
 
         model.addAttribute("pageTitle",   "Mes produits — BOLA");
         model.addAttribute("vendor",      vendor);

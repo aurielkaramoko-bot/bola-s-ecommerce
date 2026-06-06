@@ -88,6 +88,12 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     long countByVendor(VendorUser vendor);
     List<Product> findByVendor(VendorUser vendor);
     List<Product> findByVendorOrderByIdDesc(VendorUser vendor);
+
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.vendor.id = :vendorId ORDER BY p.id DESC")
+    List<Product> findByVendorIdOrderByIdDesc(@Param("vendorId") Long vendorId);
+
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.vendor.id = :vendorId")
+    long countByVendorId(@Param("vendorId") Long vendorId);
     List<Product> findByAvailableTrue();
 
     @Query("""
