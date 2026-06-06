@@ -9,8 +9,8 @@
 
       <!-- Haut gauche : Stock limité OU Trend -->
       <span th:if="${p.currentlyTrending}"
-            style="position:absolute;top:8px;left:8px;background:linear-gradient(135deg,#ff6b35,#f7931e);color:#fff;font-size:.65rem;padding:2px 7px;border-radius:999px;z-index:3;font-weight:700;">🔥 TREND</span>
-      <span th:if="${!p.currentlyTrending and p.limitedStock}" class="badge-stock-limited">🔥 Stock limité</span>
+            style="position:absolute;top:8px;left:8px;background:linear-gradient(135deg,#ff6b35,#f7931e);color:#fff;font-size:.65rem;padding:2px 7px;border-radius:999px;z-index:3;font-weight:700;"> TREND</span>
+      <span th:if="${!p.currentlyTrending and p.limitedStock}" class="badge-stock-limited"> Stock limité</span>
 
       <!-- Haut droite : Prix -->
       <span class="badge-price">

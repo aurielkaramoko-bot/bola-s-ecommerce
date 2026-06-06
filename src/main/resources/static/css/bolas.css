@@ -1376,3 +1376,9 @@ ul, ol {
   line-height: 1.6;
 }
 
+
+/* ===== COMMENTAIRES PRODUIT ===== */
+.comment-item { border-bottom: 1px solid var(--bolas-border, #f0ede8); }
+.comment-item:last-child { border-bottom: none; }
+.comment-item p { word-break: break-word; }
+#comment-list { max-height: 600px; overflow-y: auto; }

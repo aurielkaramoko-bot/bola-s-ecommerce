@@ -413,6 +413,31 @@ public class DatabaseMigrationConfig {
                     log.warn("Migration 26 vendor_users.shop_country: {}", e.getMessage());
                 }
 
+                // Migration 27 : table product_comments
+                try {
+                    conn.createStatement().execute("""
+                        CREATE TABLE IF NOT EXISTS product_comments (
+                            id BIGSERIAL PRIMARY KEY,
+                            product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+                            parent_id BIGINT,
+                            author_name VARCHAR(100),
+                            customer_id BIGINT,
+                            vendor_id BIGINT,
+                            text VARCHAR(1000) NOT NULL,
+                            likes_count INT NOT NULL DEFAULT 0,
+                            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                            verified_buyer BOOLEAN NOT NULL DEFAULT FALSE,
+                            deleted BOOLEAN NOT NULL DEFAULT FALSE
+                        )
+                    """);
+                    conn.createStatement().execute(
+                        "CREATE INDEX IF NOT EXISTS idx_product_comments_product_id ON product_comments(product_id)"
+                    );
+                    log.info("Migration 27: table product_comments créée");
+                } catch (SQLException e) {
+                    log.warn("Migration 27 product_comments: {}", e.getMessage());
+                }
+
             } catch (Exception e) {
                 log.error("Migration échouée: {}", e.getMessage());
             }

@@ -180,35 +180,203 @@
 
   <div class="mt-5 pt-4" style="border-top:1px solid var(--bolas-border);">
      <h2 class="h5 fw-bold mb-4" style="color:var(--bolas-accent);">Avis clients</h2>
-     </div>
+  </div>
+
+  <!-- ===== COMMENTAIRES STYLE TIKTOK ===== -->
+  <div class="mt-4" id="comments-section">
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <h2 class="h5 fw-bold mb-0" style="color:var(--bolas-accent);">
+        <i class="bi bi-chat-dots me-2"></i>Commentaires
+      </h2>
+      <span class="badge bg-secondary" id="comment-total">0</span>
+    </div>
+
+    <!-- Formulaire poster (connecté) -->
+    <div th:if="${connectedCustomer != null or session.BOLAS_VENDOR != null}" class="mb-4">
+      <div class="d-flex gap-2">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--bolas-accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-person-fill" style="color:#fff;"></i>
+        </div>
+        <div class="flex-grow-1">
+          <div class="input-group">
+            <input type="text" id="comment-input" class="form-control"
+                   placeholder="Ajouter un commentaire... (emoji 😊 acceptés)"
+                   maxlength="1000" autocomplete="off"/>
+            <button class="btn btn-hero-solid" onclick="submitComment()">
+              <i class="bi bi-send"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Invitation à se connecter -->
+    <div th:if="${connectedCustomer == null and session.BOLAS_VENDOR == null}"
+         class="alert alert-light border mb-3 small">
+      <i class="bi bi-person-lock me-1"></i>
+      <a th:href="@{/customer/login}" style="color:var(--bolas-accent);">Connectez-vous</a>
+      pour commenter ou liker.
+    </div>
+
+    <!-- Liste des commentaires (chargée via JS) -->
+    <div id="comment-list"></div>
+
+    <div id="comment-empty" class="text-muted small text-center py-4" style="display:none;">
+      <i class="bi bi-chat-square fs-3 d-block mb-2 opacity-25"></i>
+      Soyez le premier à commenter !
+    </div>
+  </div>
 
 </main>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
 
 <script th:inline="javascript">
-  document.addEventListener('DOMContentLoaded', function() {
-    // Synchronise l'option livraison avec le formulaire panier
-    const radioButtons = document.querySelectorAll('input[name="deliveryOption"]');
-    const hiddenInput  = document.getElementById('cartDeliveryOption');
-    radioButtons.forEach(r => r.addEventListener('change', function() {
-      if (hiddenInput) hiddenInput.value = this.value;
-    }));
+  var PRODUCT_ID = /*[[${product.id}]]*/ 0;
+  var IS_LOGGED  = /*[[${connectedCustomer != null or session.BOLAS_VENDOR != null}]]*/ false;
+  var IS_VENDOR  = /*[[${session.BOLAS_VENDOR != null}]]*/ false;
+  var replyingTo = null; // id du commentaire parent en cours de réponse
 
-    // Injecte l'adresse texte dans le lien WhatsApp
-    const waBtn      = document.getElementById('waOrderBtn');
-    const addrInput  = document.getElementById('deliveryAddress');
-    if (waBtn && addrInput) {
-      const baseUrl = waBtn.href; // URL générée par Thymeleaf sans adresse
-      addrInput.addEventListener('input', function() {
-        const addr = this.value.trim();
-        if (addr) {
-          // Ajoute le paramètre deliveryAddress à la fin du texte encodé
-          const addrLine = encodeURIComponent('\n📍 Adresse : ' + addr);
-          waBtn.href = baseUrl + addrLine;
-        } else {
-          waBtn.href = baseUrl;
+  function loadComments() {
+    fetch('/api/comments/' + PRODUCT_ID)
+      .then(function(r){return r.json();})
+      .then(function(data){
+        document.getElementById('comment-total').textContent = data.total || 0;
+        var list = document.getElementById('comment-list');
+        var empty = document.getElementById('comment-empty');
+        var comments = data.comments || [];
+        if (comments.length === 0) {
+          list.innerHTML = '';
+          empty.style.display = 'block';
+          return;
         }
+        empty.style.display = 'none';
+        list.innerHTML = comments.map(renderComment).join('');
+      }).catch(function(){});
+  }
+
+  function renderComment(c, isReply) {
+    if (c.deleted) return '<div class="comment-item py-2 text-muted small fst-italic px-2">[Commentaire supprimé]</div>';
+    var verified = c.verifiedBuyer ? '<span class="badge ms-1" style="background:#198754;font-size:.65rem;">Achat vérifié</span>' : '';
+    var vendorBadge = c.vendorComment ? '<span class="badge ms-1" style="background:var(--bolas-accent);font-size:.65rem;">Vendeur</span>' : '';
+    var replyBtn = IS_LOGGED && !isReply ? '<button class="btn btn-link btn-sm p-0 me-2" style="font-size:.78rem;" onclick="setReply(' + c.id + ', \'' + escHtml(c.authorName) + '\')">Répondre</button>' : '';
+    var deleteBtn = IS_VENDOR ? '<button class="btn btn-link btn-sm p-0 text-danger" style="font-size:.78rem;" onclick="deleteComment(' + c.id + ')">Supprimer</button>' : '';
+    var repliesHtml = '';
+    if (!isReply) {
+      repliesHtml = '<div id="replies-' + c.id + '" class="ps-4 mt-1"></div>'
+        + '<button class="btn btn-link btn-sm p-0 ms-1" style="font-size:.78rem;color:var(--bolas-accent);" onclick="loadReplies(' + c.id + ')">Afficher les réponses</button>';
+    }
+    return '<div class="comment-item d-flex gap-2 py-2 ' + (isReply ? 'ps-4' : '') + '" id="comment-' + c.id + '">'
+      + '<div style="width:32px;height:32px;border-radius:50%;background:' + (c.vendorComment ? 'var(--bolas-accent)' : '#e8d5c0') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+      + '<i class="bi bi-person-fill" style="color:' + (c.vendorComment ? '#fff' : 'var(--bolas-accent)') + ';font-size:.85rem;"></i></div>'
+      + '<div class="flex-grow-1">'
+      + '<div class="d-flex align-items-center gap-1 flex-wrap mb-1">'
+      + '<strong style="font-size:.85rem;">' + escHtml(c.authorName || 'Anonyme') + '</strong>'
+      + verified + vendorBadge
+      + '<span class="text-muted" style="font-size:.72rem;">' + (c.createdAtFormatted || '') + '</span>'
+      + '</div>'
+      + '<p class="mb-1 small" style="line-height:1.5;">' + escHtml(c.text) + '</p>'
+      + '<div class="d-flex align-items-center gap-2">'
+      + '<button class="btn btn-link btn-sm p-0 d-flex align-items-center gap-1" style="font-size:.78rem;color:#e91e63;" onclick="likeComment(' + c.id + ', this)">'
+      + '<i class="bi bi-heart"></i><span id="likes-' + c.id + '">' + (c.likesCount || 0) + '</span></button>'
+      + replyBtn + deleteBtn
+      + '</div>'
+      + '</div></div>'
+      + repliesHtml;
+  }
+
+  function loadReplies(parentId) {
+    fetch('/api/comments/' + PRODUCT_ID + '/replies/' + parentId)
+      .then(function(r){return r.json();})
+      .then(function(replies){
+        var el = document.getElementById('replies-' + parentId);
+        if (!el) return;
+        if (replies.length === 0) { el.innerHTML = '<div class="small text-muted ps-4">Aucune réponse</div>'; return; }
+        el.innerHTML = replies.map(function(r){return renderComment(r, true);}).join('');
+      }).catch(function(){});
+  }
+
+  function setReply(parentId, authorName) {
+    replyingTo = parentId;
+    var input = document.getElementById('comment-input');
+    if (input) {
+      input.placeholder = 'Répondre à ' + authorName + '...';
+      input.focus();
+    }
+  }
+
+  function submitComment() {
+    var input = document.getElementById('comment-input');
+    var text = input ? input.value.trim() : '';
+    if (!text) return;
+    var body = {text: text};
+    if (replyingTo) body.parentId = String(replyingTo);
+    fetch('/api/comments/' + PRODUCT_ID, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken()},
+      body: JSON.stringify(body)
+    }).then(function(r){
+      if (r.ok) {
+        input.value = '';
+        input.placeholder = 'Ajouter un commentaire... (emoji 😊 acceptés)';
+        replyingTo = null;
+        loadComments();
+      } else if (r.status === 401) {
+        alert('Connectez-vous pour commenter.');
+      }
+    }).catch(function(){});
+  }
+
+  function likeComment(id, btn) {
+    fetch('/api/comments/' + id + '/like', {
+      method: 'POST',
+      headers: {'X-CSRF-TOKEN': getCsrfToken()}
+    }).then(function(r){return r.json();})
+      .then(function(d){
+        var span = document.getElementById('likes-' + id);
+        if (span) span.textContent = d.likes || 0;
+        var icon = btn.querySelector('i');
+        if (icon) { icon.classList.remove('bi-heart'); icon.classList.add('bi-heart-fill'); }
+      }).catch(function(){});
+  }
+
+  function deleteComment(id) {
+    if (!confirm('Supprimer ce commentaire ?')) return;
+    fetch('/api/comments/' + id, {
+      method: 'DELETE',
+      headers: {'X-CSRF-TOKEN': getCsrfToken()}
+    }).then(function(){loadComments();}).catch(function(){});
+  }
+
+  function getCsrfToken() {
+    var m = document.querySelector('meta[name="_csrf"]');
+    if (m) return m.content;
+    var i = document.querySelector('input[name="_csrf"]');
+    return i ? i.value : '';
+  }
+
+  function escHtml(s) {
+    if (!s) return '';
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Permettre Enter pour commenter
+  document.addEventListener('DOMContentLoaded', function() {
+    var input = document.getElementById('comment-input');
+    if (input) input.addEventListener('keydown', function(e){ if (e.key === 'Enter') submitComment(); });
+    loadComments();
+
+    // Synchronise livraison + WhatsApp (existant)
+    var radioButtons = document.querySelectorAll('input[name="deliveryOption"]');
+    var hiddenInput  = document.getElementById('cartDeliveryOption');
+    radioButtons.forEach(function(r){ r.addEventListener('change', function(){ if (hiddenInput) hiddenInput.value = this.value; }); });
+    var waBtn = document.getElementById('waOrderBtn');
+    var addrInput = document.getElementById('deliveryAddress');
+    if (waBtn && addrInput) {
+      var baseUrl = waBtn.href;
+      addrInput.addEventListener('input', function() {
+        var addr = this.value.trim();
+        waBtn.href = addr ? baseUrl + encodeURIComponent('\n📍 Adresse : ' + addr) : baseUrl;
       });
     }
   });

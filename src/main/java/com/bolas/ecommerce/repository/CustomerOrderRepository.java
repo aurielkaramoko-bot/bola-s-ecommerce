@@ -161,6 +161,17 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
     /** Nombre de livraisons effectuées par un livreur (par nom) */
     long countByAssignedCourierName(String assignedCourierName);
 
+    /** Vérifie si un client a commandé un produit spécifique (badge achat vérifié) */
+    @Query("""
+        SELECT COUNT(o) > 0 FROM CustomerOrder o
+        JOIN o.lines l
+        WHERE o.customerPhone = :phone
+        AND l.product.id = :productId
+        AND o.status IN ('CONFIRMED','READY','IN_DELIVERY','DELIVERED')
+        """)
+    boolean existsByCustomerPhoneAndProductId(@Param("phone") String phone,
+                                              @Param("productId") Long productId);
+
     /** Nombre de livraisons effectuées par un livreur dans un statut donné */
     long countByAssignedCourierNameAndStatus(String assignedCourierName, OrderStatus status);
 
