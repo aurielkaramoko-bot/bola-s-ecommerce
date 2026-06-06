@@ -203,8 +203,8 @@
   </div>
 </nav>
 
-<!-- ===== STYLES CLOCHE ===== -->
-<style th:fragment="notif-styles">
+<!-- ===== STYLES CLOCHE (inline dans navbar) ===== -->
+<style>
 .notif-dropdown-panel {
   position: absolute; z-index: 1050; background: #fff;
   border: 1px solid var(--bolas-border, #e8d5c0);
@@ -219,8 +219,8 @@
 .notif-item .notif-time  { font-size:.72rem; color:#bbb; float:right; }
 </style>
 
-<!-- ===== SCRIPT CLOCHE (polling 30s) ===== -->
-<script th:fragment="notif-script" th:if="${session.BOLAS_CUSTOMER != null or session.BOLAS_VENDOR != null}">
+<!-- ===== SCRIPT CLOCHE (inline dans navbar, toujours chargé) ===== -->
+<script th:if="${session.BOLAS_CUSTOMER != null or session.BOLAS_VENDOR != null}">
 (function() {
   const IS_VENDOR = /*[[${session.BOLAS_VENDOR != null}]]*/ false;
   const COUNT_URL  = '/api/notifications/count';
