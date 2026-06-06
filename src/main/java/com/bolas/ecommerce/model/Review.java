@@ -80,6 +80,13 @@ public class Review {
         return createdAt == null ? null : createdAt.atZone(java.time.ZoneId.of("Africa/Lome")).toLocalDate();
     }
 
+    /** Pour Thymeleaf — retourne la date formatée "dd/MM/yyyy" sans #temporals */
+    public String getCreatedAtFormatted() {
+        if (createdAt == null) return "";
+        return createdAt.atZone(java.time.ZoneId.of("Africa/Lome"))
+            .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+    }
+
     public boolean isApproved() { return approved; }
     public void setApproved(boolean approved) { this.approved = approved; }
 

@@ -426,4 +426,11 @@ public class VendorUser {
     public String getShopCurrency() {
         return com.bolas.ecommerce.util.AfricanCountryUtil.currency(shopCountry);
     }
+
+    /** Retourne la date d'abonnement formatée "MMMM yyyy" pour Thymeleaf */
+    public String getSubscriptionStartsAtFormatted() {
+        if (subscriptionStartsAt == null) return null;
+        return subscriptionStartsAt.format(
+            java.time.format.DateTimeFormatter.ofPattern("MMMM yyyy", java.util.Locale.FRENCH));
+    }
 }

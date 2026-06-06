@@ -206,7 +206,7 @@
                   <i class="bi" th:classappend="${i <= review.rating} ? 'bi-star-fill text-warning' : 'bi-star text-muted'" style="font-size:0.75rem;"></i>
                 </th:block>
               </div>
-              <span class="small text-muted ms-auto" th:text="${review.createdAtDate != null ? #temporals.format(review.createdAtDate, 'dd/MM/yyyy') : ''}"></span>
+              <span class="small text-muted ms-auto" th:text="${review.createdAtFormatted}"></span>
             </div>
             <div class="small text-muted mb-1" th:if="${review.product != null}">
               <i class="bi bi-box-seam me-1"></i><span th:text="${review.product.name}">Produit</span>
@@ -286,7 +286,7 @@
                   <div>
                     <div class="small fw-semibold mb-1">Membre depuis</div>
                     <div class="small text-muted"
-                         th:text="${#temporals.format(vendor.subscriptionStartsAt, 'MMMM yyyy')}">—</div>
+                         th:text="${vendor.subscriptionStartsAtFormatted}">—</div>
                   </div>
                 </div>
               </div>
