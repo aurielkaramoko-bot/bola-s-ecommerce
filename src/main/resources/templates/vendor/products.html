@@ -133,13 +133,23 @@
                     </li>
                     <li>
                       <button type="button" class="dropdown-item text-danger"
-                              th:attr="data-product-id=${p.id}, data-product-name=${p.name}"
+                              th:attr="data-product-id=${p.id}"
+                              th:data-product-name="${p.name}"
                               onclick="confirmDelete(this)">
                         <i class="bi bi-trash me-2"></i>Supprimer
                       </button>
                     </li>
                   </ul>
                 </div>
+
+                <!-- Bouton supprimer direct (toujours visible) -->
+                <form th:action="@{/vendor/products/{id}/delete(id=${p.id})}" method="post"
+                      onsubmit="return confirm('Supprimer ce produit ?')">
+                  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                  <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
               </div>
             </td>
           </tr>
