@@ -43,7 +43,7 @@
           <!-- Pays du vendeur -->
           <p th:if="${v.shopCountry != null}"
              class="small text-muted mb-2"
-             th:text="${T(com.bolas.ecommerce.util.AfricanCountryUtil).flagAndName(v.shopCountry)}"></p>
+             th:text="${v.shopCountryDisplay}"></p>
           <!-- Badge promo boutique -->
           <span th:if="${v.shopDiscountActive}"
                 class="badge mb-1" style="background:linear-gradient(135deg,#ff6b35,#f7931e);color:#fff;font-size:.75rem;">

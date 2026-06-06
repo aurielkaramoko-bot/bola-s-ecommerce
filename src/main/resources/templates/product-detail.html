@@ -67,10 +67,10 @@
       </p>
 
       <!-- Pays du vendeur + prix converti -->
-      <div th:if="${vendorCountryFlag != null and !vendorCountryFlag.isEmpty()}" class="mb-3">
+      <div th:if="${product.vendor != null and product.vendor.shopCountry != null}" class="mb-3">
         <span class="small text-muted">
-          <span th:text="${vendorCountryFlag}"></span> —
-          Vendeur basé en <strong th:text="${vendorCurrency != null ? vendorCurrency : 'XOF'}">XOF</strong>
+          <span th:text="${product.vendor.shopCountryDisplay}"></span> —
+          Prix en <strong th:text="${product.vendor.shopCurrency}">XOF</strong>
         </span>
         <div th:if="${convertedPrice != null}" class="mt-1">
           <span class="badge" style="background:var(--bolas-light);color:var(--bolas-accent);border:1px solid var(--bolas-border);font-size:.85rem;">

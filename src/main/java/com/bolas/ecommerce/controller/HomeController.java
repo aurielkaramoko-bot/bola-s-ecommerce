@@ -200,11 +200,6 @@ public class HomeController {
         // Localisation
         model.addAttribute("googleMapsApiKey", googleMapsApiKey);
 
-        // Pays du vendeur + conversion devise
-        String countryCode = vendor.getShopCountry();
-        model.addAttribute("vendorCountryFlag", com.bolas.ecommerce.util.AfricanCountryUtil.flagAndName(countryCode));
-        model.addAttribute("vendorCurrency", com.bolas.ecommerce.util.AfricanCountryUtil.currency(countryCode));
-
         return "boutique-detail";
     }
 
@@ -241,12 +236,9 @@ public class HomeController {
         String waUrl = whatsAppLinkBuilder.productOrderUrl(product, "");
         model.addAttribute("waOrderUrl", waUrl);
 
-        // Pays du vendeur + conversion devise
-        if (product.getVendor() != null) {
-            String cc = product.getVendor().getShopCountry();
-            model.addAttribute("vendorCountryFlag", com.bolas.ecommerce.util.AfricanCountryUtil.flagAndName(cc));
-            String targetCurrency = com.bolas.ecommerce.util.AfricanCountryUtil.currency(cc);
-            model.addAttribute("vendorCurrency", targetCurrency);
+        // Prix converti si vendeur a un pays configuré
+        if (product.getVendor() != null && product.getVendor().getShopCountry() != null) {
+            String targetCurrency = product.getVendor().getShopCurrency();
             var conversion = currencyConversionService.convert(product.getEffectivePriceCfa(), targetCurrency);
             model.addAttribute("convertedPrice", conversion);
         }

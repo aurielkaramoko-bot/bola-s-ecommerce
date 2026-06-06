@@ -35,10 +35,10 @@
       <p class="text-muted mb-1" th:if="${vendor.shopDescription != null}"
          th:text="${vendor.shopDescription}">Description</p>
       <!-- Pays du vendeur -->
-      <p th:if="${vendorCountryFlag != null and !vendorCountryFlag.isEmpty()}"
+      <p th:if="${vendor.shopCountry != null}"
          class="small text-muted mb-1">
-        <span th:text="${vendorCountryFlag}"></span> — Prix en
-        <strong th:text="${vendorCurrency}">FCFA</strong>
+        <span th:text="${vendor.shopCountryDisplay}"></span> — Prix en
+        <strong th:text="${vendor.shopCurrency}">FCFA</strong>
       </p>
       <span th:if="${vendor.plan.name() == 'PREMIUM'}"
             class="badge me-1" style="background:linear-gradient(135deg,#8B5E3C,#C49A6C);">

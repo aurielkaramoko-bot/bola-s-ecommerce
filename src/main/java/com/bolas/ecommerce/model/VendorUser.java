@@ -416,4 +416,14 @@ public class VendorUser {
 
     public String getShopCountry() { return shopCountry; }
     public void setShopCountry(String shopCountry) { this.shopCountry = shopCountry; }
+
+    /** Retourne "🇹🇬 Togo" pour affichage Thymeleaf — évite T() dans les templates */
+    public String getShopCountryDisplay() {
+        return com.bolas.ecommerce.util.AfricanCountryUtil.flagAndName(shopCountry);
+    }
+
+    /** Retourne la devise ISO du pays (ex: "XOF") */
+    public String getShopCurrency() {
+        return com.bolas.ecommerce.util.AfricanCountryUtil.currency(shopCountry);
+    }
 }
