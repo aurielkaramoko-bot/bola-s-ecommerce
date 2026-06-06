@@ -148,6 +148,7 @@ public class SecurityConfig {
                         new AntPathRequestMatcher("/notifications"),
                         new AntPathRequestMatcher("/notifications/**"),
                         new AntPathRequestMatcher("/api/notifications/**"),
+                        new AntPathRequestMatcher("/api/comments/**"),
                         new AntPathRequestMatcher("/error")
                 ).permitAll()
                 .requestMatchers(new AntPathRequestMatcher("/h2-console/**")).access((authentication, context) ->

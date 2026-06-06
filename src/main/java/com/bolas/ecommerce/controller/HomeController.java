@@ -222,7 +222,8 @@ public class HomeController {
 
     @GetMapping("/products/{id}")
     @Transactional(readOnly = true)
-    public String productDetail(@PathVariable Long id, Model model) {
+    public String productDetail(@PathVariable Long id, Model model,
+                                jakarta.servlet.http.HttpSession session) {
         Product product = productRepository.findByIdWithDetails(id)
                 .filter(p -> p.isAvailable()
                         && (p.getVendor() == null
@@ -231,12 +232,11 @@ public class HomeController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produit introuvable"));
         model.addAttribute("pageTitle", product.getName() + " — BOLA");
         model.addAttribute("product", product);
+        model.addAttribute("connectedCustomer", session.getAttribute("BOLAS_CUSTOMER"));
 
-        // Lien WhatsApp pré-rempli via le bean (instruction GPS incluse)
         String waUrl = whatsAppLinkBuilder.productOrderUrl(product, "");
         model.addAttribute("waOrderUrl", waUrl);
 
-        // Prix converti si vendeur a un pays configuré
         if (product.getVendor() != null && product.getVendor().getShopCountry() != null) {
             String targetCurrency = product.getVendor().getShopCurrency();
             var conversion = currencyConversionService.convert(product.getEffectivePriceCfa(), targetCurrency);

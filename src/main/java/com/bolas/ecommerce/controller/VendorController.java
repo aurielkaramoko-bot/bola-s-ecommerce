@@ -66,6 +66,8 @@ public class VendorController {
     private final com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository;
     private final ReferralService             referralService;
     private final NotificationService         notificationService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.bolas.ecommerce.repository.CustomerRepository customerRepository;
 
     public VendorController(CustomerOrderRepository orderRepository,
                             VendorUserRepository vendorUserRepository,
@@ -1777,6 +1779,22 @@ public class VendorController {
             p.setTrendActive(true);
             p.setTrendExpiresAt(java.time.LocalDateTime.now().plusDays(14));
             ra.addFlashAttribute("flashOk", "Badge Trend activé pour 14 jours !");
+            // Notifier les clients : nouveau produit en tendance
+            final Product finalP = p;
+            try {
+                customerRepository.findAll().forEach(customer ->
+                    notificationService.envoyer(
+                        customer.getId(),
+                        com.bolas.ecommerce.model.NotificationDestinataire.CLIENT,
+                        com.bolas.ecommerce.model.NotificationType.SYSTEME,
+                        "Nouveau produit en tendance !",
+                        finalP.getName() + " est maintenant en tendance sur BOLA",
+                        "/products/" + finalP.getId()
+                    )
+                );
+            } catch (Exception e) {
+                log.warn("Notification trend échouée: {}", e.getMessage());
+            }
         } else {
             p.setTrendActive(false);
             p.setTrendExpiresAt(null);

@@ -200,7 +200,7 @@
         <div class="flex-grow-1">
           <div class="input-group">
             <input type="text" id="comment-input" class="form-control"
-                   placeholder="Ajouter un commentaire... (emoji 😊 acceptés)"
+                   placeholder="Ajouter un commentaire..."
                    maxlength="1000" autocomplete="off"/>
             <button class="btn btn-hero-solid" onclick="submitComment()">
               <i class="bi bi-send"></i>
@@ -318,7 +318,7 @@
     }).then(function(r){
       if (r.ok) {
         input.value = '';
-        input.placeholder = 'Ajouter un commentaire... (emoji 😊 acceptés)';
+        input.placeholder = 'Ajouter un commentaire...';
         replyingTo = null;
         loadComments();
       } else if (r.status === 401) {
