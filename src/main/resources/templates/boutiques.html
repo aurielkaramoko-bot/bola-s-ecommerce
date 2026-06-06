@@ -40,6 +40,10 @@
               th:text="${v.displayName}">Boutique</h2>
           <p class="small text-muted mb-2" th:if="${v.shopDescription != null}"
              th:text="${#strings.abbreviate(v.shopDescription, 60)}">Description</p>
+          <!-- Pays du vendeur -->
+          <p th:if="${v.shopCountry != null}"
+             class="small text-muted mb-2"
+             th:text="${T(com.bolas.ecommerce.util.AfricanCountryUtil).flagAndName(v.shopCountry)}"></p>
           <!-- Badge promo boutique -->
           <span th:if="${v.shopDiscountActive}"
                 class="badge mb-1" style="background:linear-gradient(135deg,#ff6b35,#f7931e);color:#fff;font-size:.75rem;">

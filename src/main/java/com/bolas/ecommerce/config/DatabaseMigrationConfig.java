@@ -403,6 +403,16 @@ public class DatabaseMigrationConfig {
                     log.warn("Migration 25 vendor_users.delivery_mode: {}", e.getMessage());
                 }
 
+                // Migration 26 : colonne shop_country sur vendor_users
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE vendor_users ADD COLUMN IF NOT EXISTS shop_country VARCHAR(2)"
+                    );
+                    log.info("Migration 26: colonne shop_country ajoutée sur vendor_users");
+                } catch (SQLException e) {
+                    log.warn("Migration 26 vendor_users.shop_country: {}", e.getMessage());
+                }
+
             } catch (Exception e) {
                 log.error("Migration échouée: {}", e.getMessage());
             }

@@ -247,6 +247,7 @@ public class VendorController {
         model.addAttribute("proLocalPrice", packPricingService.getProLocalPrice());
         model.addAttribute("proPrice",      packPricingService.getProPrice());
         model.addAttribute("premiumPrice",  packPricingService.getPremiumPrice());
+        model.addAttribute("africanCountries", com.bolas.ecommerce.util.AfricanCountryUtil.all());
         return "vendor/register";
     }
 
@@ -259,6 +260,7 @@ public class VendorController {
                                  @RequestParam(required = false) String shopDescription,
                                  @RequestParam(required = false) List<Long> categoryIds,
                                  @RequestParam(required = false) String requestedNiche,
+                                 @RequestParam(required = false) String shopCountry,
                                  @RequestParam(value = "selectedPlan", required = false, defaultValue = "GRATUIT") String selectedPlan,
                                  @RequestParam(value = "logoFile", required = false) MultipartFile logoFile,
                                  @RequestParam(value = "idDocFile", required = false) MultipartFile idDocFile,
@@ -369,6 +371,11 @@ public class VendorController {
         v.setIdDocVerified(idVerified);
         if (cleanNiche != null && !cleanNiche.isBlank()) {
             v.setRequestedNiche(cleanNiche);
+        }
+        // Pays de la boutique — valider que c'est un code connu
+        if (shopCountry != null && !shopCountry.isBlank()
+                && com.bolas.ecommerce.util.AfricanCountryUtil.get(shopCountry).isPresent()) {
+            v.setShopCountry(shopCountry.toUpperCase());
         }
 
         vendorUserRepository.save(v);

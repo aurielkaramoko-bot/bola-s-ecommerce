@@ -227,6 +227,22 @@
                     placeholder="Que vendez-vous ? Mode, alimentation, électronique..."></textarea>
         </div>
 
+        <!-- Pays de la boutique -->
+        <div class="col-md-6">
+          <label for="shopCountry" class="form-label fw-semibold small">
+            <i class="bi bi-globe-africa me-1"></i>Pays de la boutique <span class="text-danger">*</span>
+          </label>
+          <select class="form-select" id="shopCountry" name="shopCountry" required>
+            <option value="">— Choisissez votre pays —</option>
+            <th:block th:each="entry : ${africanCountries}">
+              <option th:value="${entry.key}"
+                      th:text="${entry.value.flag()} + ' ' + ${entry.value.name()}"
+                      th:selected="${entry.key == 'TG'}">Togo</option>
+            </th:block>
+          </select>
+          <div class="form-text">Utilisé pour afficher votre drapeau et la devise locale sur votre boutique.</div>
+        </div>
+
         <!-- ===== UPLOADS ===== -->
         <!-- Photo de boutique — OBLIGATOIRE -->
         <div class="col-md-6">

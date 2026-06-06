@@ -41,6 +41,7 @@ public class HomeController {
     private final CountryRepository countryRepository;
     private final ReviewRepository reviewRepository;
     private final WhatsAppLinkBuilder whatsAppLinkBuilder;
+    private final com.bolas.ecommerce.service.CurrencyConversionService currencyConversionService;
 
     @Value("${google.maps.api.key:}")
     private String googleMapsApiKey;
@@ -56,13 +57,15 @@ public class HomeController {
                           VendorUserRepository vendorUserRepository,
                           CountryRepository countryRepository,
                           ReviewRepository reviewRepository,
-                          WhatsAppLinkBuilder whatsAppLinkBuilder) {
+                          WhatsAppLinkBuilder whatsAppLinkBuilder,
+                          com.bolas.ecommerce.service.CurrencyConversionService currencyConversionService) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.vendorUserRepository = vendorUserRepository;
         this.countryRepository = countryRepository;
         this.reviewRepository = reviewRepository;
         this.whatsAppLinkBuilder = whatsAppLinkBuilder;
+        this.currencyConversionService = currencyConversionService;
     }
 
     @GetMapping("/")
@@ -197,6 +200,11 @@ public class HomeController {
         // Localisation
         model.addAttribute("googleMapsApiKey", googleMapsApiKey);
 
+        // Pays du vendeur + conversion devise
+        String countryCode = vendor.getShopCountry();
+        model.addAttribute("vendorCountryFlag", com.bolas.ecommerce.util.AfricanCountryUtil.flagAndName(countryCode));
+        model.addAttribute("vendorCurrency", com.bolas.ecommerce.util.AfricanCountryUtil.currency(countryCode));
+
         return "boutique-detail";
     }
 
@@ -232,6 +240,16 @@ public class HomeController {
         // Lien WhatsApp pré-rempli via le bean (instruction GPS incluse)
         String waUrl = whatsAppLinkBuilder.productOrderUrl(product, "");
         model.addAttribute("waOrderUrl", waUrl);
+
+        // Pays du vendeur + conversion devise
+        if (product.getVendor() != null) {
+            String cc = product.getVendor().getShopCountry();
+            model.addAttribute("vendorCountryFlag", com.bolas.ecommerce.util.AfricanCountryUtil.flagAndName(cc));
+            String targetCurrency = com.bolas.ecommerce.util.AfricanCountryUtil.currency(cc);
+            model.addAttribute("vendorCurrency", targetCurrency);
+            var conversion = currencyConversionService.convert(product.getEffectivePriceCfa(), targetCurrency);
+            model.addAttribute("convertedPrice", conversion);
+        }
 
         return "product-detail";
     }

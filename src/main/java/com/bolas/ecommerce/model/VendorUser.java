@@ -195,6 +195,11 @@ public class VendorUser {
     @Column(name = "shop_hours", length = 200)
     private String shopHours;
 
+    /** Code pays ISO 2 du vendeur (ex: "TG") — drapeau + conversion devise */
+    @Size(max = 2)
+    @Column(name = "shop_country", length = 2)
+    private String shopCountry;
+
     // ─── Getters / Setters ────────────────────────────────────────────────────
 
     public Long getId() { return id; }
@@ -408,4 +413,7 @@ public class VendorUser {
 
     public String getShopHours() { return shopHours; }
     public void setShopHours(String shopHours) { this.shopHours = shopHours; }
+
+    public String getShopCountry() { return shopCountry; }
+    public void setShopCountry(String shopCountry) { this.shopCountry = shopCountry; }
 }

@@ -75,6 +75,11 @@ public class Review {
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 
+    /** Pour Thymeleaf — retourne LocalDate formateable avec #temporals */
+    public java.time.LocalDate getCreatedAtDate() {
+        return createdAt == null ? null : createdAt.atZone(java.time.ZoneId.of("Africa/Lome")).toLocalDate();
+    }
+
     public boolean isApproved() { return approved; }
     public void setApproved(boolean approved) { this.approved = approved; }
 
