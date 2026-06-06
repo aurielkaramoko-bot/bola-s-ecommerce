@@ -27,9 +27,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Controller
 public class HomeController {
+
+    private static final Logger log = LoggerFactory.getLogger(HomeController.class);
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
@@ -158,6 +162,7 @@ public class HomeController {
             List<VendorUser> activeVendors = vendorUserRepository.findByVendorStatusAndActiveTrue(VendorStatus.ACTIVE);
             model.addAttribute("vendors", activeVendors);
         } catch (Exception e) {
+            log.error("Erreur chargement boutiques", e);
             model.addAttribute("vendors", java.util.List.of());
         }
         return "boutiques";
