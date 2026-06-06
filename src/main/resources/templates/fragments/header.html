@@ -162,7 +162,7 @@
                    class="notif-item"
                    th:classappend="${!n.lue} ? 'unread' : ''"
                    th:data-href="${n.lienAction ?: '/vendor/notifications'}"
-                   onclick="window.location.href=this.dataset.href">
+                   onmousedown="event.stopPropagation(); window.location.href=this.dataset.href">
                 <div class="notif-titre" th:text="${n.titre}">Titre</div>
                 <div class="notif-msg"  th:text="${n.message}">Message</div>
               </div>
@@ -223,9 +223,8 @@
 <script th:fragment="notif-script" th:if="${session.BOLAS_CUSTOMER != null or session.BOLAS_VENDOR != null}">
 (function() {
   const IS_VENDOR = /*[[${session.BOLAS_VENDOR != null}]]*/ false;
-  const COUNT_URL  = IS_VENDOR ? '/api/vendor/notifications/count'  : '/api/notifications/count';
-  const RECENT_URL = IS_VENDOR ? '/api/vendor/notifications/recent' : '/api/notifications/recent';
-  const READ_URL   = IS_VENDOR ? '/api/vendor/notifications/'       : '/api/notifications/';
+  const COUNT_URL  = '/api/notifications/count';
+  const RECENT_URL = '/api/notifications/recent';
 
   function updateBadge(count) {
     ['notif-badge','notif-badge-mobile'].forEach(id => {
