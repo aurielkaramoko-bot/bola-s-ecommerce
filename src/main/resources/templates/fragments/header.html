@@ -201,107 +201,100 @@
       </div>
     </div>
   </div>
-</nav>
 
-<!-- ===== STYLES CLOCHE (inline dans navbar) ===== -->
-<style>
-.notif-dropdown-panel {
-  position: absolute; z-index: 1050; background: #fff;
-  border: 1px solid var(--bolas-border, #e8d5c0);
-  border-radius: 12px; overflow: hidden; top: calc(100% + 8px);
-}
-.notif-list { max-height: 300px; overflow-y: auto; }
-.notif-item { padding: .6rem 1rem; border-bottom: 1px solid #f5f0eb; cursor: pointer; }
-.notif-item:hover { background: #fdf6ee; }
-.notif-item.unread { border-left: 3px solid #C49A6C; }
-.notif-item .notif-titre { font-size:.85rem; font-weight:600; color:#3d2b1f; }
-.notif-item .notif-msg   { font-size:.78rem; color:#888; margin-top:2px; }
-.notif-item .notif-time  { font-size:.72rem; color:#bbb; float:right; }
-</style>
-
-<!-- ===== SCRIPT CLOCHE (inline dans navbar, toujours chargé) ===== -->
-<script th:if="${session.BOLAS_CUSTOMER != null or session.BOLAS_VENDOR != null}">
-(function() {
-  const IS_VENDOR = /*[[${session.BOLAS_VENDOR != null}]]*/ false;
-  const COUNT_URL  = '/api/notifications/count';
-  const RECENT_URL = '/api/notifications/recent';
-
-  function updateBadge(count) {
-    ['notif-badge','notif-badge-mobile'].forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.textContent = count;
-      el.style.display = count > 0 ? 'inline-block' : 'none';
-    });
+  <!-- ===== STYLES CLOCHE ===== -->
+  <style>
+  .notif-dropdown-panel {
+    position: absolute; z-index: 1050; background: #fff;
+    border: 1px solid var(--bolas-border, #e8d5c0);
+    border-radius: 12px; overflow: hidden; top: calc(100% + 8px);
   }
+  .notif-list { max-height: 300px; overflow-y: auto; }
+  .notif-item { padding: .6rem 1rem; border-bottom: 1px solid #f5f0eb; cursor: pointer; }
+  .notif-item:hover { background: #fdf6ee; }
+  .notif-item.unread { border-left: 3px solid #C49A6C; }
+  .notif-item .notif-titre { font-size:.85rem; font-weight:600; color:#3d2b1f; }
+  .notif-item .notif-msg   { font-size:.78rem; color:#888; margin-top:2px; }
+  .notif-item .notif-time  { font-size:.72rem; color:#bbb; float:right; }
+  </style>
 
-  function renderNotifs(list, containerId) {
-    const el = document.getElementById(containerId);
-    if (!el) return;
-    if (!list || list.length === 0) {
-      el.innerHTML = '<div class="notif-item text-muted small text-center p-3">Aucune notification</div>';
-      return;
+  <!-- ===== SCRIPT CLOCHE ===== -->
+  <script th:if="${session.BOLAS_CUSTOMER != null or session.BOLAS_VENDOR != null}">
+  (function() {
+    const IS_VENDOR = /*[[${session.BOLAS_VENDOR != null}]]*/ false;
+    const COUNT_URL  = '/api/notifications/count';
+    const RECENT_URL = '/api/notifications/recent';
+
+    function updateBadge(count) {
+      ['notif-badge','notif-badge-mobile'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = count;
+        el.style.display = count > 0 ? 'inline-block' : 'none';
+      });
     }
-    el.innerHTML = list.map(n => `
-      <div class="notif-item ${!n.lue ? 'unread' : ''}"
-           style="cursor:pointer;"
-           onmousedown="event.stopPropagation(); window.location.href='${n.lienAction || (IS_VENDOR ? '/vendor/notifications' : '/notifications')}'">
-        <span class="notif-time">${formatAge(n.createdAt)}</span>
-        <div class="notif-titre">${n.titre || ''}</div>
-        <div class="notif-msg">${n.message || ''}</div>
-      </div>`).join('');
-  }
 
-  function fetchCount() {
-    fetch(COUNT_URL).then(r => r.json()).then(d => updateBadge(d.count || 0)).catch(() => {});
-  }
+    function renderNotifs(list, containerId) {
+      var el = document.getElementById(containerId);
+      if (!el) return;
+      if (!list || list.length === 0) {
+        el.innerHTML = '<div class="notif-item text-muted small text-center p-3">Aucune notification</div>';
+        return;
+      }
+      el.innerHTML = list.map(function(n) {
+        var href = n.lienAction || (IS_VENDOR ? '/vendor/notifications' : '/notifications');
+        return '<div class="notif-item ' + (!n.lue ? 'unread' : '') + '" style="cursor:pointer;" onmousedown="event.stopPropagation();window.location.href=\'' + href + '\'">'
+          + '<span class="notif-time">' + formatAge(n.createdAt) + '</span>'
+          + '<div class="notif-titre">' + (n.titre || '') + '</div>'
+          + '<div class="notif-msg">' + (n.message || '') + '</div>'
+          + '</div>';
+      }).join('');
+    }
 
-  function fetchRecent() {
-    fetch(RECENT_URL)
-      .then(r => r.json())
-      .then(list => {
+    function fetchCount() {
+      fetch(COUNT_URL).then(function(r){return r.json();}).then(function(d){updateBadge(d.count||0);}).catch(function(){});
+    }
+
+    function fetchRecent() {
+      fetch(RECENT_URL).then(function(r){return r.json();}).then(function(list){
         renderNotifs(list, 'notif-list-desktop');
         renderNotifs(list, 'notif-list-mobile');
-      })
-      .catch(() => {});
-  }
-
-  window.toggleNotifPanel = function(panelId) {
-    const p = document.getElementById(panelId);
-    if (!p) return;
-    const visible = p.style.display !== 'none';
-    document.querySelectorAll('.notif-dropdown-panel').forEach(el => el.style.display='none');
-    if (!visible) { p.style.display = 'block'; fetchRecent(); }
-  };
-
-  function getCsrf() {
-    return document.querySelector('input[name="_csrf"]')?.value
-        || document.querySelector('meta[name="_csrf"]')?.content || '';
-  }
-
-  function formatAge(dt) {
-    if (!dt) return '';
-    const d = new Date(dt); const now = new Date();
-    const diff = Math.floor((now - d) / 60000);
-    if (diff < 1) return 'à l\'instant';
-    if (diff < 60) return diff + ' min';
-    if (diff < 1440) return Math.floor(diff/60) + 'h';
-    return Math.floor(diff/1440) + 'j';
-  }
-
-  // Fermer le panneau en cliquant ailleurs (mousedown pour ne pas interférer avec les clics notifs)
-  document.addEventListener('mousedown', e => {
-    if (!e.target.closest('#notif-bell-wrap') &&
-        !e.target.closest('#notif-bell-mobile-wrap') &&
-        !e.target.closest('#vendor-notif-bell-wrap')) {
-      document.querySelectorAll('.notif-dropdown-panel').forEach(el => el.style.display='none');
+      }).catch(function(){});
     }
-  });
 
-  fetchCount();
-  setInterval(fetchCount, 30000);
-})();
-</script>
+    window.toggleNotifPanel = function(panelId) {
+      var p = document.getElementById(panelId);
+      if (!p) return;
+      var visible = p.style.display !== 'none';
+      document.querySelectorAll('.notif-dropdown-panel').forEach(function(el){el.style.display='none';});
+      if (!visible) { p.style.display = 'block'; fetchRecent(); }
+    };
 
+    function formatAge(dt) {
+      if (!dt) return '';
+      var d = new Date(dt), now = new Date();
+      var diff = Math.floor((now - d) / 60000);
+      if (diff < 1) return 'à l\'instant';
+      if (diff < 60) return diff + ' min';
+      if (diff < 1440) return Math.floor(diff/60) + 'h';
+      return Math.floor(diff/1440) + 'j';
+    }
+
+    document.addEventListener('mousedown', function(e) {
+      if (!e.target.closest('#notif-bell-wrap') &&
+          !e.target.closest('#notif-bell-mobile-wrap') &&
+          !e.target.closest('#vendor-notif-bell-wrap')) {
+        document.querySelectorAll('.notif-dropdown-panel').forEach(function(el){el.style.display='none';});
+      }
+    });
+
+    fetchCount();
+    setInterval(fetchCount, 30000);
+  })();
+  </script>
+</nav>
+
+<!-- styles/script hors fragment (ignorés par th:replace navbar) -->
+<style th:fragment="notif-styles-unused"></style>
 </body>
 </html>
