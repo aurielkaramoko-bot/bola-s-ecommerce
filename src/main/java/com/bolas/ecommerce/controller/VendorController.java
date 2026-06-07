@@ -748,6 +748,8 @@ public class VendorController {
                               @RequestParam(defaultValue = "true") boolean deliveryAvailable,
                               @RequestParam(defaultValue = "0") long deliveryPriceCfa,
                               @RequestParam(defaultValue = "false") boolean limitedStock,
+                              @RequestParam(required = false) String availableSizes,
+                              @RequestParam(required = false) String outOfStockSizes,
                               HttpSession session,
                               RedirectAttributes ra) {
 
@@ -789,6 +791,8 @@ public class VendorController {
         p.setFeatured(false);
         p.setVendor(vendor);
         p.setLimitedStock(limitedStock);
+        p.setAvailableSizes(availableSizes != null && !availableSizes.isBlank() ? availableSizes.trim() : null);
+        p.setOutOfStockSizes(outOfStockSizes != null && !outOfStockSizes.isBlank() ? outOfStockSizes.trim() : null);
         // promoLabel réservé aux plans PRO et PREMIUM
         if ((vendor.getPlan() == VendorPlan.PRO || vendor.getPlan() == VendorPlan.PRO_LOCAL
                 || vendor.getPlan() == VendorPlan.PREMIUM)
@@ -853,6 +857,8 @@ public class VendorController {
                                 @RequestParam(defaultValue = "true") boolean deliveryAvailable,
                                 @RequestParam(defaultValue = "0") long deliveryPriceCfa,
                                 @RequestParam(defaultValue = "false") boolean limitedStock,
+                                @RequestParam(required = false) String availableSizes,
+                                @RequestParam(required = false) String outOfStockSizes,
                                 HttpSession session,
                                 RedirectAttributes ra) {
 
@@ -888,6 +894,8 @@ public class VendorController {
         p.setDeliveryAvailable(deliveryAvailable);
         p.setDeliveryPriceCfa(deliveryPriceCfa);
         p.setLimitedStock(limitedStock);
+        p.setAvailableSizes(availableSizes != null && !availableSizes.isBlank() ? availableSizes.trim() : null);
+        p.setOutOfStockSizes(outOfStockSizes != null && !outOfStockSizes.isBlank() ? outOfStockSizes.trim() : null);
         // promoLabel réservé aux plans PRO et PREMIUM
         if ((vendor.getPlan() == VendorPlan.PRO || vendor.getPlan() == VendorPlan.PRO_LOCAL
                 || vendor.getPlan() == VendorPlan.PREMIUM)

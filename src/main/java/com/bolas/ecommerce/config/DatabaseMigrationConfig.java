@@ -438,6 +438,19 @@ public class DatabaseMigrationConfig {
                     log.warn("Migration 27 product_comments: {}", e.getMessage());
                 }
 
+                // Migration 28 : colonnes tailles sur products
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE products ADD COLUMN IF NOT EXISTS available_sizes VARCHAR(200)"
+                    );
+                    conn.createStatement().execute(
+                        "ALTER TABLE products ADD COLUMN IF NOT EXISTS out_of_stock_sizes VARCHAR(200)"
+                    );
+                    log.info("Migration 28: colonnes available_sizes et out_of_stock_sizes ajoutées sur products");
+                } catch (SQLException e) {
+                    log.warn("Migration 28 products sizes: {}", e.getMessage());
+                }
+
             } catch (Exception e) {
                 log.error("Migration échouée: {}", e.getMessage());
             }

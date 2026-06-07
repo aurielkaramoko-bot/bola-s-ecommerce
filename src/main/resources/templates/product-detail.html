@@ -83,6 +83,26 @@
         </div>
       </div>
 
+      <!-- Tailles disponibles -->
+      <div th:if="${product.sizeList != null and !product.sizeList.isEmpty()}" class="mb-4">
+        <label class="form-label fw-semibold small mb-2">
+          <i class="bi bi-rulers me-1"></i>Taille
+        </label>
+        <div class="d-flex flex-wrap gap-2">
+          <th:block th:each="size : ${product.sizeList}">
+            <button type="button"
+                    th:class="${product.outOfStockSizeList.contains(size)} ? 'btn btn-outline-secondary btn-sm size-btn disabled' : 'btn btn-outline-secondary btn-sm size-btn'"
+                    th:disabled="${product.outOfStockSizeList.contains(size)}"
+                    th:style="${product.outOfStockSizeList.contains(size)} ? 'opacity:.4;text-decoration:line-through;cursor:not-allowed;' : ''"
+                    th:attr="data-size=${size}"
+                    onclick="selectSize(this)"
+                    th:text="${size}">M</button>
+          </th:block>
+        </div>
+        <input type="hidden" id="selected-size" name="selectedSize" value=""/>
+        <div id="size-required-msg" class="small text-danger mt-1" style="display:none;">Veuillez choisir une taille.</div>
+      </div>
+
       <p class="small text-muted mb-3">
         <i class="bi bi-tag me-1"></i>
         <span th:text="${product.category != null ? product.category.name : ''}">Catégorie</span>
@@ -360,12 +380,20 @@
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  function selectSize(btn) {
+    document.querySelectorAll('.size-btn').forEach(function(b) { b.classList.remove('selected'); });
+    btn.classList.add('selected');
+    var inp = document.getElementById('selected-size');
+    if (inp) inp.value = btn.getAttribute('data-size');
+    var msg = document.getElementById('size-required-msg');
+    if (msg) msg.style.display = 'none';
+  }
+
   // Permettre Enter pour commenter
   document.addEventListener('DOMContentLoaded', function() {
     var input = document.getElementById('comment-input');
     if (input) input.addEventListener('keydown', function(e){ if (e.key === 'Enter') submitComment(); });
     loadComments();
-
     // Synchronise livraison + WhatsApp (existant)
     var radioButtons = document.querySelectorAll('input[name="deliveryOption"]');
     var hiddenInput  = document.getElementById('cartDeliveryOption');

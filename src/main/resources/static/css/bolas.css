@@ -1382,3 +1382,11 @@ ul, ol {
 .comment-item:last-child { border-bottom: none; }
 .comment-item p { word-break: break-word; }
 #comment-list { max-height: 600px; overflow-y: auto; }
+
+/* ===== BOUTONS TAILLE PRODUIT ===== */
+.size-btn { min-width: 44px; font-weight: 600; transition: all .15s; }
+.size-btn.selected {
+  background: var(--bolas-accent, #8B5E3C) !important;
+  color: #fff !important;
+  border-color: var(--bolas-accent, #8B5E3C) !important;
+}

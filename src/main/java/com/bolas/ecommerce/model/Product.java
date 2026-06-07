@@ -90,6 +90,16 @@ public class Product {
     @Column(name = "video_url", length = 2000)
     private String videoUrl;
 
+    /** Tailles disponibles pour ce produit (CSV ex: "38,39,40") — null si sans taille */
+    @Size(max = 200)
+    @Column(name = "available_sizes", length = 200)
+    private String availableSizes;
+
+    /** Tailles en rupture de stock (CSV ex: "40,41") — sous-ensemble de availableSizes */
+    @Size(max = 200)
+    @Column(name = "out_of_stock_sizes", length = 200)
+    private String outOfStockSizes;
+
     /**
      * Vendeur propriétaire de ce produit.
      * null = produit appartenant directement à BOLA (ajouté par admin).
@@ -230,12 +240,23 @@ public class Product {
         return true;
     }
 
-    public String getVideoUrl() {
-        return videoUrl;
+    public String getVideoUrl() { return videoUrl; }
+    public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
+
+    public String getAvailableSizes() { return availableSizes; }
+    public void setAvailableSizes(String availableSizes) { this.availableSizes = availableSizes; }
+
+    public String getOutOfStockSizes() { return outOfStockSizes; }
+    public void setOutOfStockSizes(String outOfStockSizes) { this.outOfStockSizes = outOfStockSizes; }
+
+    /** Liste parsée des tailles disponibles */
+    public java.util.List<String> getSizeList() {
+        return com.bolas.ecommerce.util.SizeUtil.parse(availableSizes);
     }
 
-    public void setVideoUrl(String videoUrl) {
-        this.videoUrl = videoUrl;
+    /** Liste parsée des tailles en rupture */
+    public java.util.List<String> getOutOfStockSizeList() {
+        return com.bolas.ecommerce.util.SizeUtil.parse(outOfStockSizes);
     }
 
     public VendorUser getVendor() { return vendor; }

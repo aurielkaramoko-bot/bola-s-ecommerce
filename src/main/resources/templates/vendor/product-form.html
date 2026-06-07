@@ -82,6 +82,20 @@
           </div>
         </div>
 
+        <!-- Tailles (dynamique selon catégorie) -->
+        <div class="col-12" id="size-section" style="display:none;">
+          <label class="form-label fw-semibold small">
+            <i class="bi bi-rulers me-1"></i>Tailles disponibles
+          </label>
+          <div id="size-checkboxes" class="d-flex flex-wrap gap-2 p-2 rounded border"></div>
+          <div class="mt-2" id="oos-size-section" style="display:none;">
+            <label class="form-label small fw-semibold text-muted">Tailles en rupture de stock</label>
+            <div id="oos-size-checkboxes" class="d-flex flex-wrap gap-2 p-2 rounded border bg-light"></div>
+          </div>
+          <input type="hidden" name="availableSizes" id="available-sizes-input"/>
+          <input type="hidden" name="outOfStockSizes" id="oos-sizes-input"/>
+        </div>
+
         <!-- Demande de nouvelle catégorie — form séparé hors du form principal -->
         <div class="col-12">
           <div class="p-2 rounded-3" style="background:var(--bolas-light);border:1px dashed var(--bolas-accent);">
@@ -224,6 +238,105 @@
 <script th:inline="javascript">
 var csrfToken = /*[[${_csrf.token}]]*/ '';
 var csrfHeader = /*[[${_csrf.headerName}]]*/ 'X-CSRF-TOKEN';
+
+// ─── Tailles dynamiques ──────────────────────────────────────────────────────
+var SHOE_SIZES  = ['35','36','37','38','39','40','41','42','43','44','45','46'];
+var CLOTH_SIZES = ['XS','S','M','L','XL','XXL','XXXL'];
+
+// Tailles déjà sauvegardées (mode édition)
+var savedAvailable = /*[[${product.availableSizes}]]*/ null;
+var savedOos       = /*[[${product.outOfStockSizes}]]*/ null;
+
+function getSizeType(catName) {
+  if (!catName) return null;
+  var n = catName.toLowerCase();
+  if (n.includes('chaussure') || n.includes('sneaker') || n.includes('basket') ||
+      n.includes('sandale') || n.includes('botte') || n.includes('escarpin')) return 'SHOES';
+  if (n.includes('mode') || n.includes('vêtement') || n.includes('vetement') ||
+      n.includes('robe') || n.includes('chemise') || n.includes('pantalon') ||
+      n.includes('pull') || n.includes('modeste') || n.includes('tenue') ||
+      n.includes('habillement') || n.includes('lingerie') || n.includes('maillot')) return 'CLOTHES';
+  return null;
+}
+
+function renderSizes(sizes, availList, oosList) {
+  var box = document.getElementById('size-checkboxes');
+  var oosBox = document.getElementById('oos-size-checkboxes');
+  box.innerHTML = '';
+  oosBox.innerHTML = '';
+
+  sizes.forEach(function(s) {
+    // Checkbox taille disponible
+    var label = document.createElement('label');
+    label.className = 'size-check-label';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = s; cb.name = 'sizeAvail';
+    cb.className = 'size-avail-cb';
+    if (availList && availList.includes(s)) cb.checked = true;
+    cb.addEventListener('change', function() { syncSizeInputs(); updateOosSizes(); });
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(' ' + s));
+    label.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid #ccc;border-radius:6px;cursor:pointer;user-select:none;font-size:.85rem;';
+    box.appendChild(label);
+  });
+
+  syncSizeInputs();
+  updateOosSizes();
+}
+
+function updateOosSizes() {
+  var oosBox = document.getElementById('oos-size-checkboxes');
+  var oosSection = document.getElementById('oos-size-section');
+  var checked = Array.from(document.querySelectorAll('.size-avail-cb:checked')).map(function(c){return c.value;});
+
+  if (checked.length === 0) { oosSection.style.display = 'none'; oosBox.innerHTML = ''; return; }
+  oosSection.style.display = 'block';
+
+  // Garder les checkboxes OOS existantes pour les tailles cochées
+  var existing = Array.from(oosBox.querySelectorAll('input')).map(function(i){return {v:i.value, c:i.checked};});
+  oosBox.innerHTML = '';
+  checked.forEach(function(s) {
+    var prev = existing.find(function(e){return e.v===s;});
+    var label = document.createElement('label');
+    label.className = 'size-oos-label';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = s; cb.name = 'sizeOos';
+    cb.className = 'size-oos-cb';
+    if (prev && prev.c) cb.checked = true;
+    else if (savedOos && savedOos.split(',').map(function(x){return x.trim();}).includes(s)) cb.checked = true;
+    cb.addEventListener('change', syncSizeInputs);
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(' ' + s));
+    label.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid #ccc;border-radius:6px;cursor:pointer;font-size:.85rem;color:#888;';
+    oosBox.appendChild(label);
+  });
+  syncSizeInputs();
+}
+
+function syncSizeInputs() {
+  var avail = Array.from(document.querySelectorAll('.size-avail-cb:checked')).map(function(c){return c.value;}).join(',');
+  var oos   = Array.from(document.querySelectorAll('.size-oos-cb:checked')).map(function(c){return c.value;}).join(',');
+  document.getElementById('available-sizes-input').value = avail;
+  document.getElementById('oos-sizes-input').value = oos;
+}
+
+function onCategoryChange() {
+  var sel = document.getElementById('prod-cat');
+  var catName = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : '';
+  var type = getSizeType(catName);
+  var section = document.getElementById('size-section');
+  if (!type) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  var sizes = type === 'SHOES' ? SHOE_SIZES : CLOTH_SIZES;
+  var availList = savedAvailable ? savedAvailable.split(',').map(function(x){return x.trim();}) : [];
+  renderSizes(sizes, availList, null);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('prod-cat').addEventListener('change', onCategoryChange);
+  // Déclencher si catégorie déjà sélectionnée (mode édition)
+  onCategoryChange();
+});
 
 function sendCategoryRequest() {
   var input = document.getElementById('cat-request-input');
