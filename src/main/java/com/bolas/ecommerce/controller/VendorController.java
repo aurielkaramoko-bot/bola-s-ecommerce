@@ -522,11 +522,14 @@ public class VendorController {
                 orderRepository.findByVendorAndStatusInWithLines(vendor,
                         List.of(OrderStatus.IN_DELIVERY, OrderStatus.DELIVERED));
 
-        // Livreurs approuvés de ce vendeur (exclusifs)
+        // Livreurs approuvés de ce vendeur (ancien système + nouveau système)
         var approvedCouriers = courierApplicationRepository.findByVendorOrderBySubmittedAtDesc(vendor)
                 .stream()
                 .filter(a -> a.getStatus() == CourierApplicationStatus.APPROVED)
                 .collect(Collectors.toList());
+
+        // Nouveau système : livreurs actifs du vendeur
+        var vendorLivreurs = vendorLivreurRepository.findByVendorAndActiveTrue(vendor);
 
         model.addAttribute("pageTitle", "Mes commandes — BOLA Vendeur");
         model.addAttribute("vendor",    vendor);
@@ -535,6 +538,7 @@ public class VendorController {
         model.addAttribute("readyOrders",   readyOrders);
         model.addAttribute("done",          done);
         model.addAttribute("approvedCouriers", approvedCouriers);
+        model.addAttribute("vendorLivreurs", vendorLivreurs);
         return "vendor/orders";
     }
 
@@ -595,6 +599,7 @@ public class VendorController {
     @Transactional
     public String dispatchOrder(@PathVariable Long id,
                                 @RequestParam(required = false) Long courierId,
+                                @RequestParam(required = false) Long livreurId,
                                 HttpSession session,
                                 HttpServletRequest request,
                                 RedirectAttributes ra) {
@@ -645,6 +650,24 @@ public class VendorController {
             orderRepository.save(order);
             log.info("✅ Livreur {} assigné à commande {} par vendeur {}",
                     courier.getCourierName(), id, vendor.getDisplayName());
+        }
+
+        // Nouveau système : livreur via VendorLivreur
+        if (livreurId != null && livreurId > 0) {
+            var vlOpt = vendorLivreurRepository.findById(livreurId);
+            if (vlOpt.isPresent() && vlOpt.get().getVendor().getId().equals(vendor.getId())
+                    && vlOpt.get().isActive()) {
+                com.bolas.ecommerce.model.Livreur lv = vlOpt.get().getLivreur();
+                order.setAssignedCourierName(lv.getName());
+                order.setAssignedCourierPhone(lv.getPhone());
+                if (order.getCourierToken() == null) {
+                    order.setCourierToken(java.util.UUID.randomUUID().toString());
+                }
+                orderRepository.save(order);
+                // Notifier le livreur via notification in-app (il verra dans son dashboard)
+                log.info("✅ Livreur (nouveau) {} assigné à commande {} par vendeur {}",
+                        lv.getName(), id, vendor.getDisplayName());
+            }
         }
 
         String scheme = request.getHeader("X-Forwarded-Proto") != null
