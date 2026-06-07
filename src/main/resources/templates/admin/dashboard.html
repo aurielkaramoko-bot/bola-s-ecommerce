@@ -114,38 +114,10 @@
       </div>
 
       <div class="row g-4">
-        <div class="col-lg-6">
+        <div class="col-12">
           <div class="admin-card p-3">
             <h2 class="h6 fw-semibold mb-3" style="color: #8B5E3C;" th:text="'Produits par catégorie'">Graphique</h2>
             <canvas id="chartCategories" style="max-height:280px;"></canvas>
-          </div>
-        </div>
-        <div class="col-lg-6">
-          <div class="admin-card p-3">
-            <h2 class="h6 fw-semibold mb-3" style="color: #8B5E3C;" th:text="'Commandes récentes'">Récentes</h2>
-            <div class="table-responsive">
-              <table class="table table-sm align-middle mb-0">
-                <thead>
-                <tr>
-                  <th th:text="'N° suivi'">N°</th>
-                  <th th:text="'Client'">Client</th>
-                  <th th:text="'Statut'">Statut</th>
-                  <th></th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="o : ${recentOrders}">
-                  <td th:text="${o.trackingNumber}">—</td>
-                  <td th:text="${o.customerName}">—</td>
-                  <td th:text="${o.status.label}">—</td>
-                  <td><a th:href="@{/admin/orders}" class="small" th:text="'Voir'">Voir</a></td>
-                </tr>
-                <tr th:if="${recentOrders == null or recentOrders.isEmpty()}">
-                  <td colspan="4" class="text-muted small" th:text="'Aucune commande.'">—</td>
-                </tr>
-                </tbody>
-              </table>
-            </div>
           </div>
         </div>
       </div>
