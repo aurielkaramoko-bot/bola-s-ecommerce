@@ -451,6 +451,15 @@ public class VendorController {
                 productRepository.findByVendorIdOrderByIdDesc(vendor.getId()).stream()
                         .limit(5).toList());
 
+        // Commandes récentes (5 dernières)
+        try {
+            model.addAttribute("recentOrders",
+                    orderRepository.findByVendorOrderByCreatedAtDesc(vendor).stream()
+                            .limit(5).toList());
+        } catch (Exception e) {
+            model.addAttribute("recentOrders", java.util.List.of());
+        }
+
         // Stats basiques si PRO/PREMIUM
         if (vendor.canViewStats()) {
             try {
