@@ -464,6 +464,44 @@ public class DatabaseMigrationConfig {
                     log.warn("Migration 28c: {}", e.getMessage());
                 }
 
+                // Migration 29 : table livreurs
+                try {
+                    conn.createStatement().execute("""
+                        CREATE TABLE IF NOT EXISTS livreurs (
+                            id BIGSERIAL PRIMARY KEY,
+                            name VARCHAR(150) NOT NULL,
+                            phone VARCHAR(40) NOT NULL UNIQUE,
+                            pin_hash VARCHAR(200) NOT NULL,
+                            vehicle_plate VARCHAR(30),
+                            vehicle_type VARCHAR(20),
+                            vehicle_photo_url VARCHAR(2000),
+                            delivery_zone VARCHAR(300),
+                            active BOOLEAN NOT NULL DEFAULT TRUE,
+                            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                        )
+                    """);
+                    log.info("Migration 29: table livreurs créée");
+                } catch (SQLException e) {
+                    log.warn("Migration 29 livreurs: {}", e.getMessage());
+                }
+
+                // Migration 30 : table vendor_livreurs
+                try {
+                    conn.createStatement().execute("""
+                        CREATE TABLE IF NOT EXISTS vendor_livreurs (
+                            id BIGSERIAL PRIMARY KEY,
+                            vendor_id BIGINT NOT NULL REFERENCES vendor_users(id) ON DELETE CASCADE,
+                            livreur_id BIGINT NOT NULL REFERENCES livreurs(id) ON DELETE CASCADE,
+                            active BOOLEAN NOT NULL DEFAULT TRUE,
+                            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                            UNIQUE(vendor_id, livreur_id)
+                        )
+                    """);
+                    log.info("Migration 30: table vendor_livreurs créée");
+                } catch (SQLException e) {
+                    log.warn("Migration 30 vendor_livreurs: {}", e.getMessage());
+                }
+
             } catch (Exception e) {
                 log.error("Migration échouée: {}", e.getMessage());
             }

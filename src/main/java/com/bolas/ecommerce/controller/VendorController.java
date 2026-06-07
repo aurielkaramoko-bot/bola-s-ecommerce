@@ -68,6 +68,10 @@ public class VendorController {
     private final NotificationService         notificationService;
     @org.springframework.beans.factory.annotation.Autowired
     private com.bolas.ecommerce.repository.CustomerRepository customerRepository;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.bolas.ecommerce.repository.LivreurRepository livreurRepository;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.bolas.ecommerce.repository.VendorLivreurRepository vendorLivreurRepository;
 
     public VendorController(CustomerOrderRepository orderRepository,
                             VendorUserRepository vendorUserRepository,
@@ -2079,5 +2083,94 @@ public class VendorController {
                 "Votre demande d'upgrade vers " + requested.name() + " a été soumise. "
                 + "L'équipe BOLA vous contactera pour confirmer le paiement.");
         return "redirect:/vendor/dashboard";
+    }
+
+    // ─── Mes livreurs ─────────────────────────────────────────────────────────
+
+    @GetMapping("/livreurs")
+    @Transactional(readOnly = true)
+    public String mesLivreurs(HttpSession session, Model model) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        VendorUser vendor = currentVendor(session);
+
+        List<com.bolas.ecommerce.model.VendorLivreur> vls =
+                vendorLivreurRepository.findByVendorWithLivreur(vendor);
+
+        // Stats par livreur
+        java.util.Map<Long, Long> deliveryCountMap = new java.util.HashMap<>();
+        java.util.Map<Long, Long> activeCountMap   = new java.util.HashMap<>();
+        for (var vl : vls) {
+            Long lid = vl.getLivreur().getId();
+            String name = vl.getLivreur().getName();
+            deliveryCountMap.put(lid, orderRepository.countByAssignedCourierNameAndStatus(name, OrderStatus.DELIVERED));
+            activeCountMap.put(lid,   orderRepository.countByAssignedCourierNameAndStatus(name, OrderStatus.IN_DELIVERY));
+        }
+
+        model.addAttribute("pageTitle", "Mes livreurs — BOLA");
+        model.addAttribute("vendor", vendor);
+        model.addAttribute("vendorLivreurs", vls);
+        model.addAttribute("deliveryCountMap", deliveryCountMap);
+        model.addAttribute("activeCountMap",   activeCountMap);
+        return "vendor/livreurs";
+    }
+
+    @PostMapping("/livreurs/add")
+    @Transactional
+    public String addLivreur(@RequestParam String phone,
+                              HttpSession session, RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        VendorUser vendor = currentVendor(session);
+
+        com.bolas.ecommerce.model.Livreur livreur =
+                livreurRepository.findByPhone(phone.trim()).orElse(null);
+        if (livreur == null) {
+            ra.addFlashAttribute("flashError",
+                    "Aucun livreur trouvé avec ce numéro. Le livreur doit d'abord créer son compte.");
+            return "redirect:/vendor/livreurs";
+        }
+        if (vendorLivreurRepository.existsByVendorAndLivreur(vendor, livreur)) {
+            ra.addFlashAttribute("flashError", "Ce livreur est déjà associé à votre boutique.");
+            return "redirect:/vendor/livreurs";
+        }
+        com.bolas.ecommerce.model.VendorLivreur vl = new com.bolas.ecommerce.model.VendorLivreur();
+        vl.setVendor(vendor);
+        vl.setLivreur(livreur);
+        vendorLivreurRepository.save(vl);
+        ra.addFlashAttribute("flashOk", livreur.getName() + " ajouté à votre boutique !");
+        return "redirect:/vendor/livreurs";
+    }
+
+    @PostMapping("/livreurs/{id}/suspend")
+    @Transactional
+    public String suspendLivreur(@PathVariable Long id, HttpSession session, RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        VendorUser vendor = currentVendor(session);
+        vendorLivreurRepository.findById(id).ifPresent(vl -> {
+            if (vl.getVendor().getId().equals(vendor.getId())) {
+                vl.setActive(false);
+                vendorLivreurRepository.save(vl);
+            }
+        });
+        ra.addFlashAttribute("flashOk", "Livreur suspendu.");
+        return "redirect:/vendor/livreurs";
+    }
+
+    @PostMapping("/livreurs/{id}/reactivate")
+    @Transactional
+    public String reactivateLivreur(@PathVariable Long id, HttpSession session, RedirectAttributes ra) {
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+        VendorUser vendor = currentVendor(session);
+        vendorLivreurRepository.findById(id).ifPresent(vl -> {
+            if (vl.getVendor().getId().equals(vendor.getId())) {
+                vl.setActive(true);
+                vendorLivreurRepository.save(vl);
+            }
+        });
+        ra.addFlashAttribute("flashOk", "Livreur réactivé.");
+        return "redirect:/vendor/livreurs";
     }
 }

@@ -149,7 +149,12 @@ public class SecurityConfig {
                         new AntPathRequestMatcher("/notifications/**"),
                         new AntPathRequestMatcher("/api/notifications/**"),
                         new AntPathRequestMatcher("/api/comments/**"),
-                        new AntPathRequestMatcher("/error")
+                        new AntPathRequestMatcher("/livreur/login"),
+                        new AntPathRequestMatcher("/livreur/logout"),
+                        new AntPathRequestMatcher("/livreur/register"),
+                        new AntPathRequestMatcher("/livreur/dashboard"),
+                        new AntPathRequestMatcher("/livreur/profile"),
+                        new AntPathRequestMatcher("/livreur/orders/**"),                        new AntPathRequestMatcher("/error")
                 ).permitAll()
                 .requestMatchers(new AntPathRequestMatcher("/h2-console/**")).access((authentication, context) ->
                         new org.springframework.security.authorization.AuthorizationDecision(!isProdProfile()))
