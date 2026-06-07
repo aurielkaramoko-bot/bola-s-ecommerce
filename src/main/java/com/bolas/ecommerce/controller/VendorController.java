@@ -448,7 +448,7 @@ public class VendorController {
         model.addAttribute("shopBaseUrl", shopBaseUrl);
         model.addAttribute("googleMapsApiKey", googleMapsApiKey);
         model.addAttribute("products",
-                productRepository.findByVendor(vendor).stream()
+                productRepository.findByVendorIdOrderByIdDesc(vendor.getId()).stream()
                         .limit(5).toList());
 
         // Stats basiques si PRO/PREMIUM
@@ -810,10 +810,10 @@ public class VendorController {
             if (videoFile != null && !videoFile.isEmpty()) {
                 p.setVideoUrl(imageUploadService.storeVideo(videoFile));
             }
-            // Photos supplémentaires (max 5)
+            // Photos supplémentaires (max 8)
             if (extraImageFiles != null && !extraImageFiles.isEmpty()) {
                 List<String> extraUrls = new java.util.ArrayList<>();
-                for (MultipartFile f : extraImageFiles.stream().limit(5).toList()) {
+                for (MultipartFile f : extraImageFiles.stream().limit(8).toList()) {
                     if (!f.isEmpty()) extraUrls.add(imageUploadService.store(f));
                 }
                 if (!extraUrls.isEmpty()) p.setExtraImages(String.join(",", extraUrls));
@@ -921,10 +921,10 @@ public class VendorController {
             } else if (imageUrl != null && !imageUrl.isBlank()) {
                 p.setImageUrl(imageUrl.trim());
             }
-            // Photos supplémentaires (max 5)
+            // Photos supplémentaires (max 8)
             if (extraImageFiles != null && !extraImageFiles.isEmpty()) {
                 List<String> extraUrls = new java.util.ArrayList<>();
-                for (MultipartFile f : extraImageFiles.stream().limit(5).toList()) {
+                for (MultipartFile f : extraImageFiles.stream().limit(8).toList()) {
                     if (!f.isEmpty()) extraUrls.add(imageUploadService.store(f));
                 }
                 if (!extraUrls.isEmpty()) p.setExtraImages(String.join(",", extraUrls));

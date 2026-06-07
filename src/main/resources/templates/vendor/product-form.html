@@ -155,10 +155,10 @@
 
           <!-- Photos supplémentaires (jusqu'à 5) -->
           <div>
-            <label class="form-label small text-muted">Photos supplémentaires (jusqu'à 5 angles)</label>
+            <label class="form-label small text-muted">Photos supplémentaires (jusqu'à 8 angles)</label>
             <input type="file" class="form-control" id="extra-images-input" name="extraImageFiles"
                    accept="image/*" multiple onchange="previewExtras(this)"/>
-            <div class="form-text">Sélectionnez plusieurs photos en même temps (Ctrl+clic).</div>
+            <div class="form-text">Sélectionnez plusieurs photos en même temps (Ctrl+clic). Max 8.</div>
 
             <!-- Aperçu multi-photos -->
             <div id="extra-previews" class="d-flex flex-wrap gap-2 mt-2"></div>
@@ -280,7 +280,7 @@ function previewMain(input) {
 function previewExtras(input) {
   var container = document.getElementById('extra-previews');
   container.innerHTML = '';
-  Array.from(input.files).slice(0, 5).forEach(function(file) {
+  Array.from(input.files).slice(0, 8).forEach(function(file) {
     var reader = new FileReader();
     reader.onload = function(e) {
       var img = document.createElement('img');

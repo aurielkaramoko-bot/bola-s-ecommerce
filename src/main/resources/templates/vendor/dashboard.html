@@ -231,7 +231,7 @@
                     <span th:text="${p.name}">Produit</span>
                   </div>
                 </td>
-                <td><span th:text="${#numbers.formatInteger(p.effectivePriceCfa,1,'COMMA')} + ' FCFA'"
+                <td><span th:text="${#numbers.formatInteger(p.priceCfa,1,'COMMA')} + ' FCFA'"
                          th:style="${p.onPromotion}? 'color:var(--bolas-accent);font-weight:600;' : ''"
                          th:title="${p.onPromotion ? 'Prix promo — Prix normal : ' + p.priceCfa + ' FCFA' : ''}"></span></td>
                 <td>
