@@ -753,6 +753,13 @@ public class VendorController {
                               @RequestParam(value = "extraImageFiles", required = false) List<MultipartFile> extraImageFiles,
                               HttpSession session,
                               RedirectAttributes ra) {
+
+        String redirect = requireVendor(session);
+        if (redirect != null) return redirect;
+
+        VendorUser vendor = currentVendor(session);
+
+        if (vendor.getPlan() == VendorPlan.GRATUIT &&
                 productRepository.countByVendor(vendor) >= GRATUIT_LIMIT) {
             ra.addFlashAttribute("flashError",
                     "Limite de 10 produits atteinte. Passez au Pack Pro.");
