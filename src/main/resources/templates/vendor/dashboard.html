@@ -278,40 +278,6 @@
     <!-- Commandes récentes + Actions rapides -->
     <div class="col-12 col-lg-5">
       <div class="admin-card p-3 mb-3">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-          <h2 class="h6 fw-bold mb-0" style="color:var(--bolas-accent);">
-            <i class="bi bi-receipt me-2"></i>Commandes récentes
-          </h2>
-          <a th:href="@{/vendor/orders}" class="btn btn-sm btn-hero-solid">Voir tout</a>
-        </div>
-        <div th:if="${recentOrders == null or recentOrders.isEmpty()}" class="text-muted small text-center py-3">
-          <i class="bi bi-inbox fs-4 d-block mb-1 opacity-25"></i>Aucune commande récente.
-        </div>
-        <div th:if="${recentOrders != null and !recentOrders.isEmpty()}" class="table-responsive">
-          <table class="table table-sm align-middle mb-0 small">
-            <thead class="table-light">
-              <tr><th>N° suivi</th><th>Client</th><th>Montant</th><th>Statut</th></tr>
-            </thead>
-            <tbody>
-              <tr th:each="o : ${recentOrders}">
-                <td class="fw-semibold" th:text="'#' + ${o.trackingNumber}">—</td>
-                <td th:text="${o.customerName}">—</td>
-                <td th:text="${#numbers.formatInteger(o.totalAmountCfa,1,'COMMA')} + ' F'">—</td>
-                <td>
-                  <span class="badge"
-                        th:classappend="${o.status.name() == 'PENDING'} ? 'bg-warning text-dark' :
-                                        (${o.status.name() == 'CONFIRMED' or o.status.name() == 'READY'} ? 'bg-success' :
-                                        (${o.status.name() == 'IN_DELIVERY'} ? 'bg-info text-dark' :
-                                        (${o.status.name() == 'DELIVERED'} ? 'bg-secondary' : 'bg-danger')))"
-                        th:text="${o.status.label}">—</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="admin-card p-3 mb-3">
         <h2 class="h6 fw-bold mb-2" style="color:var(--bolas-accent);"><i class="bi bi-share me-2"></i>Partager ma boutique</h2>
         <p class="small text-muted mb-2">Copie ce lien et colle-le sur ton statut WhatsApp, TikTok ou Instagram :</p>
         <div class="input-group input-group-sm">
