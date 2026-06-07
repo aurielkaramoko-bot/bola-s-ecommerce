@@ -446,7 +446,10 @@ public class DatabaseMigrationConfig {
                     conn.createStatement().execute(
                         "ALTER TABLE products ADD COLUMN IF NOT EXISTS out_of_stock_sizes VARCHAR(200)"
                     );
-                    log.info("Migration 28: colonnes available_sizes et out_of_stock_sizes ajoutées sur products");
+                    conn.createStatement().execute(
+                        "ALTER TABLE products ADD COLUMN IF NOT EXISTS extra_images VARCHAR(5000)"
+                    );
+                    log.info("Migration 28: colonnes tailles et extra_images ajoutées sur products");
                 } catch (SQLException e) {
                     log.warn("Migration 28 products sizes: {}", e.getMessage());
                 }

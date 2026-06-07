@@ -30,14 +30,40 @@
       </div>
       <div th:if="${product.videoUrl == null or product.videoUrl.isEmpty()}"
            class="product-detail-photo">
-        <img th:if="${product.imageUrl != null and !product.imageUrl.isEmpty()}"
-             th:src="${product.imageUrl}" th:alt="${product.name}" 
-             style="width:100%; border-radius:12px;"/>
+        <!-- Galerie multi-photos -->
+        <div th:if="${product.imageUrl != null and !product.imageUrl.isEmpty()}">
+          <!-- Image principale affichée grande -->
+          <img id="main-gallery-img"
+               th:src="${product.imageUrl}" th:alt="${product.name}"
+               style="width:100%;border-radius:12px;object-fit:cover;max-height:480px;cursor:zoom-in;"
+               onclick="openLightbox(this.src)"/>
+          <!-- Miniatures supplémentaires -->
+          <div th:if="${product.extraImageList != null and !product.extraImageList.isEmpty()}"
+               class="d-flex gap-2 mt-2 flex-wrap">
+            <!-- Miniature image principale -->
+            <img th:src="${product.imageUrl}" th:alt="${product.name}"
+                 class="gallery-thumb active"
+                 onclick="switchMain(this)"
+                 style="height:64px;width:64px;object-fit:cover;border-radius:8px;border:2px solid var(--bolas-accent);cursor:pointer;"/>
+            <!-- Miniatures extras -->
+            <img th:each="url : ${product.extraImageList}"
+                 th:src="${url}" th:alt="${product.name}"
+                 class="gallery-thumb"
+                 onclick="switchMain(this)"
+                 style="height:64px;width:64px;object-fit:cover;border-radius:8px;border:2px solid #ddd;cursor:pointer;"/>
+          </div>
+        </div>
         <div th:if="${product.imageUrl == null or product.imageUrl.isEmpty()}"
              class="d-flex align-items-center justify-content-center"
              style="min-height:380px; background:#f8f6f4; border-radius:12px;">
           <i class="bi bi-image text-secondary display-4"></i>
         </div>
+      </div>
+
+      <!-- Lightbox simple -->
+      <div id="lightbox" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;"
+           onclick="closeLightbox()">
+        <img id="lightbox-img" src="" style="max-width:90%;max-height:90%;border-radius:12px;object-fit:contain;"/>
       </div>
     </div>
 
@@ -378,6 +404,24 @@
   function escHtml(s) {
     if (!s) return '';
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function switchMain(thumb) {
+    var main = document.getElementById('main-gallery-img');
+    if (main) main.src = thumb.src;
+    document.querySelectorAll('.gallery-thumb').forEach(function(t) {
+      t.style.borderColor = '#ddd'; t.classList.remove('active');
+    });
+    thumb.style.borderColor = 'var(--bolas-accent)';
+    thumb.classList.add('active');
+  }
+  function openLightbox(src) {
+    var lb = document.getElementById('lightbox');
+    document.getElementById('lightbox-img').src = src;
+    lb.style.display = 'flex';
+  }
+  function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
   }
 
   function selectSize(btn) {

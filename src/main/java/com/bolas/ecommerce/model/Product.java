@@ -100,6 +100,11 @@ public class Product {
     @Column(name = "out_of_stock_sizes", length = 200)
     private String outOfStockSizes;
 
+    /** URLs des photos supplémentaires (CSV, max 5) — ex: "url1,url2,url3" */
+    @Size(max = 5000)
+    @Column(name = "extra_images", length = 5000)
+    private String extraImages;
+
     /**
      * Vendeur propriétaire de ce produit.
      * null = produit appartenant directement à BOLA (ajouté par admin).
@@ -248,6 +253,16 @@ public class Product {
 
     public String getOutOfStockSizes() { return outOfStockSizes; }
     public void setOutOfStockSizes(String outOfStockSizes) { this.outOfStockSizes = outOfStockSizes; }
+
+    public String getExtraImages() { return extraImages; }
+    public void setExtraImages(String extraImages) { this.extraImages = extraImages; }
+
+    /** Liste des URLs de photos supplémentaires */
+    public java.util.List<String> getExtraImageList() {
+        if (extraImages == null || extraImages.isBlank()) return java.util.List.of();
+        return java.util.List.of(extraImages.split(",")).stream()
+                .map(String::trim).filter(s -> !s.isBlank()).toList();
+    }
 
     /** Liste parsée des tailles disponibles */
     public java.util.List<String> getSizeList() {

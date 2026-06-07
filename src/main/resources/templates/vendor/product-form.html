@@ -130,26 +130,54 @@
           </div>
         </div>
 
-        <!-- Image URL — masquée sur mobile -->
-        <div class="col-12 d-none d-md-block">
-          <label for="prod-image-url" class="form-label fw-semibold small">URL de l'image</label>
-          <input type="url" class="form-control" id="prod-image-url" name="imageUrl"
-                 th:value="${product.imageUrl}"
-                 placeholder="https://... (ou uploadez ci-dessous)"/>
-        </div>
-
-        <!-- Image file upload -->
+        <!-- Image principale + galerie multi-photos -->
         <div class="col-12">
-          <label for="prod-image-file" class="form-label fw-semibold small">
-            <i class="bi bi-image me-1"></i>Image du produit
+          <label class="form-label fw-semibold small">
+            <i class="bi bi-images me-1"></i>Photos du produit <span class="text-danger">*</span>
           </label>
-          <input type="file" class="form-control" id="prod-image-file" name="imageFile"
-                 accept="image/*"/>
-          <div class="form-text">JPEG/PNG/WebP, max 5 Mo.</div>
-          <div th:if="${product.imageUrl != null}" class="mt-2">
-            <img th:src="${product.imageUrl}" alt="Image actuelle"
-                 style="height:80px;border-radius:8px;object-fit:cover;"/>
-            <span class="small text-muted ms-2">Image actuelle</span>
+
+          <!-- Photo principale -->
+          <div class="mb-2">
+            <label for="prod-image-file" class="form-label small text-muted">Photo principale</label>
+            <input type="file" class="form-control" id="prod-image-file" name="imageFile"
+                   accept="image/*" onchange="previewMain(this)"/>
+            <div class="form-text">JPEG/PNG/WebP, max 5 Mo.</div>
+            <div th:if="${product.imageUrl != null}" class="mt-2 d-flex align-items-center gap-2">
+              <img th:src="${product.imageUrl}" alt="Photo principale"
+                   style="height:72px;border-radius:8px;object-fit:cover;border:2px solid var(--bolas-accent);"/>
+              <span class="badge bg-success small">Photo principale</span>
+            </div>
+            <div id="main-preview" class="mt-2" style="display:none;">
+              <img id="main-preview-img" src="#" alt="Aperçu"
+                   style="height:72px;border-radius:8px;object-fit:cover;border:2px solid var(--bolas-accent);"/>
+            </div>
+          </div>
+
+          <!-- Photos supplémentaires (jusqu'à 5) -->
+          <div>
+            <label class="form-label small text-muted">Photos supplémentaires (jusqu'à 5 angles)</label>
+            <input type="file" class="form-control" id="extra-images-input" name="extraImageFiles"
+                   accept="image/*" multiple onchange="previewExtras(this)"/>
+            <div class="form-text">Sélectionnez plusieurs photos en même temps (Ctrl+clic).</div>
+
+            <!-- Aperçu multi-photos -->
+            <div id="extra-previews" class="d-flex flex-wrap gap-2 mt-2"></div>
+
+            <!-- Photos existantes (mode édition) -->
+            <div th:if="${product.extraImageList != null and !product.extraImageList.isEmpty()}"
+                 class="d-flex flex-wrap gap-2 mt-2" id="existing-extras">
+              <div th:each="url : ${product.extraImageList}" class="position-relative">
+                <img th:src="${url}" style="height:64px;width:64px;object-fit:cover;border-radius:8px;border:1px solid #ddd;"/>
+              </div>
+            </div>
+          </div>
+
+          <!-- URL image (fallback desktop) -->
+          <div class="mt-2 d-none d-md-block">
+            <label for="prod-image-url" class="form-label small text-muted">Ou URL de l'image principale</label>
+            <input type="url" class="form-control form-control-sm" id="prod-image-url" name="imageUrl"
+                   th:value="${product.imageUrl}"
+                   placeholder="https://..."/>
           </div>
         </div>
 
@@ -238,6 +266,31 @@
 <script th:inline="javascript">
 var csrfToken = /*[[${_csrf.token}]]*/ '';
 var csrfHeader = /*[[${_csrf.headerName}]]*/ 'X-CSRF-TOKEN';
+
+// ─── Preview photos ──────────────────────────────────────────────────────────
+function previewMain(input) {
+  var div = document.getElementById('main-preview');
+  var img = document.getElementById('main-preview-img');
+  if (input.files && input.files[0]) {
+    var reader = new FileReader();
+    reader.onload = function(e) { img.src = e.target.result; div.style.display='block'; };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+function previewExtras(input) {
+  var container = document.getElementById('extra-previews');
+  container.innerHTML = '';
+  Array.from(input.files).slice(0, 5).forEach(function(file) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.cssText = 'height:64px;width:64px;object-fit:cover;border-radius:8px;border:1px solid #ddd;';
+      container.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 // ─── Tailles dynamiques ──────────────────────────────────────────────────────
 var SHOE_SIZES  = ['35','36','37','38','39','40','41','42','43','44','45','46'];
