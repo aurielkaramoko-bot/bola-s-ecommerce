@@ -443,15 +443,25 @@ public class DatabaseMigrationConfig {
                     conn.createStatement().execute(
                         "ALTER TABLE products ADD COLUMN IF NOT EXISTS available_sizes VARCHAR(200)"
                     );
+                    log.info("Migration 28a: colonne available_sizes ajoutée sur products");
+                } catch (SQLException e) {
+                    log.warn("Migration 28a: {}", e.getMessage());
+                }
+                try {
                     conn.createStatement().execute(
                         "ALTER TABLE products ADD COLUMN IF NOT EXISTS out_of_stock_sizes VARCHAR(200)"
                     );
+                    log.info("Migration 28b: colonne out_of_stock_sizes ajoutée sur products");
+                } catch (SQLException e) {
+                    log.warn("Migration 28b: {}", e.getMessage());
+                }
+                try {
                     conn.createStatement().execute(
                         "ALTER TABLE products ADD COLUMN IF NOT EXISTS extra_images VARCHAR(5000)"
                     );
-                    log.info("Migration 28: colonnes tailles et extra_images ajoutées sur products");
+                    log.info("Migration 28c: colonne extra_images ajoutée sur products");
                 } catch (SQLException e) {
-                    log.warn("Migration 28 products sizes: {}", e.getMessage());
+                    log.warn("Migration 28c: {}", e.getMessage());
                 }
 
             } catch (Exception e) {
