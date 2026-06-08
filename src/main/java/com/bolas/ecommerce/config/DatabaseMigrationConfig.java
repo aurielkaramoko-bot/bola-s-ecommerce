@@ -502,6 +502,19 @@ public class DatabaseMigrationConfig {
                     log.warn("Migration 30 vendor_livreurs: {}", e.getMessage());
                 }
 
+                // Migration 31 : colonnes vehicle_plate et vehicle_type sur courier_applications
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE courier_applications ADD COLUMN IF NOT EXISTS vehicle_plate VARCHAR(30)"
+                    );
+                    conn.createStatement().execute(
+                        "ALTER TABLE courier_applications ADD COLUMN IF NOT EXISTS vehicle_type VARCHAR(20)"
+                    );
+                    log.info("Migration 31: colonnes vehicle_plate/vehicle_type sur courier_applications");
+                } catch (SQLException e) {
+                    log.warn("Migration 31: {}", e.getMessage());
+                }
+
             } catch (Exception e) {
                 log.error("Migration échouée: {}", e.getMessage());
             }

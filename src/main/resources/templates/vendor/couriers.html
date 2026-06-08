@@ -55,6 +55,27 @@
         <div class="form-text">Indiquez les zones que ce livreur couvre.</div>
       </div>
 
+      <!-- Immatriculation + Type de véhicule -->
+      <div class="col-md-6">
+        <label class="form-label fw-semibold small">
+          Immatriculation du véhicule <span class="text-danger">*</span>
+        </label>
+        <input type="text" class="form-control" name="vehiclePlate" required maxlength="30"
+               placeholder="ex. TG-1234-AB"/>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold small">
+          Type de véhicule <span class="text-danger">*</span>
+        </label>
+        <select class="form-select" name="vehicleType" required>
+          <option value="">— Choisir —</option>
+          <option value="Moto">Moto</option>
+          <option value="Voiture">Voiture</option>
+          <option value="Tricycle">Tricycle</option>
+          <option value="Vélo">Vélo</option>
+        </select>
+      </div>
+
       <!-- Photo du livreur -->
       <div class="col-md-6">
         <label class="form-label fw-semibold small">

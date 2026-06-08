@@ -27,6 +27,14 @@ public class CourierApplication {
     @Column(length = 200)
     private String zone;
 
+    /** Immatriculation du véhicule (ex: TG-1234-AB) */
+    @Column(name = "vehicle_plate", length = 30)
+    private String vehiclePlate;
+
+    /** Type de véhicule : Moto, Voiture, Tricycle, Vélo */
+    @Column(name = "vehicle_type", length = 20)
+    private String vehicleType;
+
     /** Photo du livreur (selfie ou photo d'identité) */
     @Column(name = "photo_url", length = 2000)
     private String photoUrl;
@@ -71,6 +79,12 @@ public class CourierApplication {
 
     public String getZone() { return zone; }
     public void setZone(String zone) { this.zone = zone; }
+
+    public String getVehiclePlate() { return vehiclePlate; }
+    public void setVehiclePlate(String vehiclePlate) { this.vehiclePlate = vehiclePlate; }
+
+    public String getVehicleType() { return vehicleType; }
+    public void setVehicleType(String vehicleType) { this.vehicleType = vehicleType; }
 
     public String getPhotoUrl() { return photoUrl; }
     public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }

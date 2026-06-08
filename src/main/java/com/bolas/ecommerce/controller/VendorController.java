@@ -1101,6 +1101,8 @@ public class VendorController {
     public String proposeCourier(@RequestParam String courierName,
                                  @RequestParam String courierPhone,
                                  @RequestParam(required = false) String zone,
+                                 @RequestParam(required = false) String vehiclePlate,
+                                 @RequestParam(required = false) String vehicleType,
                                  @RequestParam(value = "courierPhoto", required = false) MultipartFile courierPhoto,
                                  @RequestParam(value = "courierIdDoc", required = false) MultipartFile courierIdDoc,
                                  HttpSession session,
@@ -1113,6 +1115,8 @@ public class VendorController {
         String cleanName  = sanitizer.sanitizeText(courierName);
         String cleanPhone = sanitizer.sanitizeText(courierPhone);
         String cleanZone  = sanitizer.sanitizeText(zone);
+        String cleanPlate = sanitizer.sanitizeText(vehiclePlate);
+        String cleanType  = sanitizer.sanitizeText(vehicleType);
 
         if (cleanName == null || cleanName.isBlank()) {
             ra.addFlashAttribute("flashError", "Le nom du livreur est obligatoire.");
@@ -1120,6 +1124,14 @@ public class VendorController {
         }
         if (cleanPhone == null || cleanPhone.isBlank()) {
             ra.addFlashAttribute("flashError", "Le téléphone du livreur est obligatoire.");
+            return "redirect:/vendor/couriers";
+        }
+        if (cleanPlate == null || cleanPlate.isBlank()) {
+            ra.addFlashAttribute("flashError", "L'immatriculation du véhicule est obligatoire.");
+            return "redirect:/vendor/couriers";
+        }
+        if (cleanType == null || cleanType.isBlank()) {
+            ra.addFlashAttribute("flashError", "Le type de véhicule est obligatoire.");
             return "redirect:/vendor/couriers";
         }
         if (courierPhoto == null || courierPhoto.isEmpty()) {
@@ -1161,6 +1173,8 @@ public class VendorController {
         app.setCourierName(cleanName);
         app.setCourierPhone(cleanPhone);
         app.setZone(cleanZone);
+        app.setVehiclePlate(cleanPlate);
+        app.setVehicleType(cleanType);
         app.setPhotoUrl(photoUrl);
         app.setIdDocumentUrl(idDocUrl);
         app.setIdDocVerified(idVerified);
