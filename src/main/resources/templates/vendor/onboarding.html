@@ -194,6 +194,32 @@
                  th:value="${vendor.languagesSpoken}"/>
         </div>
 
+        <!-- Livraison internationale (ZLECAf) -->
+        <div class="col-12">
+          <div class="admin-card p-3" style="border-left:3px solid #27ae60;">
+            <div class="d-flex align-items-center gap-3 mb-2">
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch"
+                       name="internationalDelivery" id="ob-intl-toggle"
+                       th:checked="${vendor.internationalDelivery}"
+                       onchange="document.getElementById('ob-intl-countries').style.display=this.checked?'block':'none'"/>
+                <label class="form-check-label fw-semibold" for="ob-intl-toggle">
+                  🌍 Livraison internationale (ZLECAf)
+                </label>
+              </div>
+            </div>
+            <p class="small text-muted mb-2">Activez pour proposer la livraison vers d'autres pays africains.</p>
+            <div id="ob-intl-countries"
+                 th:style="${vendor.internationalDelivery} ? '' : 'display:none;'">
+              <label class="form-label small fw-semibold">Pays desservis (codes ISO séparés par virgule)</label>
+              <input type="text" class="form-control form-control-sm" name="internationalCountries"
+                     maxlength="200" placeholder="Ex: CI,SN,GA,BJ,CM"
+                     th:value="${vendor.internationalCountries}"/>
+              <div class="form-text">Codes pays : CI=Côte d'Ivoire, SN=Sénégal, GA=Gabon, BJ=Bénin, CM=Cameroun...</div>
+            </div>
+          </div>
+        </div>
+
         <!-- Actions -->
         <div class="col-12 d-flex gap-2 pt-2">
           <button type="submit" class="btn btn-hero-solid flex-grow-1">

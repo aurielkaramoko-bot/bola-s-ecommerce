@@ -64,4 +64,25 @@ public interface VendorUserRepository extends JpaRepository<VendorUser, Long> {
     /** Nombre de demandes d'abonnement en attente (pour badge dashboard admin) */
     @Query("SELECT COUNT(v) FROM VendorUser v WHERE v.pendingPlan IS NOT NULL AND v.pendingPlan <> ''")
     long countPendingSubscriptions();
+
+    /**
+     * Recherche filtrable pour la page /boutiques.
+     * Tous les paramètres sont optionnels : null = pas de filtre sur ce champ.
+     */
+    @Query("""
+        SELECT v FROM VendorUser v
+        WHERE v.active = true
+          AND v.vendorStatus = com.bolas.ecommerce.model.VendorStatus.ACTIVE
+          AND (:q IS NULL OR LOWER(v.shopName) LIKE LOWER(CONCAT('%', :q, '%'))
+                          OR LOWER(v.shopDescription) LIKE LOWER(CONCAT('%', :q, '%')))
+          AND (:country IS NULL OR v.shopCountry = :country)
+          AND (:plan IS NULL OR CAST(v.plan AS string) = :plan)
+        ORDER BY
+          CASE v.plan WHEN 'PREMIUM' THEN 0 WHEN 'PRO' THEN 1 WHEN 'PRO_LOCAL' THEN 2 ELSE 3 END,
+          v.shopName ASC
+        """)
+    List<VendorUser> searchBoutiques(@Param("q") String q,
+                                     @Param("country") String country,
+                                     @Param("plan") String plan);
 }
+

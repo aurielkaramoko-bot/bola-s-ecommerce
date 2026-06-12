@@ -21,6 +21,76 @@
     gtag('js', new Date());
     gtag('config', 'G-5H21YXWJ5G');
   </script>
+
+  <!-- Firebase FCM (uniquement si configuré) -->
+  <th:block th:if="${firebaseApiKey != null and !firebaseApiKey.isEmpty()}">
+    <script th:inline="javascript">
+    (function() {
+      var FB_CONFIG = {
+        apiKey:            /*[[${firebaseApiKey}]]*/ '',
+        authDomain:        /*[[${firebaseAuthDomain}]]*/ '',
+        projectId:         /*[[${firebaseProjectId}]]*/ '',
+        storageBucket:     /*[[${firebaseStorageBucket}]]*/ '',
+        messagingSenderId: /*[[${firebaseMessagingSenderId}]]*/ '',
+        appId:             /*[[${firebaseAppId}]]*/ ''
+      };
+      var VAPID_KEY = /*[[${firebaseVapidKey}]]*/ '';
+
+      if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+      if (!FB_CONFIG.apiKey) return;
+
+      // Charger Firebase JS SDK
+      var s1 = document.createElement('script');
+      s1.src = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js';
+      s1.onload = function() {
+        var s2 = document.createElement('script');
+        s2.src = 'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js';
+        s2.onload = function() {
+          try {
+            if (!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+            var messaging = firebase.messaging();
+
+            navigator.serviceWorker.register('/firebase-messaging-sw.js').then(function(reg) {
+              // Transmettre la config au Service Worker via postMessage
+              if (reg.active) {
+                reg.active.postMessage({ type: 'FIREBASE_CONFIG', config: FB_CONFIG });
+              }
+              reg.addEventListener('updatefound', function() {
+                var newWorker = reg.installing;
+                newWorker && newWorker.addEventListener('statechange', function() {
+                  if (newWorker.state === 'activated') {
+                    newWorker.postMessage({ type: 'FIREBASE_CONFIG', config: FB_CONFIG });
+                  }
+                });
+              });
+
+              // Demande de permission seulement si l'utilisateur est connecté
+              var isConnected = /*[[${session.BOLAS_VENDOR != null or session.BOLAS_CUSTOMER != null}]]*/ false;
+              if (!isConnected) return;
+
+              Notification.requestPermission().then(function(permission) {
+                if (permission !== 'granted') return;
+                return messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+              }).then(function(token) {
+                if (!token) return;
+                var csrf = document.querySelector('meta[name="_csrf"]');
+                var csrfVal = csrf ? csrf.content : (document.querySelector('input[name="_csrf"]') ? document.querySelector('input[name="_csrf"]').value : '');
+                fetch('/api/fcm/token', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfVal },
+                  body: JSON.stringify({ token: token })
+                }).catch(function(){});
+              }).catch(function(){});
+            }).catch(function(){});
+          } catch(e) {}
+        };
+        document.head.appendChild(s2);
+      };
+      document.head.appendChild(s1);
+    })();
+    </script>
+  </th:block>
+
 </head>
 <body>
 

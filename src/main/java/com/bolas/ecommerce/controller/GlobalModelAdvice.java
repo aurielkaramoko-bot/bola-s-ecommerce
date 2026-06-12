@@ -82,5 +82,28 @@ public class GlobalModelAdvice {
         } catch (Exception ignored) {}
         return java.util.Collections.emptyList();
     }
+
+    // ─── Firebase Web Config (clés publiques) ─────────────────────────────────
+
+    @ModelAttribute("firebaseApiKey")
+    public String firebaseApiKey(@Value("${firebase.web.api-key:}") String v) { return v; }
+
+    @ModelAttribute("firebaseAuthDomain")
+    public String firebaseAuthDomain(@Value("${firebase.web.auth-domain:}") String v) { return v; }
+
+    @ModelAttribute("firebaseProjectId")
+    public String firebaseProjectId(@Value("${firebase.web.project-id:}") String v) { return v; }
+
+    @ModelAttribute("firebaseStorageBucket")
+    public String firebaseStorageBucket(@Value("${firebase.web.storage-bucket:}") String v) { return v; }
+
+    @ModelAttribute("firebaseMessagingSenderId")
+    public String firebaseMessagingSenderId(@Value("${firebase.web.messaging-sender-id:}") String v) { return v; }
+
+    @ModelAttribute("firebaseAppId")
+    public String firebaseAppId(@Value("${firebase.web.app-id:}") String v) { return v; }
+
+    @ModelAttribute("firebaseVapidKey")
+    public String firebaseVapidKey(@Value("${firebase.web.vapid-key:}") String v) { return v; }
 }
 

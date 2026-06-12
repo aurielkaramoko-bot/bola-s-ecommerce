@@ -10,6 +10,70 @@
   <h1 class="h2 section-title mb-1">Nos boutiques</h1>
   <p class="section-subtitle mb-4">Découvrez tous les vendeurs actifs sur BOLA</p>
 
+  <!-- ===== BARRE DE RECHERCHE + FILTRES ===== -->
+  <form method="get" th:action="@{/boutiques}" class="mb-4" id="boutiques-filter-form">
+    <div class="row g-2 align-items-end">
+      <!-- Recherche texte -->
+      <div class="col-12 col-md-5">
+        <div class="input-group">
+          <span class="input-group-text bg-white border-end-0">
+            <i class="bi bi-search" style="color:var(--bolas-accent);"></i>
+          </span>
+          <input type="text" class="form-control border-start-0" name="q"
+                 id="boutiques-search-input"
+                 th:value="${q}"
+                 placeholder="Nom de boutique, description..."
+                 maxlength="100" autocomplete="off"
+                 style="border-left:none;"/>
+        </div>
+      </div>
+      <!-- Filtre pays -->
+      <div class="col-6 col-md-3">
+        <select class="form-select" name="country" id="boutiques-country-filter">
+          <option value="">🌍 Tous les pays</option>
+          <option value="TG" th:selected="${country == 'TG'}">🇹🇬 Togo</option>
+          <option value="CI" th:selected="${country == 'CI'}">🇨🇮 Côte d'Ivoire</option>
+          <option value="GA" th:selected="${country == 'GA'}">🇬🇦 Gabon</option>
+          <option value="SN" th:selected="${country == 'SN'}">🇸🇳 Sénégal</option>
+          <option value="BJ" th:selected="${country == 'BJ'}">🇧🇯 Bénin</option>
+          <option value="CM" th:selected="${country == 'CM'}">🇨🇲 Cameroun</option>
+          <option value="BF" th:selected="${country == 'BF'}">🇧🇫 Burkina Faso</option>
+          <option value="GN" th:selected="${country == 'GN'}">🇬🇳 Guinée</option>
+        </select>
+      </div>
+      <!-- Filtre plan -->
+      <div class="col-6 col-md-2">
+        <select class="form-select" name="plan" id="boutiques-plan-filter">
+          <option value="">Tous les plans</option>
+          <option value="PREMIUM" th:selected="${plan == 'PREMIUM'}">⭐ Premium</option>
+          <option value="PRO" th:selected="${plan == 'PRO'}">✓ Pro</option>
+          <option value="PRO_LOCAL" th:selected="${plan == 'PRO_LOCAL'}">📍 Local</option>
+        </select>
+      </div>
+      <!-- Bouton chercher -->
+      <div class="col-12 col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-hero-solid flex-grow-1" id="boutiques-search-btn">
+          <i class="bi bi-search me-1"></i>Chercher
+        </button>
+        <a th:if="${q != null or country != null or plan != null}"
+           th:href="@{/boutiques}" class="btn btn-outline-secondary" title="Réinitialiser">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      </div>
+    </div>
+  </form>
+
+  <!-- Résultats count -->
+  <p th:if="${vendors != null}" class="small text-muted mb-3">
+    <span th:text="${vendors.size()}">0</span> boutique(s)
+    <span th:if="${q != null and !q.isEmpty()}">
+      pour "<strong th:text="${q}"></strong>"
+    </span>
+    <span th:if="${country != null and !country.isEmpty()}">
+      — <span th:text="${country}"></span>
+    </span>
+  </p>
+
   <div class="row g-4" th:if="${vendors != null and !vendors.isEmpty()}">
     <div class="col-6 col-md-4 col-lg-3" th:each="v : ${vendors}">
       <a th:href="@{/boutiques/{id}(id=${v.id})}" class="text-decoration-none">
@@ -35,7 +99,7 @@
             <span th:if="${v.plan != null and v.plan.name() == 'PRO_LOCAL'}"
                   style="position:absolute;bottom:0;right:0;background:#198754;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.65rem;"
                   title="Vendeur Local">📍</span>
-          </div>
+        </div>
           <h2 class="h6 fw-bold mb-1" style="color:var(--bolas-accent);"
               th:text="${v.displayName}">Boutique</h2>
           <p class="small text-muted mb-2" th:if="${v.shopDescription != null}"
@@ -62,11 +126,28 @@
 
   <div th:if="${vendors == null or vendors.isEmpty()}" class="text-center py-5 text-muted">
     <i class="bi bi-shop fs-1 d-block mb-3 opacity-25"></i>
-    <p>Aucune boutique active pour l'instant.</p>
+    <p th:if="${q != null and !q.isEmpty()}">Aucune boutique trouvée pour "<strong th:text="${q}"></strong>".</p>
+    <p th:if="${q == null or q.isEmpty()}">Aucune boutique active pour l'instant.</p>
+    <a th:if="${q != null or country != null}" th:href="@{/boutiques}" class="btn btn-outline-secondary btn-sm mt-2">
+      <i class="bi bi-arrow-left me-1"></i>Voir toutes les boutiques
+    </a>
   </div>
 </main>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
 <th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
+
+<script>
+// Recherche instantanée côté client (filtre les cartes sans rechargement)
+var searchInput = document.getElementById('boutiques-search-input');
+if (searchInput) {
+  searchInput.addEventListener('input', function() {
+    // Soumettre le formulaire avec debounce si valeur vide (reset)
+    if (this.value === '') {
+      document.getElementById('boutiques-filter-form').submit();
+    }
+  });
+}
+</script>
 </body>
 </html>

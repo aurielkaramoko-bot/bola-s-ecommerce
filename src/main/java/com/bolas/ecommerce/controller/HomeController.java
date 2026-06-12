@@ -159,15 +159,27 @@ public class HomeController {
 
     @GetMapping("/boutiques")
     @Transactional(readOnly = true)
-    public String boutiques(Model model) {
+    public String boutiques(@RequestParam(required = false) String q,
+                            @RequestParam(required = false) String country,
+                            @RequestParam(required = false) String plan,
+                            Model model) {
         model.addAttribute("pageTitle", "Boutiques — BOLA");
+        // Normaliser les paramètres vides → null (pas de filtre)
+        String qFilter       = (q       != null && !q.isBlank())       ? q.trim()                   : null;
+        String countryFilter = (country != null && !country.isBlank()) ? country.trim().toUpperCase() : null;
+        String planFilter    = (plan    != null && !plan.isBlank())    ? plan.trim().toUpperCase()    : null;
+
         try {
-            List<VendorUser> activeVendors = vendorUserRepository.findByVendorStatusAndActiveTrue(VendorStatus.ACTIVE);
-            model.addAttribute("vendors", activeVendors);
+            List<VendorUser> vendors = vendorUserRepository.searchBoutiques(qFilter, countryFilter, planFilter);
+            model.addAttribute("vendors", vendors);
         } catch (Exception e) {
             log.error("Erreur chargement boutiques", e);
             model.addAttribute("vendors", java.util.List.of());
         }
+        // Repopuler les filtres dans la vue
+        model.addAttribute("q",       qFilter);
+        model.addAttribute("country", countryFilter);
+        model.addAttribute("plan",    planFilter);
         return "boutiques";
     }
 

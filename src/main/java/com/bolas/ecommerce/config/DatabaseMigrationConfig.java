@@ -515,6 +515,91 @@ public class DatabaseMigrationConfig {
                     log.warn("Migration 31: {}", e.getMessage());
                 }
 
+                // Migration 32 : table fcm_tokens
+                try {
+                    conn.createStatement().execute("""
+                        CREATE TABLE IF NOT EXISTS fcm_tokens (
+                            id BIGSERIAL PRIMARY KEY,
+                            user_type VARCHAR(16) NOT NULL,
+                            user_id BIGINT NOT NULL,
+                            token VARCHAR(500) NOT NULL UNIQUE,
+                            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                            last_used_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                        )
+                    """);
+                    conn.createStatement().execute(
+                        "CREATE INDEX IF NOT EXISTS idx_fcm_tokens_user ON fcm_tokens(user_id, user_type)"
+                    );
+                    log.info("Migration 32: table fcm_tokens créée");
+                } catch (SQLException e) {
+                    log.warn("Migration 32 fcm_tokens: {}", e.getMessage());
+                }
+
+                // Migration 33 : colonnes confiance boutique sur vendor_users
+                // (delivery_zones, delivery_delay, return_policy, languages_spoken, pending_plan, shop_discount)
+                String[][] trustCols = {
+                    {"delivery_zones",           "VARCHAR(500)"},
+                    {"delivery_delay",           "VARCHAR(100)"},
+                    {"return_policy",            "VARCHAR(500)"},
+                    {"languages_spoken",         "VARCHAR(200)"},
+                    {"pending_plan",             "VARCHAR(30)"},
+                    {"pending_payment_method",   "VARCHAR(100)"},
+                    {"pending_plan_requested_at","TIMESTAMP"},
+                    {"shop_discount_percent",    "INTEGER"},
+                    {"shop_discount_ends_at",    "DATE"},
+                    {"referral_code",            "VARCHAR(20)"},
+                    {"referred_by_id",           "BIGINT"},
+                    {"referral_bonus_months",    "INTEGER DEFAULT 0"},
+                };
+                for (String[] col : trustCols) {
+                    try {
+                        conn.createStatement().execute(
+                            "ALTER TABLE vendor_users ADD COLUMN IF NOT EXISTS " + col[0] + " " + col[1]
+                        );
+                        log.info("Migration 33: colonne {} ajoutée sur vendor_users", col[0]);
+                    } catch (SQLException e) {
+                        log.warn("Migration 33 vendor_users.{}: {}", col[0], e.getMessage());
+                    }
+                }
+
+                // Migration 34 : index unique referral_code (peut échouer si déjà créé)
+                try {
+                    conn.createStatement().execute(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS idx_vendor_referral_code ON vendor_users(referral_code) WHERE referral_code IS NOT NULL"
+                    );
+                    log.info("Migration 34: index referral_code créé");
+                } catch (SQLException e) {
+                    log.warn("Migration 34 referral_code index: {}", e.getMessage());
+                }
+
+                // Migration 35 : colonnes livreur_id sur shop_orders
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE shop_orders ADD COLUMN IF NOT EXISTS livreur_id BIGINT"
+                    );
+                    log.info("Migration 35: colonne livreur_id ajoutée sur shop_orders");
+                } catch (SQLException e) {
+                    log.warn("Migration 35 shop_orders.livreur_id: {}", e.getMessage());
+                }
+
+                // Migration 36 : livraison internationale sur vendor_users (ZLECAf)
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE vendor_users ADD COLUMN IF NOT EXISTS international_delivery BOOLEAN NOT NULL DEFAULT FALSE"
+                    );
+                    log.info("Migration 36a: colonne international_delivery ajoutée sur vendor_users");
+                } catch (SQLException e) {
+                    log.warn("Migration 36a vendor_users.international_delivery: {}", e.getMessage());
+                }
+                try {
+                    conn.createStatement().execute(
+                        "ALTER TABLE vendor_users ADD COLUMN IF NOT EXISTS international_countries VARCHAR(200)"
+                    );
+                    log.info("Migration 36b: colonne international_countries ajoutée sur vendor_users");
+                } catch (SQLException e) {
+                    log.warn("Migration 36b vendor_users.international_countries: {}", e.getMessage());
+                }
+
             } catch (Exception e) {
                 log.error("Migration échouée: {}", e.getMessage());
             }

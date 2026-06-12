@@ -92,6 +92,12 @@ public class ProductCommentController {
             c.setAuthorName(vendor.getDisplayName());
         }
 
+        // Photo jointe au commentaire (upload Cloudinary côté front)
+        String photoUrl = body.get("photoUrl");
+        if (photoUrl != null && !photoUrl.isBlank() && photoUrl.startsWith("https://")) {
+            c.setPhotoUrl(photoUrl);
+        }
+
         return ResponseEntity.ok(commentRepo.save(c));
     }
 

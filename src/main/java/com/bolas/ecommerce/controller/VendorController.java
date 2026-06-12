@@ -1959,6 +1959,8 @@ public class VendorController {
                                    @RequestParam(required = false) List<Long> categoryIds,
                                    @RequestParam(value = "logoFile", required = false) MultipartFile logoFile,
                                    @RequestParam(value = "bannerFile", required = false) MultipartFile bannerFile,
+                                   @RequestParam(required = false, defaultValue = "false") boolean internationalDelivery,
+                                   @RequestParam(required = false) String internationalCountries,
                                    HttpSession session,
                                    RedirectAttributes ra) {
         String redirect = requireVendor(session);
@@ -2012,6 +2014,16 @@ public class VendorController {
             vendor.setReturnPolicy(sanitizer.sanitizeText(returnPolicy));
         if (languagesSpoken != null && !languagesSpoken.isBlank())
             vendor.setLanguagesSpoken(sanitizer.sanitizeText(languagesSpoken));
+
+        // Livraison internationale (ZLECAf)
+        vendor.setInternationalDelivery(internationalDelivery);
+        if (internationalDelivery && internationalCountries != null && !internationalCountries.isBlank()) {
+            // Normalise : uppercase + supprimer espaces
+            String cleanCountries = internationalCountries.toUpperCase().replaceAll("\\s+", "").trim();
+            vendor.setInternationalCountries(cleanCountries);
+        } else if (!internationalDelivery) {
+            vendor.setInternationalCountries(null);
+        }
 
         // Upload fichiers (avec gestion d'erreur fine)
         try {

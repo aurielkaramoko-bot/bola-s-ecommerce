@@ -240,18 +240,32 @@
     <!-- Formulaire poster (connecté) -->
     <div th:if="${connectedCustomer != null or session.BOLAS_VENDOR != null}" class="mb-4">
       <div class="d-flex gap-2">
-        <div style="width:36px;height:36px;border-radius:50%;background:var(--bolas-accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <i class="bi bi-person-fill" style="color:#fff;"></i>
+        <div id="comment-avatar" style="width:36px;height:36px;border-radius:50%;background:var(--bolas-accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:.85rem;color:#fff;">
+          <span th:text="${connectedCustomer != null ? connectedCustomer.displayName?.substring(0,1)?.toUpperCase() : 'V'}">U</span>
         </div>
         <div class="flex-grow-1">
           <div class="input-group">
             <input type="text" id="comment-input" class="form-control"
                    placeholder="Ajouter un commentaire..."
                    maxlength="1000" autocomplete="off"/>
+            <button class="btn btn-outline-secondary" type="button" onclick="triggerPhotoUpload()"
+                    title="Joindre une photo">
+              <i class="bi bi-camera"></i>
+            </button>
             <button class="btn btn-hero-solid" onclick="submitComment()">
               <i class="bi bi-send"></i>
             </button>
           </div>
+          <!-- Preview photo avant envoi -->
+          <div id="comment-photo-preview" class="mt-2" style="display:none;">
+            <img id="comment-photo-img" src="" style="max-height:120px;border-radius:8px;border:2px solid var(--bolas-border);"/>
+            <button type="button" class="btn btn-link btn-sm text-danger p-0 ms-2" onclick="clearCommentPhoto()">
+              <i class="bi bi-x-circle"></i> Supprimer
+            </button>
+          </div>
+          <input type="file" id="comment-photo-file" accept="image/*" style="display:none;"
+                 onchange="previewCommentPhoto(this)"/>
+          <input type="hidden" id="comment-photo-url" value=""/>
         </div>
       </div>
     </div>
@@ -303,18 +317,23 @@
 
   function renderComment(c, isReply) {
     if (c.deleted) return '<div class="comment-item py-2 text-muted small fst-italic px-2">[Commentaire supprimé]</div>';
-    var verified = c.verifiedBuyer ? '<span class="badge ms-1" style="background:#198754;font-size:.65rem;">Achat vérifié</span>' : '';
-    var vendorBadge = c.vendorComment ? '<span class="badge ms-1" style="background:var(--bolas-accent);font-size:.65rem;">Vendeur</span>' : '';
+    var verified = c.verifiedBuyer ? '<span class="badge ms-1" style="background:#198754;font-size:.65rem;">✅ Achat vérifié</span>' : '';
+    var vendorBadge = c.vendorComment ? '<span class="badge ms-1" style="background:var(--bolas-accent);font-size:.65rem;">🏪 Vendeur</span>' : '';
     var replyBtn = IS_LOGGED && !isReply ? '<button class="btn btn-link btn-sm p-0 me-2" style="font-size:.78rem;" onclick="setReply(' + c.id + ', \'' + escHtml(c.authorName) + '\')">Répondre</button>' : '';
     var deleteBtn = IS_VENDOR ? '<button class="btn btn-link btn-sm p-0 text-danger" style="font-size:.78rem;" onclick="deleteComment(' + c.id + ')">Supprimer</button>' : '';
+    // Photo attachée au commentaire
+    var photoHtml = c.photoUrl ? '<div class="mt-2"><img src="' + escHtml(c.photoUrl) + '" alt="photo" style="max-height:200px;border-radius:10px;cursor:zoom-in;border:1px solid var(--bolas-border);" onclick="openLightbox(this.src)"/></div>' : '';
     var repliesHtml = '';
     if (!isReply) {
       repliesHtml = '<div id="replies-' + c.id + '" class="ps-4 mt-1"></div>'
         + '<button class="btn btn-link btn-sm p-0 ms-1" style="font-size:.78rem;color:var(--bolas-accent);" onclick="loadReplies(' + c.id + ')">Afficher les réponses</button>';
     }
+    // Avatar avec initiale
+    var initials = c.authorName ? c.authorName.charAt(0).toUpperCase() : '?';
+    var avatarBg = c.vendorComment ? 'var(--bolas-accent)' : '#e8d5c0';
+    var avatarColor = c.vendorComment ? '#fff' : 'var(--bolas-accent)';
     return '<div class="comment-item d-flex gap-2 py-2 ' + (isReply ? 'ps-4' : '') + '" id="comment-' + c.id + '">'
-      + '<div style="width:32px;height:32px;border-radius:50%;background:' + (c.vendorComment ? 'var(--bolas-accent)' : '#e8d5c0') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
-      + '<i class="bi bi-person-fill" style="color:' + (c.vendorComment ? '#fff' : 'var(--bolas-accent)') + ';font-size:.85rem;"></i></div>'
+      + '<div style="width:36px;height:36px;border-radius:50%;background:' + avatarBg + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:.9rem;color:' + avatarColor + ';">' + initials + '</div>'
       + '<div class="flex-grow-1">'
       + '<div class="d-flex align-items-center gap-1 flex-wrap mb-1">'
       + '<strong style="font-size:.85rem;">' + escHtml(c.authorName || 'Anonyme') + '</strong>'
@@ -322,7 +341,8 @@
       + '<span class="text-muted" style="font-size:.72rem;">' + (c.createdAtFormatted || '') + '</span>'
       + '</div>'
       + '<p class="mb-1 small" style="line-height:1.5;">' + escHtml(c.text) + '</p>'
-      + '<div class="d-flex align-items-center gap-2">'
+      + photoHtml
+      + '<div class="d-flex align-items-center gap-2 mt-1">'
       + '<button class="btn btn-link btn-sm p-0 d-flex align-items-center gap-1" style="font-size:.78rem;color:#e91e63;" onclick="likeComment(' + c.id + ', this)">'
       + '<i class="bi bi-heart"></i><span id="likes-' + c.id + '">' + (c.likesCount || 0) + '</span></button>'
       + replyBtn + deleteBtn
@@ -357,6 +377,9 @@
     if (!text) return;
     var body = {text: text};
     if (replyingTo) body.parentId = String(replyingTo);
+    // Photo jointe
+    var photoUrl = document.getElementById('comment-photo-url');
+    if (photoUrl && photoUrl.value) body.photoUrl = photoUrl.value;
     fetch('/api/comments/' + PRODUCT_ID, {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken()},
@@ -366,11 +389,49 @@
         input.value = '';
         input.placeholder = 'Ajouter un commentaire...';
         replyingTo = null;
+        clearCommentPhoto();
         loadComments();
       } else if (r.status === 401) {
         alert('Connectez-vous pour commenter.');
       }
     }).catch(function(){});
+  }
+
+  function triggerPhotoUpload() {
+    document.getElementById('comment-photo-file').click();
+  }
+
+  function previewCommentPhoto(input) {
+    if (!input.files || !input.files[0]) return;
+    var file = input.files[0];
+    if (file.size > 10 * 1024 * 1024) { alert('Photo trop lourde (max 10 Mo).'); return; }
+    // Upload Cloudinary direct (unsigned upload preset requis)
+    var CLOUD_NAME = 'dx1hwghgg';
+    var UPLOAD_PRESET = 'commentaires_non_signés_bolas';
+    var fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', UPLOAD_PRESET);
+    var preview = document.getElementById('comment-photo-preview');
+    var img = document.getElementById('comment-photo-img');
+    var urlInput = document.getElementById('comment-photo-url');
+    // Afficher préview locale immédiate
+    img.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+    // Upload async Cloudinary
+    fetch('https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/image/upload', {
+      method: 'POST', body: fd
+    }).then(function(r){return r.json();})
+      .then(function(d){
+        if (d.secure_url) { urlInput.value = d.secure_url; img.src = d.secure_url; }
+        else { alert('Upload photo échoué.'); clearCommentPhoto(); }
+      }).catch(function(){ alert('Upload photo échoué.'); clearCommentPhoto(); });
+  }
+
+  function clearCommentPhoto() {
+    document.getElementById('comment-photo-file').value = '';
+    document.getElementById('comment-photo-url').value = '';
+    document.getElementById('comment-photo-preview').style.display = 'none';
+    document.getElementById('comment-photo-img').src = '';
   }
 
   function likeComment(id, btn) {

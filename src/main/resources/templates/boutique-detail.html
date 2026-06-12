@@ -64,6 +64,17 @@
           <i class="bi bi-geo-alt-fill text-danger me-1"></i>
           <span th:text="${vendor.shopAddress}">Adresse</span>
         </span>
+        <!-- Pays de la boutique -->
+        <span th:if="${vendor.shopCountry != null}" class="badge bg-light text-dark">
+          <span th:text="${vendor.shopCountryDisplay}">🌍 Pays</span>
+        </span>
+        <!-- Badge livraison internationale (ZLECAf) -->
+        <span th:if="${vendor.internationalDelivery}"
+              class="badge"
+              style="background:linear-gradient(135deg,#1a6b3a,#27ae60);color:#fff;"
+              th:title="${'Livraison internationale vers : ' + (vendor.internationalCountries ?: 'Afrique')}">
+          🌍 Livraison internationale
+        </span>
         <!-- Bouton chat si PRO/PREMIUM -->
         <a th:if="${vendor.canChat()}" th:href="@{/chat/{id}(id=${vendor.id})}"
            class="btn btn-sm btn-hero-solid">
@@ -229,68 +240,55 @@
     </div>
   </div>
 
-  <!-- Accordéon infos boutique (confiance acheteur) — Prompt 6 -->
-  <div th:if="${vendor.hasShopInfos() or vendor.subscriptionStartsAt != null}" class="mt-5">
-    <div class="accordion" id="shopInfoAccordion">
-      <div class="accordion-item" style="border:1px solid var(--bolas-border);border-radius:12px;overflow:hidden;">
-        <h2 class="accordion-header" id="shopInfoHead">
-          <button class="accordion-button collapsed fw-semibold" type="button"
-                  data-bs-toggle="collapse" data-bs-target="#shopInfoBody"
-                  aria-expanded="false" aria-controls="shopInfoBody"
-                  style="color:var(--bolas-accent);background:var(--bolas-light);">
-            <i class="bi bi-info-circle me-2"></i>En savoir plus sur cette boutique
-          </button>
-        </h2>
-        <div id="shopInfoBody" class="accordion-collapse collapse" aria-labelledby="shopInfoHead">
-          <div class="accordion-body">
-            <div class="row g-3">
-              <div class="col-12 col-md-6" th:if="${vendor.deliveryZones != null}">
-                <div class="d-flex align-items-start gap-2">
-                  <i class="bi bi-geo-alt-fill mt-1" style="color:var(--bolas-accent);"></i>
-                  <div>
-                    <div class="small fw-semibold mb-1">Zones de livraison</div>
-                    <div class="small text-muted" th:text="${vendor.deliveryZones}">—</div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-12 col-md-6" th:if="${vendor.deliveryDelay != null}">
-                <div class="d-flex align-items-start gap-2">
-                  <i class="bi bi-clock mt-1" style="color:var(--bolas-accent);"></i>
-                  <div>
-                    <div class="small fw-semibold mb-1">Délai de livraison</div>
-                    <div class="small text-muted" th:text="${vendor.deliveryDelay}">—</div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-12 col-md-6" th:if="${vendor.returnPolicy != null}">
-                <div class="d-flex align-items-start gap-2">
-                  <i class="bi bi-arrow-return-left mt-1" style="color:var(--bolas-accent);"></i>
-                  <div>
-                    <div class="small fw-semibold mb-1">Politique de retour</div>
-                    <div class="small text-muted" th:text="${vendor.returnPolicy}">—</div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-12 col-md-6" th:if="${vendor.languagesSpoken != null}">
-                <div class="d-flex align-items-start gap-2">
-                  <i class="bi bi-translate mt-1" style="color:var(--bolas-accent);"></i>
-                  <div>
-                    <div class="small fw-semibold mb-1">Langues parlées</div>
-                    <div class="small text-muted" th:text="${vendor.languagesSpoken}">—</div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-12 col-md-6" th:if="${vendor.subscriptionStartsAt != null}">
-                <div class="d-flex align-items-start gap-2">
-                  <i class="bi bi-calendar-check mt-1" style="color:var(--bolas-accent);"></i>
-                  <div>
-                    <div class="small fw-semibold mb-1">Membre depuis</div>
-                    <div class="small text-muted"
-                         th:text="${vendor.subscriptionStartsAtFormatted}">—</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+  <!-- ===== EN SAVOIR PLUS — visible dès le haut ===== -->
+  <div th:if="${vendor.hasShopInfos() or vendor.subscriptionStartsAt != null}"
+       class="mb-4 admin-card p-3" style="border-left:3px solid var(--bolas-accent);">
+    <h2 class="h6 fw-bold mb-3" style="color:var(--bolas-accent);">
+      <i class="bi bi-info-circle me-2"></i>À propos de cette boutique
+    </h2>
+    <div class="row g-2">
+      <div class="col-12 col-sm-6" th:if="${vendor.deliveryDelay != null}">
+        <div class="d-flex align-items-start gap-2">
+          <i class="bi bi-clock mt-1" style="color:var(--bolas-accent);flex-shrink:0;"></i>
+          <div>
+            <div class="small fw-semibold">Délai de livraison</div>
+            <div class="small text-muted" th:text="${vendor.deliveryDelay}">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6" th:if="${vendor.returnPolicy != null}">
+        <div class="d-flex align-items-start gap-2">
+          <i class="bi bi-arrow-return-left mt-1" style="color:var(--bolas-accent);flex-shrink:0;"></i>
+          <div>
+            <div class="small fw-semibold">Politique de retour</div>
+            <div class="small text-muted" th:text="${vendor.returnPolicy}">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6" th:if="${vendor.languagesSpoken != null}">
+        <div class="d-flex align-items-start gap-2">
+          <i class="bi bi-translate mt-1" style="color:var(--bolas-accent);flex-shrink:0;"></i>
+          <div>
+            <div class="small fw-semibold">Langues parlées</div>
+            <div class="small text-muted" th:text="${vendor.languagesSpoken}">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6" th:if="${vendor.deliveryZones != null}">
+        <div class="d-flex align-items-start gap-2">
+          <i class="bi bi-geo-alt-fill mt-1" style="color:var(--bolas-accent);flex-shrink:0;"></i>
+          <div>
+            <div class="small fw-semibold">Zones de livraison</div>
+            <div class="small text-muted" th:text="${vendor.deliveryZones}">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6" th:if="${vendor.subscriptionStartsAt != null}">
+        <div class="d-flex align-items-start gap-2">
+          <i class="bi bi-calendar-check mt-1" style="color:var(--bolas-accent);flex-shrink:0;"></i>
+          <div>
+            <div class="small fw-semibold">Membre depuis</div>
+            <div class="small text-muted" th:text="${vendor.subscriptionStartsAtFormatted}">—</div>
           </div>
         </div>
       </div>

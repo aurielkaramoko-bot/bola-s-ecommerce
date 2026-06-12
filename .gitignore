@@ -14,3 +14,4 @@ data/
 .idea/
 .vscode/
 *.DS_Store
+src/main/resources/bola-marketplace-firebase-adminsdk-fbs*.json

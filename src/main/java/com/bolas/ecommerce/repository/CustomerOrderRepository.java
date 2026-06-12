@@ -64,11 +64,11 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
     /** Nombre total de commandes d'un vendeur */
     long countByVendor(VendorUser vendor);
 
-    /** CA d'un vendeur sur une période */
+    /** CA réel d'un vendeur sur une période — uniquement les commandes DELIVERED */
     @Query("""
         SELECT COALESCE(SUM(o.totalAmountCfa), 0) FROM CustomerOrder o
         WHERE o.vendor = :vendor
-        AND o.status IN ('CONFIRMED','READY','IN_DELIVERY','DELIVERED')
+        AND o.status = 'DELIVERED'
         AND o.createdAt >= :start AND o.createdAt <= :end
         """)
     long sumRevenueByVendorBetween(

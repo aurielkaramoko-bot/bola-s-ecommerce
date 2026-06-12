@@ -200,6 +200,15 @@ public class VendorUser {
     @Column(name = "shop_country", length = 2)
     private String shopCountry;
 
+    /** Le vendeur livre à l'international (ZLECAf) */
+    @Column(name = "international_delivery", nullable = false)
+    private boolean internationalDelivery = false;
+
+    /** Pays desservis en livraison internationale (codes ISO 2 séparés par virgule, ex: "CI,SN,GA") */
+    @Size(max = 200)
+    @Column(name = "international_countries", length = 200)
+    private String internationalCountries;
+
     // ─── Getters / Setters ────────────────────────────────────────────────────
 
     public Long getId() { return id; }
@@ -416,6 +425,27 @@ public class VendorUser {
 
     public String getShopCountry() { return shopCountry; }
     public void setShopCountry(String shopCountry) { this.shopCountry = shopCountry; }
+
+    // ─── Livraison internationale (ZLECAf) ────────────────────────────────────────────
+
+    public boolean isInternationalDelivery() { return internationalDelivery; }
+    public void setInternationalDelivery(boolean internationalDelivery) { this.internationalDelivery = internationalDelivery; }
+
+    public String getInternationalCountries() { return internationalCountries; }
+    public void setInternationalCountries(String internationalCountries) { this.internationalCountries = internationalCountries; }
+
+    /** Liste des pays internationaux sous forme de tableau de codes ISO 2 */
+    public java.util.List<String> getInternationalCountriesList() {
+        if (internationalCountries == null || internationalCountries.isBlank()) return java.util.List.of();
+        return java.util.Arrays.asList(internationalCountries.split(","));
+    }
+
+    /** Le vendeur livre dans un pays donné (code ISO 2) */
+    public boolean deliversTo(String countryCode) {
+        if (!internationalDelivery) return shopCountry != null && shopCountry.equalsIgnoreCase(countryCode);
+        return getInternationalCountriesList().stream()
+                .anyMatch(c -> c.trim().equalsIgnoreCase(countryCode));
+    }
 
     /** Retourne "🇹🇬 Togo" pour affichage Thymeleaf — évite T() dans les templates */
     public String getShopCountryDisplay() {

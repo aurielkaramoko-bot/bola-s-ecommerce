@@ -6,6 +6,7 @@ import com.bolas.ecommerce.model.NotificationType;
 import com.bolas.ecommerce.model.OrderStatus;
 import com.bolas.ecommerce.model.VendorUser;
 import com.bolas.ecommerce.repository.CustomerOrderRepository;
+import com.bolas.ecommerce.repository.CustomerRepository;
 import com.bolas.ecommerce.repository.ProductRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,8 @@ public class OrderFlowService {
     private final ProductRepository productRepository;
     private final NotificationService notificationService;
     private final CustomerLoyaltyService loyaltyService;
+    private final FcmService fcmService;
+    private final CustomerRepository customerRepository;
 
     @Value("${whatsapp.number}")
     private String shopWhatsapp;
@@ -54,13 +57,17 @@ public class OrderFlowService {
                             MetaWhatsAppService metaWhatsApp,
                             ProductRepository productRepository,
                             NotificationService notificationService,
-                            CustomerLoyaltyService loyaltyService) {
+                            CustomerLoyaltyService loyaltyService,
+                            FcmService fcmService,
+                            CustomerRepository customerRepository) {
         this.orderRepository = orderRepository;
         this.auditLogService = auditLogService;
         this.metaWhatsApp = metaWhatsApp;
         this.productRepository = productRepository;
         this.notificationService = notificationService;
         this.loyaltyService = loyaltyService;
+        this.fcmService = fcmService;
+        this.customerRepository = customerRepository;
     }
 
     // ─── Admin confirme une commande PENDING → READY (compatibilité) ──────────
@@ -209,6 +216,23 @@ public class OrderFlowService {
     @Transactional
     public void vendorStartDelivery(CustomerOrder order, VendorUser vendor, String appBaseUrl) {
         notifyClientReady(order, appBaseUrl);
+
+        // FCM push : notifie le client que son livreur est assigné
+        if (order.getCustomerPhone() != null) {
+            try {
+                customerRepository.findByPhone(order.getCustomerPhone()).ifPresent(customer ->
+                    fcmService.notifyLivreurAssigne(
+                        customer.getId(),
+                        order.getTrackingNumber(),
+                        order.getAssignedCourierName(),
+                        vendor.getDisplayName()
+                    )
+                );
+            } catch (Exception e) {
+                log.warn("FCM livreur assigné échoué: {}", e.getMessage());
+            }
+        }
+
         log.info("✅ Vendeur {} a lancé la livraison de commande {}", vendor.getDisplayName(), order.getTrackingNumber());
     }
 
@@ -221,10 +245,27 @@ public class OrderFlowService {
         auditLogService.orderStatusChanged(order.getId(), order.getTrackingNumber(), "DELIVERED (vendeur)");
         notifyOrderDelivered(order);
 
-        // ← Notification in-app client : livraison terminée (si futur lien session)
-        // Note : CustomerOrder n'a pas de FK customer ; notif via WA déjà envoyée
+        // FCM push : notifie le client que sa commande est livrée
+        if (order.getCustomerPhone() != null) {
+            try {
+                customerRepository.findByPhone(order.getCustomerPhone()).ifPresent(customer ->
+                    fcmService.notifyLivre(customer.getId(), vendor.getId(), order.getTrackingNumber())
+                );
+            } catch (Exception e) {
+                log.warn("FCM livraison confirmée échoué: {}", e.getMessage());
+            }
+        }
 
-        // ← Créditer les points de fidélité (clé = téléphone)
+        // Notification in-app vendeur : CA réalisé
+        notificationService.envoyer(
+            vendor.getId(), NotificationDestinataire.VENDEUR,
+            NotificationType.COMMANDE,
+            "Commande livrée ✓",
+            "N° " + order.getTrackingNumber() + " — " + order.getTotalAmountCfa() + " CFA encaissés",
+            "/vendor/orders"
+        );
+
+        // Créditer les points de fidélité (clé = téléphone)
         if (order.getCustomerPhone() != null) {
             loyaltyService.crediterPoints(
                 order.getCustomerPhone(),
