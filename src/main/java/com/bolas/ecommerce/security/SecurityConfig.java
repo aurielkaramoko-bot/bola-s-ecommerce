@@ -82,6 +82,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfRepo)
                         .ignoringRequestMatchers(request -> !isProdProfile() && h2Matcher.matches(request))
+                        .ignoringRequestMatchers(new AntPathRequestMatcher("/api/interactions"))
+                        .ignoringRequestMatchers(new AntPathRequestMatcher("/api/recommendations/**"))
                 )
                 .headers(headers -> {
                     headers.contentTypeOptions(with -> {});
@@ -149,6 +151,8 @@ public class SecurityConfig {
                         new AntPathRequestMatcher("/notifications/**"),
                         new AntPathRequestMatcher("/api/notifications/**"),
                         new AntPathRequestMatcher("/api/comments/**"),
+                        new AntPathRequestMatcher("/api/recommendations/**"),
+                        new AntPathRequestMatcher("/api/interactions"),
                         new AntPathRequestMatcher("/livreur/login"),
                         new AntPathRequestMatcher("/livreur/logout"),
                         new AntPathRequestMatcher("/livreur/register"),

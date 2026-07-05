@@ -44,6 +44,9 @@ public class VendorController {
     @org.springframework.beans.factory.annotation.Value("${google.maps.api.key:}")
     private String googleMapsApiKey;
 
+    @org.springframework.beans.factory.annotation.Value("${app.base-url:}")
+    private String configuredBaseUrl;
+
     private final CustomerOrderRepository   orderRepository;
     private final VendorUserRepository       vendorUserRepository;
     private final ProductRepository          productRepository;
@@ -66,12 +69,9 @@ public class VendorController {
     private final com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository;
     private final ReferralService             referralService;
     private final NotificationService         notificationService;
-    @org.springframework.beans.factory.annotation.Autowired
-    private com.bolas.ecommerce.repository.CustomerRepository customerRepository;
-    @org.springframework.beans.factory.annotation.Autowired
-    private com.bolas.ecommerce.repository.LivreurRepository livreurRepository;
-    @org.springframework.beans.factory.annotation.Autowired
-    private com.bolas.ecommerce.repository.VendorLivreurRepository vendorLivreurRepository;
+    private final com.bolas.ecommerce.repository.CustomerRepository customerRepository;
+    private final com.bolas.ecommerce.repository.LivreurRepository livreurRepository;
+    private final com.bolas.ecommerce.repository.VendorLivreurRepository vendorLivreurRepository;
 
     public VendorController(CustomerOrderRepository orderRepository,
                             VendorUserRepository vendorUserRepository,
@@ -94,7 +94,10 @@ public class VendorController {
                             ReviewRepository reviewRepository,
                             com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository,
                             ReferralService referralService,
-                            NotificationService notificationService) {
+                            NotificationService notificationService,
+                            com.bolas.ecommerce.repository.CustomerRepository customerRepository,
+                            com.bolas.ecommerce.repository.LivreurRepository livreurRepository,
+                            com.bolas.ecommerce.repository.VendorLivreurRepository vendorLivreurRepository) {
         this.orderRepository               = orderRepository;
         this.vendorUserRepository          = vendorUserRepository;
         this.productRepository             = productRepository;
@@ -117,6 +120,9 @@ public class VendorController {
         this.shopSellerRepository          = shopSellerRepository;
         this.referralService               = referralService;
         this.notificationService           = notificationService;
+        this.customerRepository            = customerRepository;
+        this.livreurRepository             = livreurRepository;
+        this.vendorLivreurRepository        = vendorLivreurRepository;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -137,6 +143,15 @@ public class VendorController {
             return "redirect:/vendor/login";
         }
         return null;
+    }
+
+    /** Calcule l'URL de base de l'application (config > dynamique). */
+    private String resolveBaseUrl(HttpServletRequest request) {
+        if (configuredBaseUrl != null && !configuredBaseUrl.isBlank()) return configuredBaseUrl;
+        String scheme = request.getHeader("X-Forwarded-Proto") != null
+                ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
+        return scheme + "://" + request.getServerName()
+                + (request.getServerPort() == 80 || request.getServerPort() == 443 ? "" : ":" + request.getServerPort());
     }
 
     /** Catégories autorisées pour ce vendeur — strictement celles assignées par l'admin */
@@ -437,10 +452,7 @@ public class VendorController {
         long pendingOrders  = orderRepository.countByVendorAndStatus(vendor, OrderStatus.PENDING);
         long confirmedOrders = orderRepository.countByVendorAndStatus(vendor, OrderStatus.READY);
 
-        String scheme = request.getHeader("X-Forwarded-Proto") != null
-                ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
-        String shopBaseUrl = scheme + "://" + request.getServerName()
-                + (request.getServerPort() == 80 || request.getServerPort() == 443 ? "" : ":" + request.getServerPort());
+        String shopBaseUrl = resolveBaseUrl(request);
 
         model.addAttribute("pageTitle", "Mon espace vendeur — BOLA");
         model.addAttribute("vendor",    vendor);
@@ -582,10 +594,7 @@ public class VendorController {
             return "redirect:/vendor/orders";
         }
 
-        String scheme = request.getHeader("X-Forwarded-Proto") != null
-                ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
-        String appBaseUrl = scheme + "://" + request.getServerName()
-                + (request.getServerPort() == 80 || request.getServerPort() == 443 ? "" : ":" + request.getServerPort());
+        String appBaseUrl = resolveBaseUrl(request);
 
         orderFlowService.vendorConfirmOrder(order, vendor, appBaseUrl);
         ra.addFlashAttribute("flashOk", "Commande " + order.getTrackingNumber() + " confirmée et prête ! Assignez un livreur.");
@@ -621,8 +630,19 @@ public class VendorController {
             return "redirect:/vendor/orders";
         }
 
-        // Assigner le livreur si sélectionné
-        if (courierId != null && courierId > 0) {
+        // ── Assignation livreur (mutuellement exclusif) ───────────────────────
+        // Le vendeur choisit UN système : ancien (CourierApplication) OU nouveau (VendorLivreur)
+        boolean hasCourier = courierId != null && courierId > 0;
+        boolean hasLivreur = livreurId != null && livreurId > 0;
+
+        if (hasCourier && hasLivreur) {
+            ra.addFlashAttribute("flashError",
+                    "Choisissez un seul livreur : soit un livreur proposé, soit un livreur inscrit.");
+            return "redirect:/vendor/orders";
+        }
+
+        if (hasCourier) {
+            // Ancien système : CourierApplication
             var courierOpt = courierApplicationRepository.findById(courierId);
             if (courierOpt.isEmpty()) {
                 ra.addFlashAttribute("flashError", "Livreur introuvable.");
@@ -648,32 +668,45 @@ public class VendorController {
             order.setAssignedCourierName(courier.getCourierName());
             order.setAssignedCourierPhone(courier.getCourierPhone());
             orderRepository.save(order);
-            log.info("✅ Livreur {} assigné à commande {} par vendeur {}",
+            log.info("✅ Livreur (ancien) {} assigné à commande {} par vendeur {}",
                     courier.getCourierName(), id, vendor.getDisplayName());
-        }
 
-        // Nouveau système : livreur via VendorLivreur
-        if (livreurId != null && livreurId > 0) {
+        } else if (hasLivreur) {
+            // Nouveau système : VendorLivreur
             var vlOpt = vendorLivreurRepository.findById(livreurId);
-            if (vlOpt.isPresent() && vlOpt.get().getVendor().getId().equals(vendor.getId())
-                    && vlOpt.get().isActive()) {
-                com.bolas.ecommerce.model.Livreur lv = vlOpt.get().getLivreur();
-                order.setAssignedCourierName(lv.getName());
-                order.setAssignedCourierPhone(lv.getPhone());
-                if (order.getCourierToken() == null) {
-                    order.setCourierToken(java.util.UUID.randomUUID().toString());
-                }
-                orderRepository.save(order);
-                // Notifier le livreur via notification in-app (il verra dans son dashboard)
-                log.info("✅ Livreur (nouveau) {} assigné à commande {} par vendeur {}",
-                        lv.getName(), id, vendor.getDisplayName());
+            if (vlOpt.isEmpty()) {
+                ra.addFlashAttribute("flashError", "Livreur introuvable.");
+                return "redirect:/vendor/orders";
             }
+            var vl = vlOpt.get();
+            if (!vl.getVendor().getId().equals(vendor.getId())) {
+                ra.addFlashAttribute("flashError", "Ce livreur ne vous appartient pas.");
+                return "redirect:/vendor/orders";
+            }
+            if (!vl.isActive()) {
+                ra.addFlashAttribute("flashError", "Ce livreur est suspendu.");
+                return "redirect:/vendor/orders";
+            }
+            com.bolas.ecommerce.model.Livreur lv = vl.getLivreur();
+            // Vérifier que le livreur n'est pas déjà occupé
+            long busyCount = orderRepository.countByAssignedCourierNameAndStatus(
+                    lv.getName(), OrderStatus.IN_DELIVERY);
+            if (busyCount > 0) {
+                ra.addFlashAttribute("flashError",
+                        "Le livreur " + lv.getName() + " est déjà en livraison sur une autre commande.");
+                return "redirect:/vendor/orders";
+            }
+            order.setAssignedCourierName(lv.getName());
+            order.setAssignedCourierPhone(lv.getPhone());
+            if (order.getCourierToken() == null) {
+                order.setCourierToken(java.util.UUID.randomUUID().toString());
+            }
+            orderRepository.save(order);
+            log.info("✅ Livreur (nouveau) {} assigné à commande {} par vendeur {}",
+                    lv.getName(), id, vendor.getDisplayName());
         }
 
-        String scheme = request.getHeader("X-Forwarded-Proto") != null
-                ? request.getHeader("X-Forwarded-Proto") : request.getScheme();
-        String appBaseUrl = scheme + "://" + request.getServerName()
-                + (request.getServerPort() == 80 || request.getServerPort() == 443 ? "" : ":" + request.getServerPort());
+        String appBaseUrl = resolveBaseUrl(request);
 
         orderFlowService.vendorStartDelivery(order, vendor, appBaseUrl);
         String courierName = order.getAssignedCourierName() != null ? order.getAssignedCourierName() : "—";

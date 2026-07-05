@@ -42,6 +42,9 @@ public class HomeController {
     private final ReviewRepository reviewRepository;
     private final WhatsAppLinkBuilder whatsAppLinkBuilder;
     private final com.bolas.ecommerce.service.CurrencyConversionService currencyConversionService;
+    private final com.bolas.ecommerce.service.RecommendationService recommendationService;
+    private final com.bolas.ecommerce.service.VendorTrustScoreService trustScoreService;
+    private final com.bolas.ecommerce.service.InteractionTrackingService interactionTrackingService;
 
     @Value("${google.maps.api.key:}")
     private String googleMapsApiKey;
@@ -58,7 +61,10 @@ public class HomeController {
                           CountryRepository countryRepository,
                           ReviewRepository reviewRepository,
                           WhatsAppLinkBuilder whatsAppLinkBuilder,
-                          com.bolas.ecommerce.service.CurrencyConversionService currencyConversionService) {
+                          com.bolas.ecommerce.service.CurrencyConversionService currencyConversionService,
+                          com.bolas.ecommerce.service.RecommendationService recommendationService,
+                          com.bolas.ecommerce.service.VendorTrustScoreService trustScoreService,
+                          com.bolas.ecommerce.service.InteractionTrackingService interactionTrackingService) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.vendorUserRepository = vendorUserRepository;
@@ -66,6 +72,9 @@ public class HomeController {
         this.reviewRepository = reviewRepository;
         this.whatsAppLinkBuilder = whatsAppLinkBuilder;
         this.currencyConversionService = currencyConversionService;
+        this.recommendationService = recommendationService;
+        this.trustScoreService = trustScoreService;
+        this.interactionTrackingService = interactionTrackingService;
     }
 
     @GetMapping("/")
@@ -128,6 +137,21 @@ public class HomeController {
         // Produits en tendance (max 8 pour la homepage)
         var trendProducts = productRepository.findCurrentlyTrendingAvailable();
         model.addAttribute("trendProducts", trendProducts);
+
+        // ── Recommandations IA ────────────────────────────────────────────
+        try {
+            com.bolas.ecommerce.model.Customer customer =
+                    (com.bolas.ecommerce.model.Customer) request.getSession().getAttribute("BOLAS_CUSTOMER");
+            Long customerId = (customer != null) ? customer.getId() : null;
+            var aiRecommendations = recommendationService.getRecommendations(customerId, country, 8);
+            model.addAttribute("aiRecommendations", aiRecommendations);
+            model.addAttribute("hasPersonalizedReco", customerId != null && !aiRecommendations.isEmpty());
+        } catch (Exception e) {
+            log.warn("Erreur chargement recommandations IA: {}", e.getMessage());
+            model.addAttribute("aiRecommendations", java.util.List.of());
+            model.addAttribute("hasPersonalizedReco", false);
+        }
+
         return "index";
     }
 
@@ -212,6 +236,15 @@ public class HomeController {
         // Localisation
         model.addAttribute("googleMapsApiKey", googleMapsApiKey);
 
+        // ── TrustScore vendeur ────────────────────────────────────────────
+        try {
+            var trustScore = trustScoreService.getScore(vendor.getId()).orElse(null);
+            model.addAttribute("trustScore", trustScore);
+        } catch (Exception e) {
+            log.warn("Erreur chargement TrustScore vendeur {}: {}", vendor.getId(), e.getMessage());
+            model.addAttribute("trustScore", null);
+        }
+
         return "boutique-detail";
     }
 
@@ -253,6 +286,34 @@ public class HomeController {
             String targetCurrency = product.getVendor().getShopCurrency();
             var conversion = currencyConversionService.convert(product.getEffectivePriceCfa(), targetCurrency);
             model.addAttribute("convertedPrice", conversion);
+        }
+
+        // ── Tracking IA : vue produit ────────────────────────────────────
+        com.bolas.ecommerce.model.Customer customer =
+                (com.bolas.ecommerce.model.Customer) session.getAttribute("BOLAS_CUSTOMER");
+        Long customerId = (customer != null) ? customer.getId() : null;
+        if (customerId != null) {
+            interactionTrackingService.trackView(customerId, id);
+        }
+        model.addAttribute("customerId", customerId);
+
+        // ── Recommandations IA : "Vous aimerez aussi" ───────────────────
+        try {
+            var similarProducts = recommendationService.getSimilarProducts(id, customerId, 6);
+            model.addAttribute("similarProducts", similarProducts);
+        } catch (Exception e) {
+            log.warn("Erreur recommandations similaires produit {}: {}", id, e.getMessage());
+            model.addAttribute("similarProducts", java.util.List.of());
+        }
+
+        // ── TrustScore du vendeur ────────────────────────────────────────
+        if (product.getVendor() != null) {
+            try {
+                var trustScore = trustScoreService.getScore(product.getVendor().getId()).orElse(null);
+                model.addAttribute("vendorTrustScore", trustScore);
+            } catch (Exception e) {
+                model.addAttribute("vendorTrustScore", null);
+            }
         }
 
         return "product-detail";

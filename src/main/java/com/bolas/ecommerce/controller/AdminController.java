@@ -87,6 +87,7 @@ public class AdminController {
     private final PackPricingService packPricingService;
     private final com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository;
     private final PriceChangeHistoryRepository priceChangeHistoryRepository;
+    private final com.bolas.ecommerce.service.VendorTrustScoreService trustScoreService;
 
     @Value("${google.maps.api.key:}")
     private String googleMapsApiKey;
@@ -118,7 +119,8 @@ public class AdminController {
                            SessionCounterService sessionCounter,
                            PackPricingService packPricingService,
                            com.bolas.ecommerce.repository.ShopSellerRepository shopSellerRepository,
-                           PriceChangeHistoryRepository priceChangeHistoryRepository) {
+                           PriceChangeHistoryRepository priceChangeHistoryRepository,
+                           com.bolas.ecommerce.service.VendorTrustScoreService trustScoreService) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.chatMessageRepository = chatMessageRepository;
@@ -141,6 +143,7 @@ public class AdminController {
         this.packPricingService = packPricingService;
         this.shopSellerRepository = shopSellerRepository;
         this.priceChangeHistoryRepository = priceChangeHistoryRepository;
+        this.trustScoreService = trustScoreService;
     }
 
     @InitBinder
@@ -422,7 +425,16 @@ public class AdminController {
     @PostMapping("/admin/vendors/{id}/toggle")
     public String toggleVendor(@PathVariable Long id, RedirectAttributes ra) {
         VendorUser v = vendorUserRepository.findById(id).orElseThrow();
-        v.setActive(!v.isActive());
+        if (v.isActive()) {
+            // Désactiver → SUSPENDED
+            v.setVendorStatus(VendorStatus.SUSPENDED);
+            v.setActive(false);
+        } else {
+            // Réactiver → ACTIVE
+            v.setVendorStatus(VendorStatus.ACTIVE);
+            v.setActive(true);
+            v.setSuspensionReason(null);
+        }
         vendorUserRepository.save(v);
         ra.addFlashAttribute("flashOk", v.isActive() ? "Vendeur activé." : "Vendeur désactivé.");
         return "redirect:/admin/vendors";
@@ -1261,6 +1273,59 @@ public String notifyExpiry(@PathVariable Long id) {
         log.info("❌ Admin: demande d'abonnement refusée pour vendeur {}", vendor.getId());
         ra.addFlashAttribute("flashOk", "Demande de " + vendor.getDisplayName() + " refusée.");
         return "redirect:/admin/subscriptions";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  🛡️ ALERTES FRAUDE — TrustScore Vendeurs
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/admin/fraud-alerts")
+    public String fraudAlerts(Model model) {
+        model.addAttribute("pageTitle", "Alertes Fraude — Admin BOLA");
+        try {
+            var alerts = trustScoreService.getFraudAlerts();
+            model.addAttribute("fraudAlerts", alerts);
+            model.addAttribute("alertCount", alerts.size());
+        } catch (Exception e) {
+            log.error("Erreur chargement alertes fraude", e);
+            model.addAttribute("fraudAlerts", java.util.List.of());
+            model.addAttribute("alertCount", 0);
+        }
+        return "admin/fraud-alerts";
+    }
+
+    @PostMapping("/admin/fraud-alerts/{vendorId}/resolve")
+    public String resolveFraudAlert(@PathVariable Long vendorId, RedirectAttributes ra) {
+        trustScoreService.resolveFlag(vendorId);
+        ra.addFlashAttribute("flashOk", "Alerte résolue pour le vendeur #" + vendorId);
+        return "redirect:/admin/fraud-alerts";
+    }
+
+    @PostMapping("/admin/fraud-alerts/{vendorId}/suspend")
+    public String suspendFraudVendor(@PathVariable Long vendorId,
+                                      @RequestParam(required = false) String reason,
+                                      RedirectAttributes ra) {
+        VendorUser vendor = vendorUserRepository.findById(vendorId).orElse(null);
+        if (vendor == null) {
+            ra.addFlashAttribute("flashError", "Vendeur introuvable.");
+            return "redirect:/admin/fraud-alerts";
+        }
+        vendor.setVendorStatus(VendorStatus.SUSPENDED);
+        vendor.setActive(false);
+        vendor.setSuspensionReason(reason != null ? reason : "Suspicion de fraude détectée par le système IA");
+        vendor.setSoftSuspend(false);
+        vendorUserRepository.save(vendor);
+        trustScoreService.resolveFlag(vendorId);
+        log.info("🚨 Admin: vendeur {} suspendu pour fraude", vendorId);
+        ra.addFlashAttribute("flashOk", vendor.getDisplayName() + " suspendu pour fraude.");
+        return "redirect:/admin/fraud-alerts";
+    }
+
+    @PostMapping("/admin/trust-scores/recalculate")
+    public String recalculateTrustScores(RedirectAttributes ra) {
+        int count = trustScoreService.recalculateAll();
+        ra.addFlashAttribute("flashOk", "TrustScores recalculés pour " + count + " vendeurs.");
+        return "redirect:/admin/fraud-alerts";
     }
 
 }

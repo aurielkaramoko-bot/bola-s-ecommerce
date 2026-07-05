@@ -7,6 +7,7 @@ import com.bolas.ecommerce.model.NotificationDestinataire;
 import com.bolas.ecommerce.model.NotificationType;
 import com.bolas.ecommerce.model.OrderLine;
 import com.bolas.ecommerce.model.VendorPlan;
+import com.bolas.ecommerce.model.VendorUser;
 import com.bolas.ecommerce.repository.CountryRepository;
 import com.bolas.ecommerce.repository.CustomerOrderRepository;
 import com.bolas.ecommerce.service.CommissionService;
@@ -29,7 +30,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Controller
 public class CartController {
@@ -43,7 +45,11 @@ public class CartController {
     private final CommissionService commissionService;
     private final MetaWhatsAppService metaWhatsApp;
     private final NotificationService notificationService;
+    private final com.bolas.ecommerce.service.InteractionTrackingService interactionTrackingService;
     private final String whatsappNumber;
+
+    @Value("${app.base-url:https://bola-marketplace.onrender.com}")
+    private String appBaseUrl;
 
     public CartController(CartService cartService,
                           CustomerOrderRepository orderRepository,
@@ -52,6 +58,7 @@ public class CartController {
                           CommissionService commissionService,
                           MetaWhatsAppService metaWhatsApp,
                           NotificationService notificationService,
+                          com.bolas.ecommerce.service.InteractionTrackingService interactionTrackingService,
                           @Value("${whatsapp.number}") String whatsappNumber) {
         this.cartService = cartService;
         this.orderRepository = orderRepository;
@@ -60,6 +67,7 @@ public class CartController {
         this.commissionService = commissionService;
         this.metaWhatsApp = metaWhatsApp;
         this.notificationService = notificationService;
+        this.interactionTrackingService = interactionTrackingService;
         this.whatsappNumber = whatsappNumber;
     }
 
@@ -88,6 +96,16 @@ public class CartController {
                       RedirectAttributes ra) {
         cartService.add(session, productId, Math.min(Math.max(qty, 1), 99));
         ra.addFlashAttribute("flashOk", "Ajouté au panier.");
+
+        // ── Tracking IA : ajout panier ────────────────────────────────────
+        try {
+            Customer customer = (Customer) session.getAttribute("BOLAS_CUSTOMER");
+            if (customer != null) {
+                interactionTrackingService.trackAddToCart(customer.getId(), productId);
+            }
+        } catch (Exception e) {
+            log.debug("Tracking ADD_TO_CART ignoré: {}", e.getMessage());
+        }
         if (returnTo != null && returnTo.startsWith("/")) {
             return "redirect:" + returnTo;
         }
@@ -174,136 +192,177 @@ public class CartController {
         }
         log.info("   → Panier: {} articles", lines.size());
 
-        // Créer la commande
-        CustomerOrder order = new CustomerOrder();
-        log.info("   → Création commande...");
+        // ── Grouper les lignes par vendeur ──────────────────────────────────────
+        // Clé : ID du vendeur (null → produit BOLA sans vendeur)
+        Map<Long, List<CartService.CartLine>> linesByVendor = lines.stream()
+                .collect(Collectors.groupingBy(
+                        l -> l.product().getVendor() != null ? l.product().getVendor().getId() : 0L,
+                        LinkedHashMap::new, Collectors.toList()));
 
-        // Tracking number personnalisé si client connecté, sinon UUID classique
         Customer customer = (Customer) session.getAttribute("BOLAS_CUSTOMER");
-        String trackingNumber;
-        if (customer != null) {
-            trackingNumber = customerService.generateTrackingNumber(customer, country);
-        } else {
-            trackingNumber = "BOL-" + country.toUpperCase() + "-" + UUID.randomUUID().toString().replace("-","").substring(0,8).toUpperCase();
-        }
-        order.setTrackingNumber(trackingNumber);
-        order.setCountry(country.toUpperCase());
-        order.setCustomerName(customerName.trim());
-        order.setCustomerPhone(customerPhone.trim());
-        order.setCustomerAddress(customerAddress.trim());
-        order.setDeliveryOption("PICKUP".equals(deliveryOption) ? DeliveryOption.PICKUP : DeliveryOption.HOME);
+        List<CustomerOrder> createdOrders = new ArrayList<>();
 
-        // Calcul taxe douanière selon le pays
-        long subtotal = cartService.totalAmountCfa(session);
-        long customsTax = 0L;
+        // Taxe douanière (commune à toutes les commandes)
         var countryOpt = countryRepository.findByCode(country.toUpperCase());
+        int customsTaxPercent = 0;
         if (countryOpt.isPresent() && countryOpt.get().getCustomsTaxPercent() > 0) {
-            customsTax = subtotal * countryOpt.get().getCustomsTaxPercent() / 100;
+            customsTaxPercent = countryOpt.get().getCustomsTaxPercent();
         }
-        order.setTotalAmountCfa(subtotal + customsTax);
-        order.setDeliveryFeeCfa(0L);
 
-        // Calcul commission BOLA selon le plan du vendeur principal
-        com.bolas.ecommerce.model.VendorUser mainVendor = lines.stream()
-                .map(l -> l.product().getVendor())
-                .filter(v -> v != null)
-                .findFirst()
-                .orElse(null);
-        VendorPlan vendorPlan = mainVendor != null ? mainVendor.getPlan() : null;
-        int commissionPct = commissionService.rateFor(vendorPlan);
-        long commissionAmt = commissionService.compute(subtotal, vendorPlan);
-        order.setCommissionPercent(commissionPct);
-        order.setCommissionCfa(commissionAmt);
-        order.setVendor(mainVendor);
-        if (clientLatitude != null)  order.setClientLatitude(clientLatitude);
-        if (clientLongitude != null) order.setClientLongitude(clientLongitude);
+        // ── Créer une commande par vendeur ─────────────────────────────────────
+        for (var entry : linesByVendor.entrySet()) {
+            List<CartService.CartLine> vendorLines = entry.getValue();
 
-        for (var line : lines) {
-            OrderLine ol = new OrderLine();
-            ol.setProduct(line.product());
-            ol.setQuantity(line.quantity());
-            ol.setUnitPriceCfa(line.product().getEffectivePriceCfa());
-            order.addLine(ol);
+            // Identifier le vendeur de ce groupe
+            VendorUser vendor = vendorLines.stream()
+                    .map(l -> l.product().getVendor())
+                    .filter(v -> v != null)
+                    .findFirst()
+                    .orElse(null);
+
+            // Sous-total de ce groupe
+            long subtotal = vendorLines.stream()
+                    .mapToLong(CartService.CartLine::lineTotalCfa).sum();
+            long customsTax = subtotal * customsTaxPercent / 100;
+
+            CustomerOrder order = new CustomerOrder();
+
+            // Tracking number
+            String trackingNumber;
+            if (customer != null) {
+                trackingNumber = customerService.generateTrackingNumber(customer, country);
+            } else {
+                trackingNumber = "BOL-" + country.toUpperCase() + "-"
+                        + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+            }
+            order.setTrackingNumber(trackingNumber);
+            order.setCountry(country.toUpperCase());
+            order.setCustomerName(customerName.trim());
+            order.setCustomerPhone(customerPhone.trim());
+            order.setCustomerAddress(customerAddress.trim());
+            order.setDeliveryOption("PICKUP".equals(deliveryOption) ? DeliveryOption.PICKUP : DeliveryOption.HOME);
+            order.setTotalAmountCfa(subtotal + customsTax);
+            order.setDeliveryFeeCfa(0L);
+
+            // Commission BOLA selon le plan du vendeur
+            VendorPlan vendorPlan = vendor != null ? vendor.getPlan() : null;
+            int commissionPct = commissionService.rateFor(vendorPlan);
+            long commissionAmt = commissionService.compute(subtotal, vendorPlan);
+            order.setCommissionPercent(commissionPct);
+            order.setCommissionCfa(commissionAmt);
+            order.setVendor(vendor);
+            if (clientLatitude != null) order.setClientLatitude(clientLatitude);
+            if (clientLongitude != null) order.setClientLongitude(clientLongitude);
+
+            for (var line : vendorLines) {
+                OrderLine ol = new OrderLine();
+                ol.setProduct(line.product());
+                ol.setQuantity(line.quantity());
+                ol.setUnitPriceCfa(line.product().getEffectivePriceCfa());
+                order.addLine(ol);
+            }
+            orderRepository.save(order);
+            createdOrders.add(order);
+            log.info("   → Commande sauvegardée: {} (vendeur: {})", order.getTrackingNumber(),
+                    vendor != null ? vendor.getDisplayName() : "BOLA direct");
+
+            // ── Tracking IA : achat confirmé ──────────────────────────────
+            if (customer != null) {
+                for (var line : vendorLines) {
+                    try {
+                        interactionTrackingService.trackPurchase(customer.getId(), line.product().getId());
+                    } catch (Exception e) {
+                        log.debug("Tracking PURCHASE ignoré: {}", e.getMessage());
+                    }
+                }
+            }
+
+            // Notification in-app au vendeur PRO/PREMIUM
+            if (vendor != null) {
+                notificationService.envoyer(
+                    vendor.getId(), NotificationDestinataire.VENDEUR,
+                    NotificationType.COMMANDE,
+                    "🛒 Nouvelle commande !",
+                    "N° " + order.getTrackingNumber() + " — " + customerName.trim()
+                        + " — " + order.getTotalAmountCfa() + " CFA",
+                    "/vendor/orders"
+                );
+            }
+
+            // Notifier le vendeur PRO/PREMIUM directement via WhatsApp
+            if (vendor != null && vendor.getPhone() != null
+                    && (vendor.getPlan() == VendorPlan.PRO
+                        || vendor.getPlan() == VendorPlan.PRO_LOCAL
+                        || vendor.getPlan() == VendorPlan.PREMIUM)) {
+                try {
+                    StringBuilder vendorMsg = new StringBuilder();
+                    vendorMsg.append("🛍️ Nouvelle commande pour votre boutique !\n\n");
+                    vendorMsg.append("📦 N° : ").append(order.getTrackingNumber()).append("\n");
+                    vendorMsg.append("👤 Client : ").append(customerName.trim()).append("\n");
+                    vendorMsg.append("📞 Tél : ").append(customerPhone.trim()).append("\n");
+                    vendorMsg.append("📍 Option : ").append("PICKUP".equals(deliveryOption) ? "Retrait boutique" : "Livraison domicile").append("\n");
+                    if (clientLatitude != null && clientLongitude != null) {
+                        vendorMsg.append("🗺️ Position GPS : https://maps.google.com/?q=")
+                                 .append(clientLatitude).append(",").append(clientLongitude).append("\n");
+                    } else if (!customerAddress.isBlank()) {
+                        vendorMsg.append("🏠 Adresse : ").append(customerAddress.trim()).append("\n");
+                    }
+                    vendorMsg.append("💰 Total : ").append(order.getTotalAmountCfa()).append(" CFA\n\n");
+                    vendorMsg.append("Produits commandés :\n");
+                    for (var line : vendorLines) {
+                        vendorMsg.append("• ").append(line.product().getName())
+                                 .append(" x").append(line.quantity()).append("\n");
+                    }
+                    vendorMsg.append("\n→ Préparez la commande : ").append(appBaseUrl).append("/vendor/orders");
+                    metaWhatsApp.sendText(vendor.getPhone(), vendorMsg.toString());
+                    log.info("   → Vendeur {} notifié", vendor.getDisplayName());
+                } catch (Exception e) {
+                    log.warn("Notification WhatsApp vendeur échouée : {}", e.getMessage());
+                }
+            }
         }
-        orderRepository.save(order);
-        log.info("   → Commande sauvegardée: {}", order.getTrackingNumber());
+
         cartService.clear(session);
         log.info("   → Panier vidé");
 
-        // ← Notification in-app au vendeur PRO/PREMIUM (nouvelle commande en attente)
-        if (mainVendor != null) {
-            notificationService.envoyer(
-                mainVendor.getId(), NotificationDestinataire.VENDEUR,
-                NotificationType.COMMANDE,
-                "🛒 Nouvelle commande !",
-                "N° " + order.getTrackingNumber() + " — " + customerName.trim()
-                    + " — " + order.getTotalAmountCfa() + " CFA",
-                "/vendor/orders"
-            );
-        }
-
-        // Notifier l'admin automatiquement via Meta WhatsApp
+        // Notifier l'admin (résumé de toutes les commandes)
         log.info("   → Envoi notification admin...");
         try {
             StringBuilder adminMsg = new StringBuilder();
-            adminMsg.append("\uD83D\uDED2 Nouvelle commande sur BOLA !\n\n");
-            adminMsg.append("\uD83D\uDCE6 N\u00b0 : ").append(order.getTrackingNumber()).append("\n");
+            adminMsg.append("\uD83D\uDED2 Nouvelle(s) commande(s) sur BOLA !\n\n");
             adminMsg.append("\uD83D\uDC64 Client : ").append(customerName.trim()).append("\n");
-            adminMsg.append("\uD83D\uDCDE T\u00e9l : ").append(customerPhone.trim()).append("\n");
-            adminMsg.append("\uD83C\uDF0D Pays : ").append(country.toUpperCase()).append("\n");
-            adminMsg.append("\uD83D\uDCB0 Total : ").append(order.getTotalAmountCfa()).append(" CFA\n");
-            if (commissionAmt > 0) {
-                adminMsg.append("\uD83D\uDCB5 Commission BOLA (").append(commissionPct).append("%) : ")
-                        .append(commissionAmt).append(" CFA\n");
+            adminMsg.append("\uD83D\uDCDE Tél : ").append(customerPhone.trim()).append("\n");
+            adminMsg.append("\uD83C\uDF0D Pays : ").append(country.toUpperCase()).append("\n\n");
+            for (CustomerOrder o : createdOrders) {
+                adminMsg.append("\uD83D\uDCE6 N° : ").append(o.getTrackingNumber());
+                if (o.getVendor() != null) {
+                    adminMsg.append(" (").append(o.getVendor().getDisplayName()).append(")");
+                }
+                adminMsg.append(" — ").append(o.getTotalAmountCfa()).append(" CFA");
+                if (o.getCommissionCfa() > 0) {
+                    adminMsg.append(" [commission ").append(o.getCommissionPercent()).append("% = ")
+                            .append(o.getCommissionCfa()).append(" CFA]");
+                }
+                adminMsg.append("\n");
             }
             adminMsg.append("\n\u2192 Voir dans l'admin BOLA");
             metaWhatsApp.sendText(whatsappNumber, adminMsg.toString());
         } catch (Exception e) {
-            log.warn("Notification WhatsApp admin \u00e9chou\u00e9e (commande sauvegard\u00e9e quand m\u00eame): {}", e.getMessage());
+            log.warn("Notification WhatsApp admin échouée (commandes sauvegardées quand même): {}", e.getMessage());
         }
 
-        // Notifier le vendeur PRO/PREMIUM directement (il gère sa propre préparation)
-        if (mainVendor != null && mainVendor.getPhone() != null
-                && (mainVendor.getPlan() == VendorPlan.PRO
-                    || mainVendor.getPlan() == VendorPlan.PRO_LOCAL
-                    || mainVendor.getPlan() == VendorPlan.PREMIUM)) {
-            try {
-                StringBuilder vendorMsg = new StringBuilder();
-                vendorMsg.append("🛍️ Nouvelle commande pour votre boutique !\n\n");
-                vendorMsg.append("📦 N° : ").append(order.getTrackingNumber()).append("\n");
-                vendorMsg.append("👤 Client : ").append(customerName.trim()).append("\n");
-                vendorMsg.append("📞 Tél : ").append(customerPhone.trim()).append("\n");
-                vendorMsg.append("📍 Option : ").append("PICKUP".equals(deliveryOption) ? "Retrait boutique" : "Livraison domicile").append("\n");
-                // Localisation GPS si disponible
-                if (clientLatitude != null && clientLongitude != null) {
-                    vendorMsg.append("🗺️ Position GPS : https://maps.google.com/?q=")
-                             .append(clientLatitude).append(",").append(clientLongitude).append("\n");
-                } else if (!customerAddress.isBlank()) {
-                    vendorMsg.append("🏠 Adresse : ").append(customerAddress.trim()).append("\n");
-                }
-                vendorMsg.append("💰 Total : ").append(order.getTotalAmountCfa()).append(" CFA\n\n");
-                vendorMsg.append("Produits commandés :\n");
-                for (var line : lines) {
-                    vendorMsg.append("• ").append(line.product().getName())
-                             .append(" x").append(line.quantity()).append("\n");
-                }
-                vendorMsg.append("\n→ Préparez la commande : https://bola-s-ecommerce.onrender.com/vendor/orders");
-                metaWhatsApp.sendText(mainVendor.getPhone(), vendorMsg.toString());
-                log.info("   → Vendeur {} notifié", mainVendor.getDisplayName());
-            } catch (Exception e) {
-                log.warn("Notification WhatsApp vendeur échouée : {}", e.getMessage());
-            }
-        }
-
-        // Construire le message WhatsApp vers le bon destinataire
-        // Si produit d'un vendeur → message va chez le vendeur (tous plans)
-        // Si produit BOLA direct (pas de vendeur) → message va chez l'admin
+        // Redirection WhatsApp vers le principal vendeur ou l'admin
+        // On utilise la première commande comme référence pour le message WhatsApp
+        CustomerOrder firstOrder = createdOrders.get(0);
+        VendorUser mainVendor = firstOrder.getVendor();
         String targetPhone = cleanedPhone; // admin par défaut
         String targetName = "Bola's";
         if (mainVendor != null && mainVendor.getPhone() != null && !mainVendor.getPhone().isBlank()) {
             targetPhone = mainVendor.getPhone().replaceAll("[^0-9]", "");
             targetName = mainVendor.getDisplayName();
         }
+
+        long grandTotal = createdOrders.stream().mapToLong(CustomerOrder::getTotalAmountCfa).sum();
 
         StringBuilder msg = new StringBuilder();
         msg.append("Bonjour ").append(targetName).append(" 👋\nJe souhaite commander :\n\n");
@@ -312,21 +371,20 @@ public class CartController {
                .append(" x").append(line.quantity())
                .append(" = ").append(line.lineTotalCfa()).append(" CFA\n");
         }
-        msg.append("\nSous-total : ").append(subtotal).append(" CFA");
-        if (customsTax > 0) {
-            msg.append("\nTaxe douanière (").append(countryOpt.get().getCustomsTaxPercent()).append("%) : ").append(customsTax).append(" CFA");
-        }
-        msg.append("\nTotal : ").append(order.getTotalAmountCfa()).append(" CFA");
+        msg.append("\nTotal : ").append(grandTotal).append(" CFA");
         msg.append("\nPays : ").append(country.toUpperCase());
         msg.append("\nOption : ").append("PICKUP".equals(deliveryOption) ? "Retrait en boutique" : "Livraison à domicile");
-        // Localisation GPS si disponible
         if (clientLatitude != null && clientLongitude != null) {
             msg.append("\n🗺️ Position GPS : https://maps.google.com/?q=")
                .append(clientLatitude).append(",").append(clientLongitude);
         } else if (!customerAddress.isBlank()) {
             msg.append("\n🏠 Adresse : ").append(customerAddress.trim());
         }
-        msg.append("\n\n📦 N° de suivi : ").append(order.getTrackingNumber());
+        // Lister les numéros de suivi
+        msg.append("\n\n📦 N° de suivi : ");
+        msg.append(createdOrders.stream()
+                .map(CustomerOrder::getTrackingNumber)
+                .collect(Collectors.joining(", ")));
 
         String waUrl = "https://wa.me/" + targetPhone
                 + "?text=" + URLEncoder.encode(msg.toString(), StandardCharsets.UTF_8);

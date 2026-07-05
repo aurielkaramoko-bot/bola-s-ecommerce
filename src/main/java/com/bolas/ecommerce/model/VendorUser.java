@@ -247,8 +247,24 @@ public class VendorUser {
     public VendorStatus getVendorStatus() { return vendorStatus; }
     public void setVendorStatus(VendorStatus vendorStatus) { this.vendorStatus = vendorStatus; }
 
-    public boolean isActive() { return active; }
-    public void setActive(boolean active) { this.active = active; }
+    /**
+     * Source de vérité unique : dérivé de vendorStatus.
+     * Un vendeur est actif SI ET SEULEMENT SI vendorStatus == ACTIVE.
+     */
+    public boolean isActive() { return vendorStatus == VendorStatus.ACTIVE; }
+
+    /**
+     * Rétro-compatibilité : met à jour le champ `active` ET synchronise vendorStatus.
+     * Préférez utiliser setVendorStatus() directement.
+     */
+    public void setActive(boolean active) {
+        this.active = active;
+        if (active && this.vendorStatus != VendorStatus.ACTIVE) {
+            this.vendorStatus = VendorStatus.ACTIVE;
+        } else if (!active && this.vendorStatus == VendorStatus.ACTIVE) {
+            this.vendorStatus = VendorStatus.SUSPENDED;
+        }
+    }
 
     public Boolean getIdDocVerified() { return idDocVerified; }
     public void setIdDocVerified(Boolean idDocVerified) { this.idDocVerified = idDocVerified; }
