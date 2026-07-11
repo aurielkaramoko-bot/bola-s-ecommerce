@@ -1,6 +1,7 @@
 package com.bolas.ecommerce.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.Instant;
 
 /**
@@ -26,6 +27,7 @@ public class FcmToken {
     private Long userId;
 
     /** Token FCM de l'appareil */
+    @JsonIgnore
     @Column(nullable = false, length = 500)
     private String token;
 

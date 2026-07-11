@@ -352,7 +352,8 @@ public class VendorController {
         try {
             logoUrl = imageUploadService.store(logoFile);
         } catch (IllegalArgumentException | IOException e) {
-            ra.addFlashAttribute("flashError", "Photo de boutique invalide : " + e.getMessage());
+            log.warn("Upload photo boutique échoué: {}", e.getMessage());
+            ra.addFlashAttribute("flashError", "Photo de boutique invalide ou format non supporté.");
             return "redirect:/vendor/register";
         }
 
@@ -361,7 +362,8 @@ public class VendorController {
         try {
             idDocUrl = imageUploadService.store(idDocFile);
         } catch (IllegalArgumentException | IOException e) {
-            ra.addFlashAttribute("flashError", "Pièce d'identité invalide : " + e.getMessage());
+            log.warn("Upload pièce identité échoué: {}", e.getMessage());
+            ra.addFlashAttribute("flashError", "Pièce d'identité invalide ou format non supporté.");
             return "redirect:/vendor/register";
         }
 
@@ -888,7 +890,8 @@ public class VendorController {
                 if (!extraUrls.isEmpty()) p.setExtraImages(String.join(",", extraUrls));
             }
         } catch (IllegalArgumentException | IOException e) {
-            ra.addFlashAttribute("flashError", "Échec upload : " + e.getMessage());
+            log.warn("Upload produit échoué: {}", e.getMessage());
+            ra.addFlashAttribute("flashError", "Échec upload image, format non supporté.");
             return "redirect:/vendor/products/add";
         }
 
@@ -999,7 +1002,8 @@ public class VendorController {
                 if (!extraUrls.isEmpty()) p.setExtraImages(String.join(",", extraUrls));
             }
         } catch (IllegalArgumentException | IOException e) {
-            ra.addFlashAttribute("flashError", "Échec upload image : " + e.getMessage());
+            log.warn("Upload édition produit {} échoué: {}", id, e.getMessage());
+            ra.addFlashAttribute("flashError", "Échec upload image, format non supporté.");
             return "redirect:/vendor/products/" + id + "/edit";
         }
 
@@ -1181,7 +1185,8 @@ public class VendorController {
         try {
             photoUrl = imageUploadService.store(courierPhoto);
         } catch (IllegalArgumentException | IOException e) {
-            ra.addFlashAttribute("flashError", "Photo invalide : " + e.getMessage());
+            log.warn("Upload photo livreur échoué: {}", e.getMessage());
+            ra.addFlashAttribute("flashError", "Photo invalide ou format non supporté.");
             return "redirect:/vendor/couriers";
         }
 
@@ -1190,7 +1195,8 @@ public class VendorController {
         try {
             idDocUrl = imageUploadService.store(courierIdDoc);
         } catch (IllegalArgumentException | IOException e) {
-            ra.addFlashAttribute("flashError", "Pièce d'identité invalide : " + e.getMessage());
+            log.warn("Upload CNI livreur échoué: {}", e.getMessage());
+            ra.addFlashAttribute("flashError", "Pièce d'identité invalide ou format non supporté.");
             return "redirect:/vendor/couriers";
         }
 

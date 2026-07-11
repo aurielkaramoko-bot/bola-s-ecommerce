@@ -1,6 +1,7 @@
 package com.bolas.ecommerce.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.*;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -25,6 +26,7 @@ public class ShopSeller {
     private String username;
 
     @NotBlank @Size(max = 200)
+    @JsonIgnore
     @Column(nullable = false, length = 200)
     private String passwordHash;
 
@@ -53,6 +55,7 @@ public class ShopSeller {
     private boolean active = true;
 
     /** URL de la pièce d'identité (pour vérification) */
+    @JsonIgnore
     @Size(max = 2000)
     @Column(name = "id_document_url", length = 2000)
     private String idDocumentUrl;

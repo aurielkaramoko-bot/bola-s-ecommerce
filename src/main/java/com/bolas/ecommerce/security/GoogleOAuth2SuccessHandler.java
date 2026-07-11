@@ -50,8 +50,7 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
             session.setAttribute("BOLAS_CUSTOMER", customer);
             response.sendRedirect("/");
         } catch (Exception e) {
-            System.err.println("=== GOOGLE SUCCESS ERROR === " + e.getMessage());
-            e.printStackTrace();
+            log.error("=== GOOGLE SUCCESS ERROR ===", e);
             response.sendRedirect("/customer/login?error");
         }
     }

@@ -1,6 +1,7 @@
 package com.bolas.ecommerce.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.*;
 
 @Entity
@@ -16,6 +17,7 @@ public class VendorUser {
     private String username;
 
     @NotBlank @Size(max = 200)
+    @JsonIgnore
     @Column(nullable = false, length = 200)
     private String passwordHash;
 
@@ -45,6 +47,7 @@ public class VendorUser {
     private String logoUrl;
 
     /** URL de la pièce d'identité (pour vérification admin) */
+    @JsonIgnore
     @Size(max = 2000)
     @Column(name = "id_document_url", length = 2000)
     private String idDocumentUrl;

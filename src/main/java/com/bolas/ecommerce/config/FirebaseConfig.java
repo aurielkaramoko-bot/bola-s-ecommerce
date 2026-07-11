@@ -45,11 +45,11 @@ public class FirebaseConfig {
 
     private InputStream resolveCredentials() {
         // 1. Render production : fichier secret monté
-        Path renderSecret = Path.of("/etc/secrets/firebase-service-account.json");
-        if (Files.exists(renderSecret)) {
+        Path credentialFilePath = Path.of("/etc/secrets/firebase-service-account.json");
+        if (Files.exists(credentialFilePath)) {
             try {
                 log.debug("Firebase: lecture depuis le secret monté en production");
-                return Files.newInputStream(renderSecret);
+                return Files.newInputStream(credentialFilePath);
             } catch (IOException e) {
                 log.warn("Firebase: erreur lecture secret Render: {}", e.getMessage());
             }

@@ -1,6 +1,7 @@
 package com.bolas.ecommerce.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
@@ -27,6 +28,7 @@ public class Customer {
     private String email;
 
     /** Null si inscription via Google */
+    @JsonIgnore
     @Size(max = 200)
     @Column(length = 200)
     private String passwordHash;
@@ -36,10 +38,12 @@ public class Customer {
     private String phone;
 
     /** Date de naissance — utilisée pour le tracking number */
+    @JsonIgnore
     @Column
     private LocalDate birthDate;
 
     /** ID Google OAuth2 — null si inscription classique */
+    @JsonIgnore
     @Size(max = 200)
     @Column(length = 200, unique = true)
     private String googleId;

@@ -370,8 +370,7 @@ public class AdminController {
             log.info("✅ Page vendeurs chargée avec succès");
         } catch (Exception e) {
             log.error("❌ Erreur CRITIQUE chargement vendeurs", e);
-            e.printStackTrace();
-            model.addAttribute("flashError", "Erreur serveur : " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            model.addAttribute("flashError", "Erreur serveur, veuillez réessayer.");
             model.addAttribute("vendors", List.of());
             model.addAttribute("pendingVendors", List.of());
             model.addAttribute("activeVendors", List.of());
