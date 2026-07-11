@@ -464,7 +464,6 @@ public class VendorController {
         model.addAttribute("gratuitLimit",    GRATUIT_LIMIT);
         model.addAttribute("allowedCategories", allowedCategories(vendor));
         model.addAttribute("shopBaseUrl", shopBaseUrl);
-        model.addAttribute("googleMapsApiKey", googleMapsApiKey);
         model.addAttribute("products",
                 productRepository.findByVendorIdOrderByIdDesc(vendor.getId()).stream()
                         .limit(5).toList());
@@ -1941,7 +1940,6 @@ public class VendorController {
         model.addAttribute("assignedCategoryIds",
                 vendorCategoryRepository.findCategoriesByVendor(vendor).stream()
                         .map(c -> c.getId()).toList());
-        model.addAttribute("googleMapsApiKey", googleMapsApiKey);
         return "vendor/onboarding";
     }
 

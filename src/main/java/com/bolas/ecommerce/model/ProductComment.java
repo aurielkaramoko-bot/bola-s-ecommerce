@@ -1,6 +1,7 @@
 package com.bolas.ecommerce.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 
@@ -26,10 +27,12 @@ public class ProductComment {
     private String authorName;
 
     /** ID client connecté (null si vendeur ou admin) */
+    @JsonIgnore
     @Column(name = "customer_id")
     private Long customerId;
 
     /** ID vendeur si c'est une réponse vendeur */
+    @JsonIgnore
     @Column(name = "vendor_id")
     private Long vendorId;
 

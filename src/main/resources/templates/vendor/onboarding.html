@@ -266,18 +266,39 @@ document.querySelectorAll('.cat-subs-ob input[type=checkbox]:checked').forEach(f
 </script>
 
 <!-- Google Maps avec Places Autocomplete -->
-<th:block th:if="${googleMapsApiKey != null and !googleMapsApiKey.isEmpty()}">
-  <script th:src="|https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places&callback=initOnboardingMap|" async defer></script>
-  <script th:inline="javascript">
-    /*<![CDATA[*/
-    function initOnboardingMap() {
-      var el = document.getElementById('onboarding-map');
-      if (!el) return;
-      var savedLat = parseFloat(el.getAttribute('data-lat'));
-      var savedLng = parseFloat(el.getAttribute('data-lng'));
-      var center = (!isNaN(savedLat) && !isNaN(savedLng))
-        ? { lat: savedLat, lng: savedLng }
-        : { lat: 6.1375, lng: 1.2123 };
+<script>
+// Chargement sécurisé de la clé Maps
+fetch('/api/maps-config')
+  .then(function(r) { return r.json(); })
+  .then(function(cfg) {
+    if (!cfg.key) {
+      // Fallback sans clé
+      var mapEl = document.getElementById('onboarding-map');
+      if (mapEl) {
+        mapEl.innerHTML = '<div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted gap-2">'
+          + '<i class="bi bi-geo-alt" style="font-size:2rem;"></i>'
+          + '<button type="button" class="btn btn-sm btn-hero-solid" onclick="useMyLocationOnboarding()">'
+          + '<i class="bi bi-crosshair me-1"></i>Utiliser ma position actuelle</button>'
+          + '<span class="small" id="ob-geo-status"></span></div>';
+      }
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + cfg.key + '&libraries=places&callback=initOnboardingMap';
+    s.async = true; s.defer = true;
+    document.head.appendChild(s);
+  });
+</script>
+<script th:inline="javascript">
+  /*<![CDATA[*/
+  function initOnboardingMap() {
+    var el = document.getElementById('onboarding-map');
+    if (!el) return;
+    var savedLat = parseFloat(el.getAttribute('data-lat'));
+    var savedLng = parseFloat(el.getAttribute('data-lng'));
+    var center = (!isNaN(savedLat) && !isNaN(savedLng))
+      ? { lat: savedLat, lng: savedLng }
+      : { lat: 6.1375, lng: 1.2123 };
 
       var map = new google.maps.Map(el, { zoom: 14, center: center });
       var marker = null;
@@ -315,13 +336,11 @@ document.querySelectorAll('.cat-subs-ob input[type=checkbox]:checked').forEach(f
       });
     }
     window.initOnboardingMap = initOnboardingMap;
-    /*]]>*/
-  </script>
-</th:block>
+  /*]]>*/
+</script>
 
-<!-- Fallback si pas de clé Maps -->
-<th:block th:if="${googleMapsApiKey == null or googleMapsApiKey.isEmpty()}">
-  <script>
+<!-- Fallback géolocalisation (utilisé si Maps non disponible) -->
+<script>
     var mapEl = document.getElementById('onboarding-map');
     if (mapEl) {
       mapEl.innerHTML = '<div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted gap-2">'
@@ -341,7 +360,6 @@ document.querySelectorAll('.cat-subs-ob input[type=checkbox]:checked').forEach(f
       });
     }
   </script>
-</th:block>
 
 </body>
 </html>

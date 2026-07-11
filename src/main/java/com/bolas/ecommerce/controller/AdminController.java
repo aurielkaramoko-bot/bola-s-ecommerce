@@ -933,7 +933,6 @@ public class AdminController {
     @Transactional(readOnly = true)
     public String deliveryForm(Model model) {
         model.addAttribute("pageTitle", "Livraison GPS — Admin Bola's");
-        model.addAttribute("apiKey", googleMapsApiKey);
         model.addAttribute("shopLatitude", shopLatitude);
         model.addAttribute("shopLongitude", shopLongitude);
         model.addAttribute("courierUpdate", new CourierUpdateDto());
@@ -949,7 +948,6 @@ public class AdminController {
                                         RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("pageTitle", "Livraison GPS — Admin Bola's");
-            model.addAttribute("apiKey", googleMapsApiKey);
             model.addAttribute("shopLatitude", shopLatitude);
             model.addAttribute("shopLongitude", shopLongitude);
             model.addAttribute("orders", customerOrderRepository.findAllByOrderByCreatedAtDesc());
@@ -973,15 +971,13 @@ public class AdminController {
                 order.setCourierPhotoUrl(imageUploadService.store(courierPhoto));
             } catch (IllegalArgumentException e) {
                 model.addAttribute("pageTitle", "Livraison GPS — Admin Bola's");
-                model.addAttribute("apiKey", googleMapsApiKey);
                 model.addAttribute("shopLatitude", shopLatitude);
                 model.addAttribute("shopLongitude", shopLongitude);
                 model.addAttribute("orders", customerOrderRepository.findTop50ByOrderByCreatedAtDesc());
-                model.addAttribute("flashError", e.getMessage());
+                model.addAttribute("flashError", "Photo livreur invalide ou format non supporté.");
                 return "admin/delivery-update";
             } catch (IOException e) {
                 model.addAttribute("pageTitle", "Livraison GPS — Admin Bola's");
-                model.addAttribute("apiKey", googleMapsApiKey);
                 model.addAttribute("shopLatitude", shopLatitude);
                 model.addAttribute("shopLongitude", shopLongitude);
                 model.addAttribute("orders", customerOrderRepository.findTop50ByOrderByCreatedAtDesc());

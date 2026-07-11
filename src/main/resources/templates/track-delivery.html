@@ -153,7 +153,7 @@
   </div>
 
   <!-- Carte GPS — hauteur fixe, overflow:hidden, bouton plein écran -->
-  <div th:if="${tracking != null and googleMapsApiKey != null and !googleMapsApiKey.isEmpty()}" class="mx-auto" style="max-width: 900px;">
+  <div th:if="${tracking != null}" class="mx-auto" style="max-width: 900px;">
     <div style="position:relative;overflow:hidden;border-radius:12px;">
       <div id="map-tracking" class="shadow-sm"
            th:attr="data-shop-lat=${shopLatitude},data-shop-lng=${shopLongitude},
@@ -232,8 +232,24 @@
   </script>
 </th:block>
 
-<th:block th:if="${tracking != null and googleMapsApiKey != null and !googleMapsApiKey.isEmpty()}">
-  <script th:src="|https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&callback=initBolasMap|" async defer></script>
+<th:block th:if="${tracking != null}">
+  <script th:inline="javascript">
+    /*<![CDATA[*/
+    // Chargement sécurisé de la clé Maps via API (non exposée dans le HTML)
+    if (document.getElementById('map-tracking')) {
+      fetch('/api/maps-config')
+        .then(function(r) { return r.json(); })
+        .then(function(cfg) {
+          if (!cfg.key) return;
+          var s = document.createElement('script');
+          s.src = 'https://maps.googleapis.com/maps/api/js?key=' + cfg.key + '&callback=initBolasMap';
+          s.async = true; s.defer = true;
+          document.head.appendChild(s);
+        });
+    }
+    /*]]>*/
+  </script>
+</th:block>
   <script th:inline="javascript">
     /*<![CDATA[*/
     var MAP_THEME = '#8B5E3C';

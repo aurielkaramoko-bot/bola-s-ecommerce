@@ -2,10 +2,14 @@ package com.bolas.ecommerce.controller;
 
 import com.bolas.ecommerce.repository.CustomerOrderRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.Map;
 
 @Controller
 public class TrackingController {
@@ -28,7 +32,7 @@ public class TrackingController {
     @GetMapping("/tracking")
     public String track(@RequestParam(required = false) String trackingNumber, Model model) {
         model.addAttribute("pageTitle", "Suivi livraison — Bola's");
-        model.addAttribute("googleMapsApiKey", googleMapsApiKey);
+        // La clé Maps est chargée via /api/maps-config côté JS, pas exposée dans le HTML
         model.addAttribute("shopLatitude", shopLatitude);
         model.addAttribute("shopLongitude", shopLongitude);
         model.addAttribute("trackingNumber", trackingNumber);
@@ -42,5 +46,15 @@ public class TrackingController {
             }
         }
         return "track-delivery";
+    }
+
+    /** Endpoint JS pour charger la clé Maps sans l'exposer dans le HTML source */
+    @GetMapping("/api/maps-config")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> mapsConfig() {
+        if (googleMapsApiKey == null || googleMapsApiKey.isBlank()) {
+            return ResponseEntity.ok(Map.of("key", ""));
+        }
+        return ResponseEntity.ok(Map.of("key", googleMapsApiKey));
     }
 }

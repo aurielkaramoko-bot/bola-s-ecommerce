@@ -355,9 +355,18 @@
 </div>
 
 <!-- Google Maps pour cartes compactes en haut -->
-<script th:if="${vendor.hasLocation() and googleMapsApiKey != null and !googleMapsApiKey.isEmpty()}"
-        th:src="${'https://maps.googleapis.com/maps/api/js?key=' + googleMapsApiKey + '&callback=initShopMaps'}"
-        async defer></script>
+<script th:if="${vendor.hasLocation()}">
+// Chargement sécurisé de la clé Maps
+fetch('/api/maps-config')
+  .then(function(r) { return r.json(); })
+  .then(function(cfg) {
+    if (!cfg.key) return;
+    var s = document.createElement('script');
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + cfg.key + '&callback=initShopMaps';
+    s.async = true; s.defer = true;
+    document.head.appendChild(s);
+  });
+</script>
 <script th:if="${vendor.hasLocation()}">
 function initShopMaps() {
   var lat = [[${vendor.shopLatitude}]];

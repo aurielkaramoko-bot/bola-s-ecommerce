@@ -128,6 +128,7 @@ public class SecurityConfig {
                         new AntPathRequestMatcher("/cart/**"),
                         new AntPathRequestMatcher("/api/public/**"),
                         new AntPathRequestMatcher("/api/livreur/**"),
+                        new AntPathRequestMatcher("/api/maps-config"),
                         new AntPathRequestMatcher("/livreur/**"),
                         new AntPathRequestMatcher("/css/**"),
                         new AntPathRequestMatcher("/js/**"),

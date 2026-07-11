@@ -45,7 +45,7 @@ public class IdDocumentVerificationService {
     );
 
     private static final String VISION_URL =
-            "https://vision.googleapis.com/v1/images:annotate?key=";
+            "https://vision.googleapis.com/v1/images:annotate";
 
     private final String apiKey;
     private final HttpClient httpClient;
@@ -71,8 +71,9 @@ public class IdDocumentVerificationService {
             String body = buildRequestBody(base64);
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(VISION_URL + apiKey))
+                    .uri(URI.create(VISION_URL + "?key=" + apiKey))
                     .header("Content-Type", "application/json")
+                    .header("X-Goog-Api-Key", apiKey)
                     .POST(HttpRequest.BodyPublishers.ofString(body))
                     .build();
 

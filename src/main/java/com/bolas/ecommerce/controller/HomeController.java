@@ -91,6 +91,8 @@ public class HomeController {
             Cookie c = new Cookie("bolas_country", country);
             c.setMaxAge(60 * 60 * 24 * 30);
             c.setPath("/");
+            c.setHttpOnly(true);
+            c.setSecure(true);
             response.addCookie(c);
         }
 
@@ -233,8 +235,7 @@ public class HomeController {
             model.addAttribute("reviewCount", 0L);
         }
 
-        // Localisation
-        model.addAttribute("googleMapsApiKey", googleMapsApiKey);
+        // Localisation — clé Maps chargée via /api/maps-config côté JS
 
         // ── TrustScore vendeur ────────────────────────────────────────────
         try {

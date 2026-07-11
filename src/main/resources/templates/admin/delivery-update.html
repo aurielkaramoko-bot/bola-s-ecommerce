@@ -233,7 +233,19 @@ function initAdminMap() {
   });
 }
 
+<script>
 window.initAdminMap = initAdminMap;
+
+// Chargement sécurisé de la clé Maps
+fetch('/api/maps-config')
+  .then(function(r) { return r.json(); })
+  .then(function(cfg) {
+    if (!cfg.key) return;
+    var s = document.createElement('script');
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + cfg.key + '&callback=initAdminMap';
+    s.async = true; s.defer = true;
+    document.head.appendChild(s);
+  });
 
 // Validation avant soumission
 document.addEventListener('DOMContentLoaded', function() {
@@ -248,9 +260,6 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 </script>
-
-<script th:src="|https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initAdminMap|"
-        async defer></script>
 
 <th:block th:replace="~{fragments/footer :: bootstrap-scripts}"></th:block>
 </body>
