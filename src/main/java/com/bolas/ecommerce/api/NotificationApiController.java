@@ -1,5 +1,6 @@
 package com.bolas.ecommerce.api;
 
+import com.bolas.ecommerce.dto.NotificationDto;
 import com.bolas.ecommerce.model.Customer;
 import com.bolas.ecommerce.model.Notification;
 import com.bolas.ecommerce.model.NotificationDestinataire;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * API légère pour les notifications in-app BOLA.
@@ -42,10 +44,12 @@ public class NotificationApiController {
 
     /** GET /api/notifications/recent → 5 dernières notifications (JSON) */
     @GetMapping("/recent")
-    public ResponseEntity<List<Notification>> recent(HttpSession session) {
+    public ResponseEntity<List<NotificationDto>> recent(HttpSession session) {
         UserContext ctx = resolveUser(session);
         if (ctx == null) return ResponseEntity.ok(List.of());
-        return ResponseEntity.ok(notifService.getRecent(ctx.id(), ctx.type()));
+        List<NotificationDto> dtos = notifService.getRecent(ctx.id(), ctx.type())
+                .stream().map(NotificationDto::from).collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     /** POST /api/notifications/{id}/read → marquer une notif comme lue */
@@ -71,7 +75,7 @@ public class NotificationApiController {
     }
 
     @GetMapping("/vendor/recent")
-    public ResponseEntity<List<Notification>> vendorRecent(HttpSession session) {
+    public ResponseEntity<List<NotificationDto>> vendorRecent(HttpSession session) {
         return recent(session);
     }
 

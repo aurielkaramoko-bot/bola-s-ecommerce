@@ -8,6 +8,10 @@ RUN mvn clean package -DskipTests -q
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 COPY --from=build /app/target/bolas-ecommerce-1.0.0.jar app.jar
-RUN mkdir -p /app/uploads /app/logs
+RUN mkdir -p /app/uploads /app/logs \
+    && addgroup --system app \
+    && adduser --system --ingroup app --no-create-home appuser \
+    && chown -R appuser:app /app
+USER appuser
 EXPOSE 10000
 ENTRYPOINT ["java", "-Dspring.profiles.active=prod", "-Dserver.port=10000", "-jar", "app.jar"]

@@ -1,5 +1,6 @@
 package com.bolas.ecommerce.controller;
 
+import com.bolas.ecommerce.dto.ProductCommentDto;
 import com.bolas.ecommerce.model.Customer;
 import com.bolas.ecommerce.model.Product;
 import com.bolas.ecommerce.model.ProductComment;
@@ -8,6 +9,7 @@ import com.bolas.ecommerce.repository.CustomerOrderRepository;
 import com.bolas.ecommerce.repository.ProductCommentRepository;
 import com.bolas.ecommerce.repository.ProductRepository;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -54,7 +56,7 @@ public class ProductCommentController {
     @PostMapping("/{productId}")
     @Transactional
     public ResponseEntity<ProductComment> post(@PathVariable Long productId,
-                                                @RequestBody Map<String, String> body,
+                                                @Valid @RequestBody ProductCommentDto body,
                                                 HttpSession session) {
         Customer customer = (Customer) session.getAttribute("BOLAS_CUSTOMER");
         VendorUser vendor = (VendorUser) session.getAttribute("BOLAS_VENDOR");
@@ -66,16 +68,15 @@ public class ProductCommentController {
         Product product = productRepo.findById(productId).orElse(null);
         if (product == null) return ResponseEntity.notFound().build();
 
-        String text = body.getOrDefault("text", "").trim();
-        if (text.isBlank() || text.length() > 1000) return ResponseEntity.badRequest().build();
+        String text = body.getText().trim();
+        if (text.isBlank()) return ResponseEntity.badRequest().build();
 
         ProductComment c = new ProductComment();
         c.setProduct(product);
         c.setText(text);
 
-        String parentIdStr = body.get("parentId");
-        if (parentIdStr != null && !parentIdStr.isBlank()) {
-            try { c.setParentId(Long.parseLong(parentIdStr)); } catch (NumberFormatException ignored) {}
+        if (body.getParentId() != null) {
+            c.setParentId(body.getParentId());
         }
 
         if (customer != null) {
@@ -83,18 +84,15 @@ public class ProductCommentController {
             String name = customer.getDisplayName() != null ? customer.getDisplayName()
                         : customer.getFirstName() != null ? customer.getFirstName() : "Client";
             c.setAuthorName(name);
-            // Badge achat vérifié : a-t-il commandé ce produit ?
             boolean bought = orderRepo.existsByCustomerPhoneAndProductId(customer.getPhone(), productId);
             c.setVerifiedBuyer(bought);
         } else {
-            // Réponse vendeur
             c.setVendorId(vendor.getId());
             c.setAuthorName(vendor.getDisplayName());
         }
 
-        // Photo jointe au commentaire (upload Cloudinary côté front)
-        String photoUrl = body.get("photoUrl");
-        if (photoUrl != null && !photoUrl.isBlank() && photoUrl.startsWith("https://")) {
+        String photoUrl = body.getPhotoUrl();
+        if (photoUrl != null && !photoUrl.isBlank()) {
             c.setPhotoUrl(photoUrl);
         }
 

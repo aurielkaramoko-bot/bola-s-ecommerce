@@ -1,10 +1,12 @@
 package com.bolas.ecommerce.controller;
 
+import com.bolas.ecommerce.dto.FcmTokenDto;
 import com.bolas.ecommerce.model.Customer;
 import com.bolas.ecommerce.model.NotificationDestinataire;
 import com.bolas.ecommerce.model.VendorUser;
 import com.bolas.ecommerce.service.FcmService;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -35,13 +37,10 @@ public class FcmTokenApiController {
      */
     @PostMapping("/token")
     public ResponseEntity<Map<String, String>> registerToken(
-            @RequestBody Map<String, String> body,
+            @Valid @RequestBody FcmTokenDto body,
             HttpSession session) {
 
-        String token = body.get("token");
-        if (token == null || token.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "token manquant"));
-        }
+        String token = body.getToken();
 
         // Vendeur connecté ?
         Object vendorObj = session.getAttribute("BOLAS_VENDOR");

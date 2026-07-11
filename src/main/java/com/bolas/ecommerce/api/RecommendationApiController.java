@@ -1,8 +1,10 @@
 package com.bolas.ecommerce.api;
 
+import com.bolas.ecommerce.dto.InteractionDto;
 import com.bolas.ecommerce.model.Product;
 import com.bolas.ecommerce.service.InteractionTrackingService;
 import com.bolas.ecommerce.service.RecommendationService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -61,26 +63,18 @@ public class RecommendationApiController {
      */
     @PostMapping("/interactions")
     public ResponseEntity<Map<String, String>> trackInteraction(
-            @RequestBody Map<String, Object> body) {
+            @Valid @RequestBody InteractionDto body) {
 
-        Long customerId = body.get("customerId") != null
-                ? ((Number) body.get("customerId")).longValue() : null;
-        Long productId = body.get("productId") != null
-                ? ((Number) body.get("productId")).longValue() : null;
-        String type = (String) body.get("type");
-
-        if (customerId == null || productId == null || type == null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Paramètres manquants"));
-        }
+        Long customerId = body.getCustomerId();
+        Long productId  = body.getProductId();
+        String type     = body.getType();
 
         switch (type.toUpperCase()) {
-            case "VIEW" -> trackingService.trackView(customerId, productId);
+            case "VIEW"        -> trackingService.trackView(customerId, productId);
             case "ADD_TO_CART" -> trackingService.trackAddToCart(customerId, productId);
-            case "PURCHASE" -> trackingService.trackPurchase(customerId, productId);
-            case "REVIEW" -> trackingService.trackReview(customerId, productId);
-            default -> {
-                return ResponseEntity.badRequest().body(Map.of("error", "Type inconnu: " + type));
-            }
+            case "PURCHASE"    -> trackingService.trackPurchase(customerId, productId);
+            case "REVIEW"      -> trackingService.trackReview(customerId, productId);
+            default            -> { return ResponseEntity.badRequest().body(Map.of("error", "Type inconnu: " + type)); }
         }
 
         return ResponseEntity.ok(Map.of("status", "ok"));
