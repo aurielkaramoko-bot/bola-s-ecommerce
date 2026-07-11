@@ -11,11 +11,15 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 @Component
 public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GoogleOAuth2SuccessHandler.class);
 
     private final CustomerService customerService;
 
@@ -42,7 +46,7 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
             lastName  = oauthUser.getAttribute("family_name");
         }
 
-        System.err.println("=== GOOGLE SUCCESS === googleId=" + googleId + " email=" + email);
+        log.debug("Google OAuth2 success: googleId={} email={}", googleId, email);
 
         try {
             Customer customer = customerService.loginOrCreateGoogle(googleId, email, firstName, lastName);
