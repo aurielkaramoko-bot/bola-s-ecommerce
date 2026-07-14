@@ -191,26 +191,52 @@ public class HomeController {
                             @RequestParam(required = false) String plan,
                             Model model) {
         model.addAttribute("pageTitle", "Boutiques — BOLA");
-        // Normaliser les paramètres vides → null (pas de filtre)
-        String qFilter       = (q       != null && !q.isBlank())       ? q.trim()                   : null;
+
+        String qFilter       = (q       != null && !q.isBlank())       ? q.trim().toLowerCase()      : null;
         String countryFilter = (country != null && !country.isBlank()) ? country.trim().toUpperCase() : null;
         VendorPlan planFilter = null;
         if (plan != null && !plan.isBlank()) {
-            try { planFilter = com.bolas.ecommerce.model.VendorPlan.valueOf(plan.trim().toUpperCase()); }
+            try { planFilter = VendorPlan.valueOf(plan.trim().toUpperCase()); }
             catch (IllegalArgumentException ignored) {}
         }
 
+        List<VendorUser> vendors = java.util.List.of();
         try {
-            List<VendorUser> vendors = vendorUserRepository.searchBoutiques(qFilter, countryFilter, planFilter);
-            model.addAttribute("vendors", vendors);
+            // Charger tous les vendeurs actifs puis filtrer en Java — évite tout problème de requête JPQL
+            List<VendorUser> all = vendorUserRepository.findByVendorStatusAndActiveTrue(
+                    com.bolas.ecommerce.model.VendorStatus.ACTIVE);
+
+            final String qF = qFilter;
+            final String cF = countryFilter;
+            final VendorPlan pF = planFilter;
+
+            vendors = all.stream()
+                .filter(v -> qF == null
+                    || (v.getShopName() != null && v.getShopName().toLowerCase().contains(qF))
+                    || (v.getShopDescription() != null && v.getShopDescription().toLowerCase().contains(qF)))
+                .filter(v -> cF == null
+                    || cF.equals(v.getShopCountry()))
+                .filter(v -> pF == null
+                    || pF == v.getPlan())
+                .sorted(java.util.Comparator.comparingInt((VendorUser v) -> {
+                    if (v.getPlan() == null) return 3;
+                    return switch (v.getPlan()) {
+                        case PREMIUM   -> 0;
+                        case PRO       -> 1;
+                        case PRO_LOCAL -> 2;
+                        default        -> 3;
+                    };
+                }).thenComparing(v -> v.getShopName() != null ? v.getShopName() : ""))
+                .collect(java.util.stream.Collectors.toList());
+
         } catch (Exception e) {
             log.error("Erreur chargement boutiques", e);
-            model.addAttribute("vendors", java.util.List.of());
         }
-        // Repopuler les filtres dans la vue
-        model.addAttribute("q",       qFilter);
-        model.addAttribute("country", countryFilter);
-        model.addAttribute("plan",    planFilter);
+
+        model.addAttribute("vendors", vendors);
+        model.addAttribute("q",       q       != null && !q.isBlank()       ? q.trim()       : null);
+        model.addAttribute("country", country != null && !country.isBlank() ? country.trim() : null);
+        model.addAttribute("plan",    plan    != null && !plan.isBlank()    ? plan.trim()    : null);
         return "boutiques";
     }
 
