@@ -8,6 +8,7 @@ import com.bolas.ecommerce.repository.ProductSpecification;
 import com.bolas.ecommerce.repository.ReviewRepository;
 import com.bolas.ecommerce.repository.VendorUserRepository;
 import com.bolas.ecommerce.model.Product;
+import com.bolas.ecommerce.model.VendorPlan;
 import com.bolas.ecommerce.model.VendorStatus;
 import com.bolas.ecommerce.model.VendorUser;
 import com.bolas.ecommerce.util.WhatsAppLinkBuilder;
@@ -193,7 +194,11 @@ public class HomeController {
         // Normaliser les paramètres vides → null (pas de filtre)
         String qFilter       = (q       != null && !q.isBlank())       ? q.trim()                   : null;
         String countryFilter = (country != null && !country.isBlank()) ? country.trim().toUpperCase() : null;
-        String planFilter    = (plan    != null && !plan.isBlank())    ? plan.trim().toUpperCase()    : null;
+        VendorPlan planFilter = null;
+        if (plan != null && !plan.isBlank()) {
+            try { planFilter = com.bolas.ecommerce.model.VendorPlan.valueOf(plan.trim().toUpperCase()); }
+            catch (IllegalArgumentException ignored) {}
+        }
 
         try {
             List<VendorUser> vendors = vendorUserRepository.searchBoutiques(qFilter, countryFilter, planFilter);

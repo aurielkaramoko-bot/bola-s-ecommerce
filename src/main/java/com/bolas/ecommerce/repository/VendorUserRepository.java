@@ -76,13 +76,16 @@ public interface VendorUserRepository extends JpaRepository<VendorUser, Long> {
           AND (:q IS NULL OR LOWER(v.shopName) LIKE LOWER(CONCAT('%', :q, '%'))
                           OR LOWER(v.shopDescription) LIKE LOWER(CONCAT('%', :q, '%')))
           AND (:country IS NULL OR v.shopCountry = :country)
-          AND (:plan IS NULL OR CAST(v.plan AS string) = :plan)
+          AND (:plan IS NULL OR v.plan = :plan)
         ORDER BY
-          CASE v.plan WHEN 'PREMIUM' THEN 0 WHEN 'PRO' THEN 1 WHEN 'PRO_LOCAL' THEN 2 ELSE 3 END,
+          CASE WHEN v.plan = com.bolas.ecommerce.model.VendorPlan.PREMIUM THEN 0
+               WHEN v.plan = com.bolas.ecommerce.model.VendorPlan.PRO     THEN 1
+               WHEN v.plan = com.bolas.ecommerce.model.VendorPlan.PRO_LOCAL THEN 2
+               ELSE 3 END,
           v.shopName ASC
         """)
     List<VendorUser> searchBoutiques(@Param("q") String q,
                                      @Param("country") String country,
-                                     @Param("plan") String plan);
+                                     @Param("plan") VendorPlan plan);
 }
 
